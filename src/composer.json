@@ -11,14 +11,17 @@
         "awcodes/overlook": "*",
         "aymanalhattami/filament-slim-scrollbar": "*",
         "bezhansalleh/filament-shield": "*",
+        "dedoc/scramble": "^0.12.36",
         "diogogpinto/filament-auth-ui-enhancer": "*",
         "filament/filament": "^3.3",
         "hasnayeen/themes": "*",
         "joaopaulolndev/filament-edit-profile": "^1.0",
         "joshembling/image-optimizer": "^1.6",
         "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "njxqlus/filament-progressbar": "*",
+        "rupadana/filament-api-service": "^3.4",
         "z3d0x/filament-logger": "^0.8.0"
     },
     "require-dev": {
