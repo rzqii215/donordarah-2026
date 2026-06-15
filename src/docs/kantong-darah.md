@@ -15,3 +15,12 @@ Pendonor hadir
 → Kantong darah dibuat
 → Pemeriksaan mutu
 → Tersedia atau ditolak
+
+# Frontend Portal Pendonor
+
+## Konsep Visual
+
+Frontend menggunakan konsep:
+
+```text
+Modern Medical Minimal
