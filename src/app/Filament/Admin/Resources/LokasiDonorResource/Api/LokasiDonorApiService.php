@@ -3,6 +3,8 @@
 namespace App\Filament\Admin\Resources\LokasiDonorResource\Api;
 
 use App\Filament\Admin\Resources\LokasiDonorResource;
+use App\Filament\Admin\Resources\LokasiDonorResource\Api\Handlers\DetailHandler;
+use App\Filament\Admin\Resources\LokasiDonorResource\Api\Handlers\PaginationHandler;
 use Rupadana\ApiService\ApiService;
 
 class LokasiDonorApiService extends ApiService
@@ -18,8 +20,8 @@ class LokasiDonorApiService extends ApiService
     public static function handlers(): array
     {
         return [
-            Handlers\PaginationHandler::class,
-            Handlers\DetailHandler::class,
+            PaginationHandler::class,
+            DetailHandler::class,
         ];
     }
 }

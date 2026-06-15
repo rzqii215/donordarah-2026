@@ -6,9 +6,8 @@ use App\Filament\Admin\Resources\LokasiDonorResource;
 use App\Filament\Admin\Resources\LokasiDonorResource\Api\Transformers\LokasiDonorTransformer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Rupadana\ApiService\Http\Handlers;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class PaginationHandler extends Handlers
 {
@@ -23,94 +22,293 @@ class PaginationHandler extends Handlers
     public static bool $public = true;
 
     /**
-     * Daftar lokasi donor.
+     * Daftar lokasi donor publik.
      *
-     * Filter:
+     * Parameter:
      *
      * - filter[q]
      * - filter[kota]
      * - filter[provinsi]
-     *
-     * Sorting:
-     *
-     * - nama_lokasi
-     * - kota
-     * - provinsi
-     * - created_at
-     *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * - sort=nama
+     * - sort=-created_at
+     * - page
+     * - per_page
      */
-    public function handler(Request $request)
-    {
+    public function handler(
+        Request $request
+    ) {
+        $query = static::getEloquentQuery();
+
+        $table = $query
+            ->getModel()
+            ->getTable();
+
+        $columns = Schema::getColumnListing(
+            $table
+        );
+
+        $kolomNama = $this->kolomTersedia(
+            columns: $columns,
+            candidates: [
+                'nama',
+                'nama_lokasi',
+                'judul',
+            ],
+        );
+
+        $kolomAlamat = $this->kolomTersedia(
+            columns: $columns,
+            candidates: [
+                'alamat',
+                'alamat_lengkap',
+            ],
+        );
+
+        $kolomKota = $this->kolomTersedia(
+            columns: $columns,
+            candidates: [
+                'kota',
+                'kabupaten_kota',
+                'kabupaten',
+            ],
+        );
+
+        $kolomProvinsi = $this->kolomTersedia(
+            columns: $columns,
+            candidates: [
+                'provinsi',
+            ],
+        );
+
+        $filters = $request->input(
+            'filter',
+            []
+        );
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
+        $pencarian = trim(
+            (string) ($filters['q'] ?? '')
+        );
+
+        if ($pencarian !== '') {
+            $kolomPencarian = array_values(
+                array_filter([
+                    $kolomNama,
+                    $kolomAlamat,
+                    $kolomKota,
+                    $kolomProvinsi,
+                ])
+            );
+
+            if ($kolomPencarian !== []) {
+                $query->where(
+                    function (
+                        Builder $subQuery
+                    ) use (
+                        $kolomPencarian,
+                        $pencarian
+                    ): void {
+                        foreach (
+                            $kolomPencarian
+                            as $index => $column
+                        ) {
+                            if ($index === 0) {
+                                $subQuery->where(
+                                    $column,
+                                    'like',
+                                    '%' . $pencarian . '%'
+                                );
+
+                                continue;
+                            }
+
+                            $subQuery->orWhere(
+                                $column,
+                                'like',
+                                '%' . $pencarian . '%'
+                            );
+                        }
+                    }
+                );
+            }
+        }
+
+        $filterKota = trim(
+            (string) ($filters['kota'] ?? '')
+        );
+
+        if (
+            $filterKota !== ''
+            && $kolomKota !== null
+        ) {
+            $query->where(
+                $kolomKota,
+                'like',
+                '%' . $filterKota . '%'
+            );
+        }
+
+        $filterProvinsi = trim(
+            (string) ($filters['provinsi'] ?? '')
+        );
+
+        if (
+            $filterProvinsi !== ''
+            && $kolomProvinsi !== null
+        ) {
+            $query->where(
+                $kolomProvinsi,
+                'like',
+                '%' . $filterProvinsi . '%'
+            );
+        }
+
+        $this->terapkanSorting(
+            query: $query,
+            request: $request,
+            columns: $columns,
+            kolomNama: $kolomNama,
+            kolomKota: $kolomKota,
+            kolomProvinsi: $kolomProvinsi,
+        );
+
         $perPage = min(
             max(
-                $request->integer('per_page', 12),
+                $request->integer(
+                    'per_page',
+                    12
+                ),
                 1
             ),
             50
         );
 
-        $query = QueryBuilder::for(
-            static::getEloquentQuery()
-        )
-            ->allowedFilters([
-                AllowedFilter::callback(
-                    'q',
-                    function (
-                        Builder $query,
-                        mixed $value
-                    ): void {
-                        $pencarian = trim(
-                            (string) $value
-                        );
-
-                        if ($pencarian === '') {
-                            return;
-                        }
-
-                        $query->where(
-                            function (
-                                Builder $subQuery
-                            ) use (
-                                $pencarian
-                            ): void {
-                                $subQuery
-                                    ->where(
-                                        'nama_lokasi',
-                                        'like',
-                                        '%' . $pencarian . '%'
-                                    )
-                                    ->orWhere(
-                                        'alamat',
-                                        'like',
-                                        '%' . $pencarian . '%'
-                                    )
-                                    ->orWhere(
-                                        'kota',
-                                        'like',
-                                        '%' . $pencarian . '%'
-                                    );
-                            }
-                        );
-                    }
-                ),
-
-                AllowedFilter::partial('kota'),
-
-                AllowedFilter::partial('provinsi'),
-            ])
-            ->allowedSorts([
-                'nama_lokasi',
-                'kota',
-                'provinsi',
-                'created_at',
-            ])
-            ->defaultSort('nama_lokasi')
+        $records = $query
             ->paginate($perPage)
-            ->appends($request->query());
+            ->appends(
+                $request->query()
+            );
 
         return LokasiDonorTransformer::collection(
-            $query
+            $records
         );
+    }
+
+    /**
+     * @param array<int, string> $columns
+     */
+    private function terapkanSorting(
+        Builder $query,
+        Request $request,
+        array $columns,
+        ?string $kolomNama,
+        ?string $kolomKota,
+        ?string $kolomProvinsi
+    ): void {
+        $sort = trim(
+            (string) $request->query(
+                'sort',
+                ''
+            )
+        );
+
+        $direction = str_starts_with(
+            $sort,
+            '-'
+        )
+            ? 'desc'
+            : 'asc';
+
+        $sortKey = ltrim(
+            $sort,
+            '-'
+        );
+
+        $mapping = [
+            'nama' => $kolomNama,
+            'nama_lokasi' => $kolomNama,
+            'kota' => $kolomKota,
+            'provinsi' => $kolomProvinsi,
+
+            'created_at' => in_array(
+                'created_at',
+                $columns,
+                true
+            )
+                ? 'created_at'
+                : null,
+
+            'updated_at' => in_array(
+                'updated_at',
+                $columns,
+                true
+            )
+                ? 'updated_at'
+                : null,
+        ];
+
+        $sortColumn = $mapping[$sortKey]
+            ?? null;
+
+        if ($sortColumn === null) {
+            $sortColumn = $kolomNama;
+
+            if (
+                $sortColumn === null
+                && in_array(
+                    'created_at',
+                    $columns,
+                    true
+                )
+            ) {
+                $sortColumn = 'created_at';
+                $direction = 'desc';
+            }
+
+            if (
+                $sortColumn === null
+                && in_array(
+                    'id',
+                    $columns,
+                    true
+                )
+            ) {
+                $sortColumn = 'id';
+                $direction = 'asc';
+            }
+        }
+
+        if ($sortColumn !== null) {
+            $query->orderBy(
+                $sortColumn,
+                $direction
+            );
+        }
+    }
+
+    /**
+     * @param array<int, string> $columns
+     * @param array<int, string> $candidates
+     */
+    private function kolomTersedia(
+        array $columns,
+        array $candidates
+    ): ?string {
+        foreach ($candidates as $candidate) {
+            if (
+                in_array(
+                    $candidate,
+                    $columns,
+                    true
+                )
+            ) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 }

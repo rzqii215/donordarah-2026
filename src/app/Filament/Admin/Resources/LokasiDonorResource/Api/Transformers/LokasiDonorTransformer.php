@@ -19,46 +19,93 @@ class LokasiDonorTransformer extends JsonResource
      *
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array
-    {
-        $gambar = $this->resource->getAttribute(
-            'path_gambar'
-        );
+    public function toArray(
+        Request $request
+    ): array {
+        $kodeLokasi = $this->atribut([
+            'kode_lokasi',
+            'kode',
+        ]);
 
-        $status = $this->resource->getAttribute(
-            'status'
-        );
+        $namaLokasi = $this->atribut([
+            'nama',
+            'nama_lokasi',
+            'judul',
+        ]);
 
-        $latitude = $this->resource->getAttribute(
-            'latitude'
-        );
+        $jenisLokasi = $this->atribut([
+            'jenis_lokasi',
+            'jenis',
+        ]);
 
-        $longitude = $this->resource->getAttribute(
-            'longitude'
-        );
+        $alamat = $this->atribut([
+            'alamat',
+            'alamat_lengkap',
+        ]);
+
+        $provinsi = $this->atribut([
+            'provinsi',
+        ]);
+
+        $kota = $this->atribut([
+            'kota',
+            'kabupaten_kota',
+            'kabupaten',
+        ]);
+
+        $kecamatan = $this->atribut([
+            'kecamatan',
+        ]);
+
+        $kodePos = $this->atribut([
+            'kode_pos',
+        ]);
+
+        $latitude = $this->atribut([
+            'latitude',
+            'lat',
+        ]);
+
+        $longitude = $this->atribut([
+            'longitude',
+            'lng',
+            'lon',
+        ]);
+
+        $nomorTelepon = $this->atribut([
+            'nomor_telepon',
+            'telepon',
+            'no_telepon',
+        ]);
+
+        $email = $this->atribut([
+            'email',
+        ]);
+
+        $gambar = $this->atribut([
+            'path_gambar',
+            'gambar',
+            'foto',
+            'image',
+        ]);
+
+        $status = $this->atribut([
+            'status',
+        ]);
 
         return [
             'id' => $this->resource->getKey(),
 
-            'kode_lokasi' =>
-                $this->resource->getAttribute(
-                    'kode_lokasi'
-                ),
+            'kode_lokasi' => $kodeLokasi,
 
-            'nama_lokasi' =>
-                $this->resource->getAttribute(
-                    'nama_lokasi'
-                ),
+            'nama_lokasi' => $namaLokasi,
 
-            'jenis_lokasi' =>
-                $this->resource->getAttribute(
-                    'jenis_lokasi'
-                ),
+            'jenis_lokasi' => $jenisLokasi,
 
-            'deskripsi' =>
-                $this->resource->getAttribute(
-                    'deskripsi'
-                ),
+            'deskripsi' => $this->atribut([
+                'deskripsi',
+                'keterangan',
+            ]),
 
             'gambar_url' => filled($gambar)
                 ? asset(
@@ -70,30 +117,11 @@ class LokasiDonorTransformer extends JsonResource
                 : null,
 
             'alamat' => [
-                'lengkap' =>
-                    $this->resource->getAttribute(
-                        'alamat'
-                    ),
-
-                'provinsi' =>
-                    $this->resource->getAttribute(
-                        'provinsi'
-                    ),
-
-                'kota' =>
-                    $this->resource->getAttribute(
-                        'kota'
-                    ),
-
-                'kecamatan' =>
-                    $this->resource->getAttribute(
-                        'kecamatan'
-                    ),
-
-                'kode_pos' =>
-                    $this->resource->getAttribute(
-                        'kode_pos'
-                    ),
+                'lengkap' => $alamat,
+                'provinsi' => $provinsi,
+                'kota' => $kota,
+                'kecamatan' => $kecamatan,
+                'kode_pos' => $kodePos,
             ],
 
             'koordinat' => [
@@ -114,14 +142,10 @@ class LokasiDonorTransformer extends JsonResource
 
             'kontak' => [
                 'nomor_telepon' =>
-                    $this->resource->getAttribute(
-                        'nomor_telepon'
-                    ),
+                    $nomorTelepon,
 
                 'email' =>
-                    $this->resource->getAttribute(
-                        'email'
-                    ),
+                    $email,
             ],
 
             'status' => [
@@ -138,18 +162,46 @@ class LokasiDonorTransformer extends JsonResource
 
             'dibuat_pada' =>
                 $this->formatTanggal(
-                    $this->resource->getAttribute(
-                        'created_at'
-                    )
+                    $this->atribut([
+                        'created_at',
+                    ])
                 ),
 
             'diperbarui_pada' =>
                 $this->formatTanggal(
-                    $this->resource->getAttribute(
-                        'updated_at'
-                    )
+                    $this->atribut([
+                        'updated_at',
+                    ])
                 ),
         ];
+    }
+
+    /**
+     * Mengambil nilai dari nama atribut pertama yang tersedia.
+     *
+     * @param array<int, string> $candidates
+     */
+    private function atribut(
+        array $candidates
+    ): mixed {
+        $attributes = $this->resource
+            ->getAttributes();
+
+        foreach ($candidates as $candidate) {
+            if (
+                array_key_exists(
+                    $candidate,
+                    $attributes
+                )
+            ) {
+                return $this->resource
+                    ->getAttribute(
+                        $candidate
+                    );
+            }
+        }
+
+        return null;
     }
 
     private function nilaiDesimal(
@@ -168,11 +220,21 @@ class LokasiDonorTransformer extends JsonResource
     private function formatTanggal(
         mixed $tanggal
     ): ?string {
-        if (! $tanggal instanceof CarbonInterface) {
+        if ($tanggal instanceof CarbonInterface) {
+            return $tanggal->toIso8601String();
+        }
+
+        if (blank($tanggal)) {
             return null;
         }
 
-        return $tanggal->toIso8601String();
+        try {
+            return \Carbon\CarbonImmutable::parse(
+                (string) $tanggal
+            )->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function nilaiEnum(
@@ -182,11 +244,9 @@ class LokasiDonorTransformer extends JsonResource
             return (string) $nilai->value;
         }
 
-        if (blank($nilai)) {
-            return null;
-        }
-
-        return (string) $nilai;
+        return filled($nilai)
+            ? (string) $nilai
+            : null;
     }
 
     private function labelEnum(
@@ -202,12 +262,12 @@ class LokasiDonorTransformer extends JsonResource
             return (string) $nilai->label();
         }
 
-        $nilaiEnum = $this->nilaiEnum(
+        $value = $this->nilaiEnum(
             $nilai
         );
 
-        return filled($nilaiEnum)
-            ? Str::headline($nilaiEnum)
+        return filled($value)
+            ? Str::headline($value)
             : null;
     }
 }

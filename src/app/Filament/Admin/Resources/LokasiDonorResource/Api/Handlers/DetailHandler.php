@@ -20,18 +20,15 @@ class DetailHandler extends Handlers
     public static bool $public = true;
 
     /**
-     * Detail lokasi donor.
-     *
-     * @return LokasiDonorTransformer|\Illuminate\Http\JsonResponse
+     * Detail lokasi donor publik.
      */
-    public function handler(Request $request)
-    {
-        $id = $request->route('id');
-
+    public function handler(
+        Request $request
+    ) {
         $record = static::getEloquentQuery()
             ->where(
                 static::getKeyName(),
-                $id
+                $request->route('id')
             )
             ->first();
 

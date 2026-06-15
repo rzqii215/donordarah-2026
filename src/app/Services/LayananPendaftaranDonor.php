@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PeranPengguna;
 use App\Enums\StatusJadwalDonor;
 use App\Enums\StatusPendaftaranDonor;
+use App\Enums\StatusPengguna;
 use App\Models\JadwalDonor;
 use App\Models\PendaftaranDonor;
 use App\Models\User;
@@ -35,13 +36,22 @@ class LayananPendaftaranDonor
                 ->with('profilPendonor')
                 ->findOrFail($pendonorId);
 
-            $this->pastikanPendonorValid($pendonor);
-            $this->pastikanJadwalDapatDidaftar($jadwal);
+            $this->pastikanPendonorValid(
+                $pendonor
+            );
+
+            $this->pastikanJadwalDapatDidaftar(
+                $jadwal
+            );
+
             $this->pastikanBelumTerdaftar(
                 jadwalDonorId: $jadwal->id,
                 pendonorId: $pendonor->id,
             );
-            $this->pastikanKuotaTersedia($jadwal);
+
+            $this->pastikanKuotaTersedia(
+                $jadwal
+            );
 
             return PendaftaranDonor::query()->create([
                 'nomor_pendaftaran' =>
@@ -81,7 +91,11 @@ class LayananPendaftaranDonor
                     null,
 
                 'catatan' =>
-                    $data['catatan'] ?? null,
+                    filled($data['catatan'] ?? null)
+                        ? trim(
+                            (string) $data['catatan']
+                        )
+                        : null,
             ]);
         });
     }
@@ -144,6 +158,15 @@ class LayananPendaftaranDonor
                 ]);
             }
 
+            $alasanBersih = trim($alasan);
+
+            if ($alasanBersih === '') {
+                throw ValidationException::withMessages([
+                    'alasan' =>
+                        'Alasan penolakan wajib diisi.',
+                ]);
+            }
+
             $record->update([
                 'status' =>
                     StatusPendaftaranDonor::Ditolak,
@@ -155,7 +178,7 @@ class LayananPendaftaranDonor
                     now(),
 
                 'alasan_penolakan' =>
-                    $alasan,
+                    $alasanBersih,
 
                 'hadir_pada' =>
                     null,
@@ -192,10 +215,12 @@ class LayananPendaftaranDonor
                     now(),
 
                 'ditinjau_oleh' =>
-                    $record->ditinjau_oleh ?? $petugasId,
+                    $record->ditinjau_oleh
+                    ?? $petugasId,
 
                 'ditinjau_pada' =>
-                    $record->ditinjau_pada ?? now(),
+                    $record->ditinjau_pada
+                    ?? now(),
             ]);
 
             return $record->refresh();
@@ -225,7 +250,11 @@ class LayananPendaftaranDonor
                 ]);
             }
 
-            if (now()->lessThan($record->jadwal->mulai_pada)) {
+            if (
+                now()->lessThan(
+                    $record->jadwal->mulai_pada
+                )
+            ) {
                 throw ValidationException::withMessages([
                     'status' =>
                         'Pendonor belum dapat ditandai tidak hadir sebelum kegiatan dimulai.',
@@ -269,6 +298,15 @@ class LayananPendaftaranDonor
                 ]);
             }
 
+            $alasanBersih = trim($alasan);
+
+            if ($alasanBersih === '') {
+                throw ValidationException::withMessages([
+                    'alasan' =>
+                        'Alasan pembatalan wajib diisi.',
+                ]);
+            }
+
             $record->update([
                 'status' =>
                     StatusPendaftaranDonor::Dibatalkan,
@@ -277,7 +315,7 @@ class LayananPendaftaranDonor
                     now(),
 
                 'alasan_pembatalan' =>
-                    $alasan,
+                    $alasanBersih,
             ]);
 
             return $record->refresh();
@@ -294,7 +332,17 @@ class LayananPendaftaranDonor
         ) {
             throw ValidationException::withMessages([
                 'pendonor_id' =>
-                    'Pengguna yang dipilih tidak memiliki role Pendonor.',
+                    'Pengguna tidak memiliki role Pendonor.',
+            ]);
+        }
+
+        if (
+            $pendonor->status !==
+            StatusPengguna::Aktif
+        ) {
+            throw ValidationException::withMessages([
+                'pendonor_id' =>
+                    'Akun Pendonor belum aktif.',
             ]);
         }
 
@@ -322,7 +370,7 @@ class LayananPendaftaranDonor
         if (! $jadwal->pendaftaranSedangDibuka()) {
             throw ValidationException::withMessages([
                 'jadwal_donor_id' =>
-                    'Periode pendaftaran jadwal donor belum dibuka atau sudah ditutup.',
+                    'Periode pendaftaran belum dibuka atau sudah ditutup.',
             ]);
         }
     }
@@ -331,20 +379,21 @@ class LayananPendaftaranDonor
         int $jadwalDonorId,
         int $pendonorId
     ): void {
-        $sudahTerdaftar = PendaftaranDonor::withTrashed()
-            ->where(
-                'jadwal_donor_id',
-                $jadwalDonorId
-            )
-            ->where(
-                'pendonor_id',
-                $pendonorId
-            )
-            ->exists();
+        $sudahTerdaftar =
+            PendaftaranDonor::withTrashed()
+                ->where(
+                    'jadwal_donor_id',
+                    $jadwalDonorId
+                )
+                ->where(
+                    'pendonor_id',
+                    $pendonorId
+                )
+                ->exists();
 
         if ($sudahTerdaftar) {
             throw ValidationException::withMessages([
-                'pendonor_id' =>
+                'jadwal_donor_id' =>
                     'Pendonor sudah pernah terdaftar pada jadwal ini.',
             ]);
         }
@@ -368,7 +417,18 @@ class LayananPendaftaranDonor
                 ->get(['id'])
                 ->count();
 
-        if ($jumlahPendaftarAktif >= $jadwal->kuota) {
+        $kuota = (int) $jadwal->getAttribute(
+            'kuota'
+        );
+
+        if ($kuota < 1) {
+            throw ValidationException::withMessages([
+                'jadwal_donor_id' =>
+                    'Kuota jadwal donor belum ditentukan.',
+            ]);
+        }
+
+        if ($jumlahPendaftarAktif >= $kuota) {
             throw ValidationException::withMessages([
                 'jadwal_donor_id' =>
                     'Kuota jadwal donor sudah penuh.',
@@ -382,7 +442,9 @@ class LayananPendaftaranDonor
             $nomor = sprintf(
                 'REG-%s-%s',
                 now()->format('Ymd'),
-                Str::upper(Str::random(6))
+                Str::upper(
+                    Str::random(6)
+                )
             );
         } while (
             PendaftaranDonor::withTrashed()
