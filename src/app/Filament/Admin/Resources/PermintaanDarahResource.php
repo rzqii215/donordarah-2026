@@ -4,714 +4,309 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\GolonganDarah;
 use App\Enums\RhesusDarah;
-use App\Enums\StatusPengguna;
 use App\Enums\StatusPermintaanDarah;
-use App\Enums\StatusVerifikasiRumahSakit;
 use App\Enums\TingkatUrgensiPermintaanDarah;
 use App\Filament\Admin\Resources\PermintaanDarahResource\Pages;
+use App\Models\DistribusiDarah;
 use App\Models\PermintaanDarah;
 use App\Models\ProfilRumahSakit;
+use App\Services\LayananAlokasiDarah;
 use App\Services\LayananPermintaanDarah;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Infolists\Components\Section as InfolistSection;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PermintaanDarahResource extends Resource
 {
-    protected static ?string $model =
-        PermintaanDarah::class;
+    protected static ?string $model = PermintaanDarah::class;
 
-    protected static ?string $navigationIcon =
-        'heroicon-o-document-text';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationLabel =
-        'Permintaan Darah';
+    protected static ?string $navigationGroup = 'Manajemen Donor Darah';
 
-    protected static ?string $modelLabel =
-        'Permintaan Darah';
+    protected static ?string $navigationLabel = 'Pengajuan Kebutuhan Donor';
 
-    protected static ?string $pluralModelLabel =
-        'Permintaan Darah';
+    protected static ?string $modelLabel = 'Pengajuan Kebutuhan Donor';
 
-    protected static ?string $navigationGroup =
-        'Permintaan dan Distribusi';
+    protected static ?string $pluralModelLabel = 'Pengajuan Kebutuhan Donor';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Section::make(
-                    'Rumah Sakit Pemohon'
-                )
+                Forms\Components\Section::make('Data Pemohon')
+                    ->description('Pilih pemohon donor yang mengajukan kebutuhan darah.')
                     ->schema([
-                        Forms\Components\Select::make(
-                            'profil_rumah_sakit_id'
-                        )
-                            ->label('Rumah Sakit')
-                            ->relationship(
-                                name: 'rumahSakit',
-                                titleAttribute:
-                                    'nama_rumah_sakit',
-                                modifyQueryUsing:
-                                    fn (
-                                        Builder $query
-                                    ): Builder => $query
-                                        ->where(
-                                            'status_verifikasi',
-                                            StatusVerifikasiRumahSakit
-                                                ::Disetujui
-                                                ->value
-                                        )
-                                        ->whereHas(
-                                            'pengguna',
-                                            fn (
-                                                Builder $pengguna
-                                            ): Builder => $pengguna
-                                                ->where(
-                                                    'status',
-                                                    StatusPengguna
-                                                        ::Aktif
-                                                        ->value
-                                                )
-                                        )
-                                        ->orderBy(
-                                            'nama_rumah_sakit'
-                                        ),
-                            )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (
-                                    ProfilRumahSakit $record
-                                ): string => sprintf(
-                                    '%s (%s)',
-                                    $record
-                                        ->nama_rumah_sakit,
-                                    $record
-                                        ->kode_rumah_sakit,
-                                )
-                            )
-                            ->searchable([
-                                'nama_rumah_sakit',
-                                'kode_rumah_sakit',
-                                'nomor_izin',
-                            ])
+                        Forms\Components\Select::make('profil_rumah_sakit_id')
+                            ->label('Pemohon Donor')
+                            ->options(function (): array {
+                                return ProfilRumahSakit::query()
+                                    ->orderBy('nama_rumah_sakit')
+                                    ->get()
+                                    ->mapWithKeys(function (ProfilRumahSakit $profil): array {
+                                        return [
+                                            $profil->id => $profil->nama_rumah_sakit
+                                                . ' - '
+                                                . $profil->kode_rumah_sakit,
+                                        ];
+                                    })
+                                    ->toArray();
+                            })
+                            ->searchable()
                             ->preload()
-                            ->required()
-                            ->disabledOn('edit'),
+                            ->required(),
 
-                        Forms\Components\Placeholder::make(
-                            'nomor_permintaan_info'
-                        )
-                            ->label('Nomor Permintaan')
-                            ->content(
-                                fn (
-                                    ?PermintaanDarah $record
-                                ): string => $record
-                                    ? $record
-                                        ->nomor_permintaan
-                                    : 'Dibuat otomatis setelah disimpan'
-                            ),
+                        Forms\Components\TextInput::make('nomor_permintaan')
+                            ->label('Nomor Pengajuan')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->placeholder('Dibuat otomatis oleh sistem'),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make(
-                    'Informasi Pasien'
-                )
-                    ->description(
-                        'Gunakan kode atau referensi pasien internal, bukan data medis lengkap.'
-                    )
+                Forms\Components\Section::make('Detail Kebutuhan')
+                    ->description('Data kebutuhan donor yang diajukan oleh pemohon.')
                     ->schema([
-                        Forms\Components\TextInput::make(
-                            'referensi_pasien'
-                        )
-                            ->label('Referensi Pasien')
+                        Forms\Components\TextInput::make('referensi_pasien')
+                            ->label('Referensi Pengajuan')
                             ->required()
-                            ->maxLength(100)
-                            ->placeholder(
-                                'Contoh: PSN-2026-0001'
-                            ),
+                            ->maxLength(150),
 
-                        Forms\Components\TextInput::make(
-                            'nama_dokter'
-                        )
-                            ->label('Nama Dokter')
+                        Forms\Components\TextInput::make('nama_dokter')
+                            ->label('Penanggung Jawab Pengajuan')
                             ->required()
-                            ->maxLength(255)
-                            ->placeholder(
-                                'Contoh: dr. Ahmad Pratama'
-                            ),
-                    ])
-                    ->columns(2),
+                            ->maxLength(255),
 
-                Forms\Components\Section::make(
-                    'Kebutuhan Darah'
-                )
-                    ->schema([
-                        Forms\Components\Select::make(
-                            'golongan_darah'
-                        )
+                        Forms\Components\Select::make('golongan_darah')
                             ->label('Golongan Darah')
-                            ->options(
-                                GolonganDarah::options()
-                            )
-                            ->required()
-                            ->native(false),
+                            ->options(GolonganDarah::options())
+                            ->required(),
 
-                        Forms\Components\Select::make(
-                            'rhesus'
-                        )
+                        Forms\Components\Select::make('rhesus')
                             ->label('Rhesus')
-                            ->options(
-                                RhesusDarah::options()
-                            )
-                            ->required()
-                            ->native(false),
+                            ->options(RhesusDarah::options())
+                            ->required(),
 
-                        Forms\Components\TextInput::make(
-                            'jumlah_kantong'
-                        )
+                        Forms\Components\TextInput::make('jumlah_kantong')
                             ->label('Jumlah Kantong')
-                            ->required()
                             ->numeric()
                             ->integer()
                             ->minValue(1)
                             ->maxValue(100)
-                            ->suffix('kantong'),
+                            ->required(),
 
-                        Forms\Components\Select::make(
-                            'tingkat_urgensi'
-                        )
+                        Forms\Components\Select::make('tingkat_urgensi')
                             ->label('Tingkat Urgensi')
-                            ->options(
-                                TingkatUrgensiPermintaanDarah
-                                    ::options()
-                            )
-                            ->default(
-                                TingkatUrgensiPermintaanDarah
-                                    ::Normal
-                                    ->value
-                            )
-                            ->required()
-                            ->native(false),
+                            ->options(TingkatUrgensiPermintaanDarah::options())
+                            ->required(),
 
-                        Forms\Components\DateTimePicker::make(
-                            'dibutuhkan_pada'
-                        )
+                        Forms\Components\DateTimePicker::make('dibutuhkan_pada')
                             ->label('Dibutuhkan Pada')
-                            ->required()
-                            ->native(false)
                             ->seconds(false)
-                            ->displayFormat('d/m/Y H:i'),
+                            ->native(false)
+                            ->required(),
 
-                        Forms\Components\FileUpload::make(
-                            'path_dokumen_permintaan'
-                        )
-                            ->label('Dokumen Permintaan')
+                        Forms\Components\Select::make('status')
+                            ->label('Status Pengajuan')
+                            ->options(StatusPermintaanDarah::options())
+                            ->required()
+                            ->default(StatusPermintaanDarah::Diajukan->value),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Section::make('Dokumen dan Catatan')
+                    ->schema([
+                        Forms\Components\FileUpload::make('path_dokumen_permintaan')
+                            ->label('Dokumen Pendukung')
                             ->disk('public')
-                            ->directory(
-                                'dokumen-permintaan-darah'
-                            )
+                            ->directory('dokumen-pengajuan-kebutuhan-donor')
                             ->acceptedFileTypes([
                                 'application/pdf',
                                 'image/jpeg',
                                 'image/png',
                             ])
-                            ->maxSize(5120)
-                            ->openable()
+                            ->maxSize(4096)
                             ->downloadable()
-                            ->helperText(
-                                'Format PDF, JPG, atau PNG. Maksimal 5 MB.'
-                            ),
+                            ->openable()
+                            ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make(
-                            'catatan'
-                        )
+                        Forms\Components\Textarea::make('catatan')
                             ->label('Catatan')
                             ->rows(4)
-                            ->maxLength(3000)
+                            ->maxLength(5000)
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2),
 
-                Forms\Components\Section::make(
-                    'Status Permintaan'
-                )
-                    ->hiddenOn('create')
-                    ->schema([
-                        Forms\Components\Placeholder::make(
-                            'status_info'
-                        )
-                            ->label('Status')
-                            ->content(
-                                fn (
-                                    ?PermintaanDarah $record
-                                ): string => $record
-                                    ? $record->status->label()
-                                    : '-'
-                            ),
+                        Forms\Components\Textarea::make('alasan_penolakan')
+                            ->label('Alasan Penolakan / Pembatalan')
+                            ->rows(4)
+                            ->maxLength(5000)
+                            ->visible(function (?PermintaanDarah $record): bool {
+                                if ($record === null) {
+                                    return false;
+                                }
 
-                        Forms\Components\Placeholder::make(
-                            'peninjau_info'
-                        )
-                            ->label('Ditinjau Oleh')
-                            ->content(
-                                fn (
-                                    ?PermintaanDarah $record
-                                ): string => $record
-                                    ? (
-                                        $record
-                                            ->peninjau
-                                            ?->name
-                                        ?? '-'
-                                    )
-                                    : '-'
-                            ),
-
-                        Forms\Components\Placeholder::make(
-                            'ditinjau_pada_info'
-                        )
-                            ->label('Ditinjau Pada')
-                            ->content(
-                                fn (
-                                    ?PermintaanDarah $record
-                                ): string => $record
-                                    ? (
-                                        $record
-                                            ->ditinjau_pada
-                                            ?->format(
-                                                'd M Y H:i'
-                                            )
-                                        ?? '-'
-                                    )
-                                    : '-'
-                            ),
-
-                        Forms\Components\Textarea::make(
-                            'alasan_penolakan'
-                        )
-                            ->label('Alasan Penolakan')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->rows(3),
-
-                        Forms\Components\Textarea::make(
-                            'alasan_pembatalan'
-                        )
-                            ->label('Alasan Pembatalan')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->rows(3),
-                    ])
-                    ->columns(3),
+                                return in_array(
+                                    self::statusValue($record),
+                                    [
+                                        StatusPermintaanDarah::Ditolak->value,
+                                        StatusPermintaanDarah::Dibatalkan->value,
+                                    ],
+                                    true
+                                );
+                            })
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
-    public static function infolist(
-        Infolist $infolist
-    ): Infolist {
-        return $infolist
-            ->schema([
-                InfolistSection::make(
-                    'Informasi Permintaan'
-                )
-                    ->schema([
-                        TextEntry::make(
-                            'nomor_permintaan'
-                        )
-                            ->label('Nomor Permintaan')
-                            ->copyable(),
-
-                        TextEntry::make('status')
-                            ->label('Status')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    StatusPermintaanDarah|string $state
-                                ): string => self
-                                    ::statusEnum($state)
-                                    ->label()
-                            )
-                            ->color(
-                                fn (
-                                    StatusPermintaanDarah|string $state
-                                ): string => self
-                                    ::statusEnum($state)
-                                    ->warna()
-                            ),
-
-                        TextEntry::make(
-                            'tingkat_urgensi'
-                        )
-                            ->label('Urgensi')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    TingkatUrgensiPermintaanDarah|string $state
-                                ): string => self
-                                    ::urgensiEnum($state)
-                                    ->label()
-                            )
-                            ->color(
-                                fn (
-                                    TingkatUrgensiPermintaanDarah|string $state
-                                ): string => self
-                                    ::urgensiEnum($state)
-                                    ->warna()
-                            ),
-
-                        TextEntry::make(
-                            'rumahSakit.nama_rumah_sakit'
-                        )
-                            ->label('Rumah Sakit'),
-
-                        TextEntry::make(
-                            'rumahSakit.kode_rumah_sakit'
-                        )
-                            ->label('Kode Rumah Sakit'),
-
-                        TextEntry::make(
-                            'referensi_pasien'
-                        )
-                            ->label('Referensi Pasien'),
-
-                        TextEntry::make('nama_dokter')
-                            ->label('Nama Dokter'),
-                    ])
-                    ->columns(3),
-
-                InfolistSection::make(
-                    'Kebutuhan Darah'
-                )
-                    ->schema([
-                        TextEntry::make(
-                            'golongan_darah'
-                        )
-                            ->label('Golongan Darah')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    mixed $state
-                                ): string => $state
-                                    instanceof
-                                    GolonganDarah
-                                        ? $state->label()
-                                        : (string) $state
-                            ),
-
-                        TextEntry::make('rhesus')
-                            ->label('Rhesus')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    mixed $state
-                                ): string => $state
-                                    instanceof
-                                    RhesusDarah
-                                        ? $state->label()
-                                        : (string) $state
-                            ),
-
-                        TextEntry::make(
-                            'jumlah_kantong'
-                        )
-                            ->label('Jumlah')
-                            ->suffix(' kantong'),
-
-                        TextEntry::make(
-                            'dibutuhkan_pada'
-                        )
-                            ->label('Dibutuhkan Pada')
-                            ->dateTime('d M Y H:i'),
-
-                        TextEntry::make(
-                            'path_dokumen_permintaan'
-                        )
-                            ->label('Dokumen Permintaan')
-                            ->formatStateUsing(
-                                fn (
-                                    ?string $state
-                                ): string => filled($state)
-                                    ? 'Lihat dokumen'
-                                    : 'Belum diunggah'
-                            )
-                            ->url(
-                                fn (
-                                    PermintaanDarah $record
-                                ): ?string => filled(
-                                    $record
-                                        ->path_dokumen_permintaan
-                                )
-                                    ? asset(
-                                        'storage/'
-                                        . ltrim(
-                                            $record
-                                                ->path_dokumen_permintaan,
-                                            '/'
-                                        )
-                                    )
-                                    : null
-                            )
-                            ->openUrlInNewTab(),
-
-                        TextEntry::make('catatan')
-                            ->label('Catatan')
-                            ->placeholder('-')
-                            ->columnSpanFull(),
-                    ])
-                    ->columns(3),
-
-                InfolistSection::make(
-                    'Riwayat Proses'
-                )
-                    ->schema([
-                        TextEntry::make('peninjau.name')
-                            ->label('Ditinjau Oleh')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'ditinjau_pada'
-                        )
-                            ->label('Ditinjau Pada')
-                            ->dateTime('d M Y H:i')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'disetujui_pada'
-                        )
-                            ->label('Disetujui Pada')
-                            ->dateTime('d M Y H:i')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'siap_diambil_pada'
-                        )
-                            ->label('Siap Diambil Pada')
-                            ->dateTime('d M Y H:i')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'selesai_pada'
-                        )
-                            ->label('Selesai Pada')
-                            ->dateTime('d M Y H:i')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'dibatalkan_pada'
-                        )
-                            ->label('Dibatalkan Pada')
-                            ->dateTime('d M Y H:i')
-                            ->placeholder('-'),
-
-                        TextEntry::make(
-                            'alasan_penolakan'
-                        )
-                            ->label('Alasan Penolakan')
-                            ->placeholder('-')
-                            ->columnSpanFull(),
-
-                        TextEntry::make(
-                            'alasan_pembatalan'
-                        )
-                            ->label('Alasan Pembatalan')
-                            ->placeholder('-')
-                            ->columnSpanFull(),
-                    ])
-                    ->columns(3),
-            ]);
-    }
-
-    public static function table(
-        Table $table
-    ): Table {
+    public static function table(Table $table): Table
+    {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make(
-                    'nomor_permintaan'
-                )
-                    ->label('Nomor')
+                Tables\Columns\TextColumn::make('nomor_permintaan')
+                    ->label('Nomor Pengajuan')
                     ->searchable()
                     ->sortable()
-                    ->copyable(),
+                    ->weight('bold'),
 
-                Tables\Columns\TextColumn::make(
-                    'rumahSakit.nama_rumah_sakit'
-                )
-                    ->label('Rumah Sakit')
-                    ->description(
-                        fn (
-                            PermintaanDarah $record
-                        ): string => $record
-                            ->rumahSakit
-                            ->kode_rumah_sakit
-                    )
+                Tables\Columns\TextColumn::make('rumahSakit.nama_rumah_sakit')
+                    ->label('Pemohon Donor')
                     ->searchable()
-                    ->sortable(),
+                    ->wrap(),
 
-                Tables\Columns\TextColumn::make(
-                    'referensi_pasien'
-                )
-                    ->label('Referensi Pasien')
+                Tables\Columns\TextColumn::make('referensi_pasien')
+                    ->label('Referensi')
                     ->searchable()
-                    ->toggleable(),
+                    ->placeholder('-'),
 
-                Tables\Columns\TextColumn::make(
-                    'golongan_darah'
-                )
-                    ->label('Golongan')
+                Tables\Columns\TextColumn::make('nama_dokter')
+                    ->label('Penanggung Jawab')
+                    ->searchable()
+                    ->placeholder('-'),
+
+                Tables\Columns\TextColumn::make('golongan_darah')
+                    ->label('Gol. Darah')
+                    ->formatStateUsing(function ($state, PermintaanDarah $record): string {
+                        return self::formatGolonganDarah($record);
+                    })
                     ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            mixed $state
-                        ): string => $state
-                            instanceof GolonganDarah
-                                ? $state->label()
-                                : (string) $state
-                    )
+                    ->color('danger'),
+
+                Tables\Columns\TextColumn::make('jumlah_kantong')
+                    ->label('Kebutuhan')
+                    ->formatStateUsing(fn ($state): string => number_format((int) $state) . ' kantong')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make(
-                    'rhesus'
-                )
-                    ->label('Rhesus')
+                Tables\Columns\TextColumn::make('jumlah_teralokasi')
+                    ->label('Alokasi')
+                    ->state(function (PermintaanDarah $record): string {
+                        return number_format($record->jumlahKantongDialokasikan())
+                            . ' / '
+                            . number_format((int) $record->jumlah_kantong)
+                            . ' kantong';
+                    })
                     ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            mixed $state
-                        ): string => $state
-                            instanceof RhesusDarah
-                                ? $state->label()
-                                : (string) $state
-                    )
-                    ->sortable(),
+                    ->color(function (PermintaanDarah $record): string {
+                        return $record->kebutuhanSudahTerpenuhi()
+                            ? 'success'
+                            : 'warning';
+                    }),
 
-                Tables\Columns\TextColumn::make(
-                    'jumlah_kantong'
-                )
-                    ->label('Jumlah')
-                    ->suffix(' kantong')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make(
-                    'tingkat_urgensi'
-                )
+                Tables\Columns\TextColumn::make('tingkat_urgensi')
                     ->label('Urgensi')
                     ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            TingkatUrgensiPermintaanDarah|string $state
-                        ): string => self
-                            ::urgensiEnum($state)
-                            ->label()
-                    )
-                    ->color(
-                        fn (
-                            TingkatUrgensiPermintaanDarah|string $state
-                        ): string => self
-                            ::urgensiEnum($state)
-                            ->warna()
-                    )
+                    ->formatStateUsing(fn ($state): string => self::labelEnum($state))
+                    ->color(function ($state): string {
+                        $value = $state instanceof TingkatUrgensiPermintaanDarah
+                            ? $state->value
+                            : (string) $state;
+
+                        return match ($value) {
+                            TingkatUrgensiPermintaanDarah::Darurat->value => 'danger',
+                            TingkatUrgensiPermintaanDarah::Mendesak->value => 'warning',
+                            default => 'info',
+                        };
+                    })
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make(
-                    'status'
-                )
-                    ->label('Status')
-                    ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            StatusPermintaanDarah|string $state
-                        ): string => self
-                            ::statusEnum($state)
-                            ->label()
-                    )
-                    ->color(
-                        fn (
-                            StatusPermintaanDarah|string $state
-                        ): string => self
-                            ::statusEnum($state)
-                            ->warna()
-                    )
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make(
-                    'dibutuhkan_pada'
-                )
+                Tables\Columns\TextColumn::make('dibutuhkan_pada')
                     ->label('Dibutuhkan')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make(
-                    'peninjau.name'
-                )
-                    ->label('Peninjau')
-                    ->placeholder('-')
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make(
-                    'created_at'
-                )
-                    ->label('Diajukan')
-                    ->dateTime('d M Y H:i')
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => self::labelStatus($state))
+                    ->color(fn ($state): string => self::warnaStatus($state))
                     ->sortable(),
+
+                Tables\Columns\IconColumn::make('sudah_punya_distribusi')
+                    ->label('Distribusi')
+                    ->boolean()
+                    ->state(function (PermintaanDarah $record): bool {
+                        return DistribusiDarah::query()
+                            ->where('permintaan_darah_id', $record->id)
+                            ->exists();
+                    }),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Diperbarui')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make(
-                    'status'
-                )
+                Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
-                    ->options(
-                        StatusPermintaanDarah::options()
-                    ),
+                    ->options(StatusPermintaanDarah::options()),
 
-                Tables\Filters\SelectFilter::make(
-                    'tingkat_urgensi'
-                )
-                    ->label('Urgensi')
-                    ->options(
-                        TingkatUrgensiPermintaanDarah
-                            ::options()
-                    ),
-
-                Tables\Filters\SelectFilter::make(
-                    'golongan_darah'
-                )
+                Tables\Filters\SelectFilter::make('golongan_darah')
                     ->label('Golongan Darah')
-                    ->options(
-                        GolonganDarah::options()
+                    ->options(GolonganDarah::options()),
+
+                Tables\Filters\SelectFilter::make('tingkat_urgensi')
+                    ->label('Urgensi')
+                    ->options(TingkatUrgensiPermintaanDarah::options()),
+
+                Tables\Filters\Filter::make('perlu_alokasi')
+                    ->label('Perlu Alokasi')
+                    ->query(
+                        fn (Builder $query): Builder => $query
+                            ->whereIn('status', [
+                                StatusPermintaanDarah::Disetujui->value,
+                                StatusPermintaanDarah::MenungguStok->value,
+                            ])
                     ),
 
-                Tables\Filters\SelectFilter::make(
-                    'rhesus'
-                )
-                    ->label('Rhesus')
-                    ->options(
-                        RhesusDarah::options()
+                Tables\Filters\Filter::make('siap_distribusi')
+                    ->label('Siap Dibuatkan Distribusi')
+                    ->query(
+                        fn (Builder $query): Builder => $query
+                            ->where('status', StatusPermintaanDarah::SiapDiambil->value)
+                            ->whereNotIn(
+                                'id',
+                                DistribusiDarah::query()
+                                    ->whereNotNull('permintaan_darah_id')
+                                    ->select('permintaan_darah_id')
+                            )
                     ),
-
-                Tables\Filters\SelectFilter::make(
-                    'profil_rumah_sakit_id'
-                )
-                    ->label('Rumah Sakit')
-                    ->relationship(
-                        'rumahSakit',
-                        'nama_rumah_sakit'
-                    )
-                    ->searchable()
-                    ->preload(),
-
-                Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
@@ -720,243 +315,220 @@ class PermintaanDarahResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->label('Ubah')
                     ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => $record->dapatDiubah()
+                        fn (PermintaanDarah $record): bool => $record->dapatDiubah()
                     ),
 
-                Tables\Actions\Action::make(
-                    'tinjau'
-                )
+                Tables\Actions\Action::make('tinjau')
                     ->label('Tinjau')
-                    ->icon(
-                        'heroicon-o-magnifying-glass'
-                    )
-                    ->color('info')
-                    ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => $record
-                            ->dapatDitinjau()
-                    )
-                    ->requiresConfirmation()
-                    ->action(
-                        function (
-                            PermintaanDarah $record
-                        ): void {
-                            app(
-                                LayananPermintaanDarah::class
-                            )->tandaiDitinjau(
-                                permintaan: $record,
-                                petugasId: (int) Filament
-                                    ::auth()
-                                    ->id(),
-                            );
-
-                            Notification::make()
-                                ->title(
-                                    'Permintaan sedang ditinjau.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-
-                Tables\Actions\Action::make(
-                    'setujui'
-                )
-                    ->label('Setujui')
-                    ->icon(
-                        'heroicon-o-check-circle'
-                    )
-                    ->color('success')
-                    ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => $record
-                            ->dapatDisetujui()
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Setujui Permintaan Darah'
-                    )
-                    ->modalDescription(
-                        'Permintaan akan dilanjutkan ke proses alokasi kantong darah.'
-                    )
-                    ->action(
-                        function (
-                            PermintaanDarah $record
-                        ): void {
-                            app(
-                                LayananPermintaanDarah::class
-                            )->setujui(
-                                permintaan: $record,
-                                petugasId: (int) Filament
-                                    ::auth()
-                                    ->id(),
-                            );
-
-                            Notification::make()
-                                ->title(
-                                    'Permintaan darah berhasil disetujui.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-
-                Tables\Actions\Action::make(
-                    'menunggu_stok'
-                )
-                    ->label('Tunggu Stok')
-                    ->icon('heroicon-o-clock')
+                    ->icon('heroicon-o-eye')
                     ->color('warning')
-                    ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => in_array(
-                            $record->status,
-                            [
-                                StatusPermintaanDarah
-                                    ::Diajukan,
-                                StatusPermintaanDarah
-                                    ::Ditinjau,
-                                StatusPermintaanDarah
-                                    ::Disetujui,
-                            ],
-                            true
-                        )
-                    )
                     ->requiresConfirmation()
-                    ->action(
-                        function (
-                            PermintaanDarah $record
-                        ): void {
-                            app(
-                                LayananPermintaanDarah::class
-                            )->tandaiMenungguStok(
+                    ->visible(
+                        fn (PermintaanDarah $record): bool => self::statusValue($record)
+                            === StatusPermintaanDarah::Diajukan->value
+                    )
+                    ->action(function (PermintaanDarah $record): void {
+                        app(LayananPermintaanDarah::class)->tandaiDitinjau(
+                            permintaan: $record,
+                            petugasId: (int) Filament::auth()->id()
+                        );
+
+                        Notification::make()
+                            ->title('Pengajuan berhasil ditandai sedang ditinjau.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('setujui')
+                    ->label('Setujui')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(function (PermintaanDarah $record): bool {
+                        return $record->dapatDisetujui();
+                    })
+                    ->action(function (PermintaanDarah $record): void {
+                        app(LayananPermintaanDarah::class)->setujui(
+                            permintaan: $record,
+                            petugasId: (int) Filament::auth()->id()
+                        );
+
+                        Notification::make()
+                            ->title('Pengajuan berhasil disetujui.')
+                            ->body('Lanjutkan dengan Alokasi Otomatis jika stok kantong darah sudah tersedia.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('alokasi_otomatis')
+                    ->label('Alokasi Otomatis')
+                    ->icon('heroicon-o-sparkles')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Alokasi Otomatis Kantong Darah')
+                    ->modalDescription('Sistem akan mengambil kantong darah tersedia yang sesuai golongan darah dan rhesus, lalu memprioritaskan kedaluwarsa terdekat.')
+                    ->modalSubmitActionLabel('Ya, Alokasikan')
+                    ->visible(
+                        fn (PermintaanDarah $record): bool => self::dapatDialokasiOtomatis($record)
+                    )
+                    ->action(function (PermintaanDarah $record): void {
+                        try {
+                            $hasil = app(LayananAlokasiDarah::class)->alokasikanOtomatis(
                                 permintaan: $record,
-                                petugasId: (int) Filament
-                                    ::auth()
-                                    ->id(),
+                                petugasId: (int) Filament::auth()->id()
                             );
+                        } catch (ValidationException $exception) {
+                            $pesan = collect($exception->errors())
+                                ->flatten()
+                                ->first() ?? $exception->getMessage();
 
                             Notification::make()
-                                ->title(
-                                    'Permintaan menunggu ketersediaan stok.'
-                                )
+                                ->title('Alokasi otomatis gagal.')
+                                ->body((string) $pesan)
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        $record->refresh();
+
+                        if ($hasil->count() === 0) {
+                            Notification::make()
+                                ->title('Belum ada kantong darah yang dapat dialokasikan.')
+                                ->body('Pengajuan tetap berada pada status Menunggu Stok sampai stok sesuai tersedia.')
                                 ->warning()
                                 ->send();
-                        }
-                    ),
 
-                Tables\Actions\Action::make(
-                    'tolak'
-                )
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title('Alokasi otomatis berhasil.')
+                            ->body(
+                                number_format($hasil->count())
+                                . ' kantong darah berhasil dialokasikan.'
+                            )
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('siap_diambil')
+                    ->label('Siap Diambil')
+                    ->icon('heroicon-o-truck')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->visible(
+                        fn (PermintaanDarah $record): bool => in_array(
+                            self::statusValue($record),
+                            [
+                                StatusPermintaanDarah::Disetujui->value,
+                                StatusPermintaanDarah::MenungguStok->value,
+                            ],
+                            true
+                        ) && $record->kebutuhanSudahTerpenuhi()
+                    )
+                    ->action(function (PermintaanDarah $record): void {
+                        $record
+                            ->forceFill([
+                                'status' => StatusPermintaanDarah::SiapDiambil->value,
+                                'siap_diambil_pada' => $record->siap_diambil_pada ?? now(),
+                            ])
+                            ->save();
+
+                        Notification::make()
+                            ->title('Pengajuan berhasil ditandai Siap Diambil.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('buat_distribusi')
+                    ->label('Buat Distribusi')
+                    ->icon('heroicon-o-truck')
+                    ->color('primary')
+                    ->visible(
+                        fn (PermintaanDarah $record): bool => self::dapatBuatDistribusi($record)
+                    )
+                    ->url(function (PermintaanDarah $record): string {
+                        return DistribusiDarahResource::getUrl('create', [
+                            'permintaan_darah_id' => $record->id,
+                        ]);
+                    }),
+
+                Tables\Actions\Action::make('tolak')
                     ->label('Tolak')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => $record
-                            ->dapatDitolak()
-                    )
                     ->form([
-                        Forms\Components\Textarea::make(
-                            'alasan'
-                        )
+                        Forms\Components\Textarea::make('alasan_penolakan')
                             ->label('Alasan Penolakan')
                             ->required()
-                            ->minLength(10)
-                            ->maxLength(2000)
-                            ->rows(4),
+                            ->rows(4)
+                            ->maxLength(5000),
                     ])
-                    ->action(
-                        function (
-                            PermintaanDarah $record,
-                            array $data
-                        ): void {
-                            app(
-                                LayananPermintaanDarah::class
-                            )->tolak(
-                                permintaan: $record,
-                                petugasId: (int) Filament
-                                    ::auth()
-                                    ->id(),
-                                alasan: $data['alasan'],
-                            );
+                    ->visible(function (PermintaanDarah $record): bool {
+                        return $record->dapatDitolak();
+                    })
+                    ->action(function (PermintaanDarah $record, array $data): void {
+                        app(LayananPermintaanDarah::class)->tolak(
+                            permintaan: $record,
+                            petugasId: (int) Filament::auth()->id(),
+                            alasan: $data['alasan_penolakan']
+                        );
 
-                            Notification::make()
-                                ->title(
-                                    'Permintaan darah ditolak.'
-                                )
-                                ->danger()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Pengajuan berhasil ditolak.')
+                            ->danger()
+                            ->send();
+                    }),
 
-                Tables\Actions\Action::make(
-                    'batalkan'
-                )
+                Tables\Actions\Action::make('batalkan')
                     ->label('Batalkan')
                     ->icon('heroicon-o-no-symbol')
                     ->color('gray')
-                    ->visible(
-                        fn (
-                            PermintaanDarah $record
-                        ): bool => $record
-                            ->dapatDibatalkan()
-                    )
                     ->form([
-                        Forms\Components\Textarea::make(
-                            'alasan'
-                        )
+                        Forms\Components\Textarea::make('alasan_penolakan')
                             ->label('Alasan Pembatalan')
                             ->required()
-                            ->minLength(10)
-                            ->maxLength(2000)
-                            ->rows(4),
+                            ->rows(4)
+                            ->maxLength(5000),
                     ])
-                    ->action(
-                        function (
-                            PermintaanDarah $record,
-                            array $data
-                        ): void {
-                            app(
-                                LayananPermintaanDarah::class
-                            )->batalkan(
-                                permintaan: $record,
-                                alasan: $data['alasan'],
-                            );
+                    ->visible(function (PermintaanDarah $record): bool {
+                        return $record->dapatDibatalkan();
+                    })
+                    ->action(function (PermintaanDarah $record, array $data): void {
+                        app(LayananPermintaanDarah::class)->batalkan(
+                            permintaan: $record,
+                            alasan: $data['alasan_penolakan']
+                        );
 
-                            Notification::make()
-                                ->title(
-                                    'Permintaan darah dibatalkan.'
-                                )
-                                ->warning()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Pengajuan berhasil dibatalkan.')
+                            ->warning()
+                            ->send();
+                    }),
             ])
             ->bulkActions([])
-            ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading(
-                'Belum ada permintaan darah'
-            )
-            ->emptyStateDescription(
-                'Permintaan darah dari Rumah Sakit akan tampil pada halaman ini.'
-            )
-            ->emptyStateIcon(
-                'heroicon-o-document-text'
+            ->defaultSort(
+                'created_at',
+                'desc'
             );
     }
 
-    public static function canEdit(
-        Model $record
-    ): bool {
+    public static function canEdit(Model $record): bool
+    {
         return $record instanceof PermintaanDarah
             && $record->dapatDiubah();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
     }
 
     public static function getRelations(): array
@@ -964,95 +536,138 @@ class PermintaanDarahResource extends Resource
         return [];
     }
 
-    public static function getPages(): array
-    {
-        return [
-            'index' =>
-                Pages\ListPermintaanDarahs::route('/'),
-
-            'create' =>
-                Pages\CreatePermintaanDarah::route(
-                    '/create'
-                ),
-
-            'view' =>
-                Pages\ViewPermintaanDarah::route(
-                    '/{record}'
-                ),
-
-            'edit' =>
-                Pages\EditPermintaanDarah::route(
-                    '/{record}/edit'
-                ),
-        ];
-    }
-
-    public static function getGlobalSearchResultTitle(
-        Model $record
-    ): string {
-        return $record->nomor_permintaan;
-    }
-
-    public static function getGlobalSearchResultDetails(
-        Model $record
-    ): array {
-        return [
-            'Rumah Sakit' =>
-                $record
-                    ->rumahSakit
-                    ?->nama_rumah_sakit
-                ?? '-',
-
-            'Golongan' =>
-                sprintf(
-                    '%s%s',
-                    $record
-                        ->golongan_darah
-                        ->label(),
-                    $record
-                        ->rhesus
-                        ->simbol(),
-                ),
-
-            'Jumlah' =>
-                $record->jumlah_kantong
-                . ' kantong',
-
-            'Status' =>
-                $record->status->label(),
-        ];
-    }
-
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->with([
-                'rumahSakit.pengguna',
-                'peninjau',
-            ])
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
+                'rumahSakit',
+                'itemAktif',
+                'distribusi',
             ]);
     }
 
-    private static function statusEnum(
-        StatusPermintaanDarah|string $status
-    ): StatusPermintaanDarah {
-        return $status instanceof
-            StatusPermintaanDarah
-                ? $status
-                : StatusPermintaanDarah::from(
-                    $status
-                );
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListPermintaanDarah::route('/'),
+            'create' => Pages\CreatePermintaanDarah::route('/create'),
+            'view' => Pages\ViewPermintaanDarah::route('/{record}'),
+            'edit' => Pages\EditPermintaanDarah::route('/{record}/edit'),
+        ];
     }
 
-    private static function urgensiEnum(
-        TingkatUrgensiPermintaanDarah|string $urgensi
-    ): TingkatUrgensiPermintaanDarah {
-        return $urgensi instanceof
-            TingkatUrgensiPermintaanDarah
-                ? $urgensi
-                : TingkatUrgensiPermintaanDarah
-                    ::from($urgensi);
+    private static function formatGolonganDarah(?PermintaanDarah $permintaan): string
+    {
+        if ($permintaan === null) {
+            return '-';
+        }
+
+        $golongan = $permintaan->golongan_darah;
+        $rhesus = $permintaan->rhesus;
+
+        $golonganLabel = is_object($golongan) && method_exists($golongan, 'label')
+            ? $golongan->label()
+            : (string) ($golongan instanceof \BackedEnum ? $golongan->value : $golongan);
+
+        $rhesusLabel = is_object($rhesus) && method_exists($rhesus, 'simbol')
+            ? $rhesus->simbol()
+            : (string) ($rhesus instanceof \BackedEnum ? $rhesus->value : $rhesus);
+
+        return trim($golonganLabel . $rhesusLabel);
+    }
+
+    private static function labelEnum(mixed $state): string
+    {
+        if (is_object($state) && method_exists($state, 'label')) {
+            return $state->label();
+        }
+
+        $value = $state instanceof \BackedEnum
+            ? $state->value
+            : (string) $state;
+
+        return Str::of($value)
+            ->replace('_', ' ')
+            ->replace('-', ' ')
+            ->headline()
+            ->toString();
+    }
+
+    private static function labelStatus(mixed $state): string
+    {
+        if ($state instanceof StatusPermintaanDarah) {
+            return $state->label();
+        }
+
+        return StatusPermintaanDarah::tryFrom((string) $state)?->label()
+            ?? Str::of((string) $state)
+                ->replace('_', ' ')
+                ->replace('-', ' ')
+                ->headline()
+                ->toString();
+    }
+
+    private static function warnaStatus(mixed $state): string
+    {
+        $value = $state instanceof StatusPermintaanDarah
+            ? $state->value
+            : (string) $state;
+
+        return match ($value) {
+            StatusPermintaanDarah::Draf->value => 'gray',
+            StatusPermintaanDarah::Diajukan->value => 'warning',
+            StatusPermintaanDarah::Ditinjau->value => 'info',
+            StatusPermintaanDarah::MenungguStok->value => 'warning',
+            StatusPermintaanDarah::Disetujui->value => 'success',
+            StatusPermintaanDarah::SiapDiambil->value => 'info',
+            StatusPermintaanDarah::Selesai->value => 'success',
+            StatusPermintaanDarah::Ditolak->value => 'danger',
+            StatusPermintaanDarah::Dibatalkan->value => 'danger',
+            default => 'gray',
+        };
+    }
+
+    private static function statusValue(PermintaanDarah $record): string
+    {
+        return $record->status instanceof StatusPermintaanDarah
+            ? $record->status->value
+            : (string) $record->status;
+    }
+
+    private static function dapatDialokasiOtomatis(PermintaanDarah $record): bool
+    {
+        if (
+            ! in_array(
+                self::statusValue($record),
+                [
+                    StatusPermintaanDarah::Disetujui->value,
+                    StatusPermintaanDarah::MenungguStok->value,
+                    StatusPermintaanDarah::SiapDiambil->value,
+                ],
+                true
+            )
+        ) {
+            return false;
+        }
+
+        if ($record->distribusi()->exists()) {
+            return false;
+        }
+
+        return $record->sisaKebutuhanKantong() > 0;
+    }
+
+    private static function dapatBuatDistribusi(PermintaanDarah $record): bool
+    {
+        if ($record->distribusi()->exists()) {
+            return false;
+        }
+
+        if (method_exists($record, 'dapatDibuatkanDistribusi')) {
+            return $record->dapatDibuatkanDistribusi();
+        }
+
+        return self::statusValue($record) === StatusPermintaanDarah::SiapDiambil->value
+            && $record->sisaKebutuhanKantong() === 0;
     }
 }

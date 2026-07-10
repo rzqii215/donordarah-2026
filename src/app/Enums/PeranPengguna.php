@@ -7,7 +7,7 @@ enum PeranPengguna: string
     case SuperAdmin = 'super_admin';
     case Petugas = 'petugas';
     case Pendonor = 'donor';
-    case RumahSakit = 'hospital';
+    case PemohonDonor = 'pemohon_donor';
 
     public function label(): string
     {
@@ -15,7 +15,7 @@ enum PeranPengguna: string
             self::SuperAdmin => 'Super Admin',
             self::Petugas => 'Petugas',
             self::Pendonor => 'Pendonor',
-            self::RumahSakit => 'Rumah Sakit',
+            self::PemohonDonor => 'Pemohon Donor',
         };
     }
 

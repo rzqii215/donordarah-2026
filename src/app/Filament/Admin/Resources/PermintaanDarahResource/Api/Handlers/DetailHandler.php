@@ -18,7 +18,7 @@ class DetailHandler extends Handlers
         PermintaanDarahResource::class;
 
     /**
-     * Detail permintaan darah milik Rumah Sakit yang sedang login.
+     * Detail pengajuan kebutuhan donor milik Pemohon Donor yang sedang login.
      */
     public function handler(
         Request $request

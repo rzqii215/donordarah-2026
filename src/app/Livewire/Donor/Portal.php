@@ -2,957 +2,700 @@
 
 namespace App\Livewire\Donor;
 
-use App\Enums\StatusJadwalDonor;
-use App\Enums\StatusPendaftaranDonor;
+use App\Enums\StatusKantongDarah;
+use App\Enums\StatusMutuKantongDarah;
 use App\Models\JadwalDonor;
+use App\Models\KantongDarah;
 use App\Models\LokasiDonor;
 use App\Models\PendaftaranDonor;
 use App\Models\ProfilPendonor;
 use App\Models\User;
-use App\Services\LayananStokDarah;
-use BackedEnum;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use DateTimeInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 #[Layout('components.layouts.donor')]
 class Portal extends Component
 {
-    use WithPagination;
-
-    public string $section = 'beranda';
-
-    public string $search = '';
-
-    public string $name = '';
-
-    public string $nomorTelepon = '';
-
-    public string $tanggalLahir = '';
-
-    public string $jenisKelamin = '';
-
-    public string $alamat = '';
-
-    public string $provinsi = '';
-
-    public string $kota = '';
-
-    public string $kecamatan = '';
-
-    public string $kodePos = '';
-
-    public string $namaKontakDarurat = '';
-
-    public string $teleponKontakDarurat = '';
-
-    public bool $bersediaDihubungi = false;
-
-    /**
-     * @var array<int, string>
-     */
-    private const DAFTAR_SECTION = [
-        'beranda',
-        'jadwal',
-        'lokasi',
-        'stok',
-        'riwayat',
-        'profil',
-    ];
-
-    public function mount(
-        string $section = 'beranda'
-    ): void {
-        if (
-            ! in_array(
-                $section,
-                self::DAFTAR_SECTION,
-                true
-            )
-        ) {
-            abort(404);
-        }
-
-        $this->section = $section;
-
-        $pengguna = Auth::user();
-
-        if (! $pengguna instanceof User) {
-            $this->redirect(
-                '/login',
-                navigate: true
-            );
-
-            return;
-        }
-
-        if (! $pengguna->hasRole('donor')) {
-            $tujuan = $pengguna->hasAnyRole([
-                'super_admin',
-                'petugas',
-            ])
-                ? '/admin'
-                : '/';
-
-            $this->redirect(
-                $tujuan,
-                navigate: true
-            );
-
-            return;
-        }
-
-        $this->isiFormProfil($pengguna);
-    }
-
-    public function updatingSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    public function simpanProfil(): void
-    {
-        $pengguna = Auth::user();
-
-        if (
-            ! $pengguna instanceof User
-            || ! $pengguna->hasRole('donor')
-        ) {
-            $this->redirect(
-                '/',
-                navigate: true
-            );
-
-            return;
-        }
-
-        $data = $this->validate(
-            [
-                'name' => [
-                    'required',
-                    'string',
-                    'max:255',
-                ],
-
-                'nomorTelepon' => [
-                    'nullable',
-                    'string',
-                    'max:30',
-                ],
-
-                'tanggalLahir' => [
-                    'required',
-                    'date',
-                    'before:today',
-                ],
-
-                'jenisKelamin' => [
-                    'required',
-                    'string',
-                ],
-
-                'alamat' => [
-                    'required',
-                    'string',
-                    'max:5000',
-                ],
-
-                'provinsi' => [
-                    'required',
-                    'string',
-                    'max:100',
-                ],
-
-                'kota' => [
-                    'required',
-                    'string',
-                    'max:100',
-                ],
-
-                'kecamatan' => [
-                    'nullable',
-                    'string',
-                    'max:100',
-                ],
-
-                'kodePos' => [
-                    'nullable',
-                    'string',
-                    'max:10',
-                ],
-
-                'namaKontakDarurat' => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                ],
-
-                'teleponKontakDarurat' => [
-                    'nullable',
-                    'string',
-                    'max:30',
-                ],
-
-                'bersediaDihubungi' => [
-                    'boolean',
-                ],
-            ],
-            [
-                'name.required' =>
-                    'Nama lengkap wajib diisi.',
-
-                'tanggalLahir.required' =>
-                    'Tanggal lahir wajib diisi.',
-
-                'tanggalLahir.before' =>
-                    'Tanggal lahir harus sebelum hari ini.',
-
-                'jenisKelamin.required' =>
-                    'Jenis kelamin wajib dipilih.',
-
-                'alamat.required' =>
-                    'Alamat lengkap wajib diisi.',
-
-                'provinsi.required' =>
-                    'Provinsi wajib diisi.',
-
-                'kota.required' =>
-                    'Kota atau kabupaten wajib diisi.',
-            ]
-        );
-
-        $profil = ProfilPendonor::query()
-            ->where(
-                'pengguna_id',
-                $pengguna->id
-            )
-            ->first();
-
-        if ($profil === null) {
-            $this->addError(
-                'profil',
-                'Profil Pendonor belum tersedia.'
-            );
-
-            return;
-        }
-
-        $pengguna->update([
-            'name' => trim($data['name']),
-
-            'nomor_telepon' =>
-                filled($data['nomorTelepon'])
-                    ? trim($data['nomorTelepon'])
-                    : null,
-        ]);
-
-        $profil->update([
-            'tanggal_lahir' =>
-                $data['tanggalLahir'],
-
-            'jenis_kelamin' =>
-                $data['jenisKelamin'],
-
-            'alamat' =>
-                trim($data['alamat']),
-
-            'provinsi' =>
-                trim($data['provinsi']),
-
-            'kota' =>
-                trim($data['kota']),
-
-            'kecamatan' =>
-                filled($data['kecamatan'])
-                    ? trim($data['kecamatan'])
-                    : null,
-
-            'kode_pos' =>
-                filled($data['kodePos'])
-                    ? trim($data['kodePos'])
-                    : null,
-
-            'nama_kontak_darurat' =>
-                filled($data['namaKontakDarurat'])
-                    ? trim($data['namaKontakDarurat'])
-                    : null,
-
-            'telepon_kontak_darurat' =>
-                filled($data['teleponKontakDarurat'])
-                    ? trim($data['teleponKontakDarurat'])
-                    : null,
-
-            'bersedia_dihubungi' =>
-                $data['bersediaDihubungi'],
-        ]);
-
-        $this->isiFormProfil(
-            $pengguna->refresh()
-        );
-
-        session()->flash(
-            'success',
-            'Profil berhasil diperbarui.'
-        );
-    }
-
     public function render(): View
     {
-        $pengguna = Auth::user();
-
-        if (! $pengguna instanceof User) {
-            abort(401);
-        }
-
-        $data = match ($this->section) {
-            'jadwal' =>
-                $this->dataJadwal(),
-
-            'lokasi' =>
-                $this->dataLokasi(),
-
-            'stok' =>
-                $this->dataStok(),
-
-            'riwayat' =>
-                $this->dataRiwayat($pengguna),
-
-            'profil' =>
-                $this->dataProfil($pengguna),
-
-            default =>
-                $this->dataBeranda($pengguna),
-        };
-
-        $data['pageTitle'] =
-            $this->judulHalaman();
-
-        return view(
-            'livewire.donor.portal',
-            $data
-        );
+        return view('livewire.donor.portal', [
+            'profilPendonor' => $this->profilPendonor(),
+            'ringkasan' => $this->ringkasanBeranda(),
+            'jadwalTerdekat' => $this->jadwalTerdekat(),
+            'stokRingkas' => $this->stokRingkas(),
+            'lokasiTerdekat' => $this->lokasiTerdekat(),
+            'riwayatTerbaru' => $this->riwayatTerbaru(),
+        ]);
     }
 
-    public function labelEnum(
-        mixed $nilai
-    ): string {
-        if (
-            is_object($nilai)
-            && method_exists(
-                $nilai,
-                'label'
-            )
-        ) {
-            return (string) $nilai->label();
-        }
-
-        if ($nilai instanceof BackedEnum) {
-            return Str::headline(
-                (string) $nilai->value
-            );
-        }
-
-        return filled($nilai)
-            ? Str::headline(
-                (string) $nilai
-            )
-            : '-';
-    }
-
-    public function valueEnum(
-        mixed $nilai
-    ): string {
-        if ($nilai instanceof BackedEnum) {
-            return (string) $nilai->value;
-        }
-
-        return filled($nilai)
-            ? (string) $nilai
-            : '';
-    }
-
-    public function simbolRhesus(
-        mixed $nilai
-    ): string {
-        if (
-            is_object($nilai)
-            && method_exists(
-                $nilai,
-                'simbol'
-            )
-        ) {
-            return (string) $nilai->simbol();
-        }
-
-        return '';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function dataBeranda(
-        User $pengguna
-    ): array {
-        $jadwalTerdekat = JadwalDonor::query()
-            ->where(
-                'status',
-                StatusJadwalDonor
-                    ::Dipublikasikan
-                    ->value
-            )
-            ->where(
-                'selesai_pada',
-                '>=',
-                now()
-            )
-            ->orderBy('mulai_pada')
+    private function profilPendonor(): ?ProfilPendonor
+    {
+        return ProfilPendonor::query()
+            ->where('pengguna_id', Auth::id())
             ->first();
-
-        $lokasiJadwal = $jadwalTerdekat
-            ? LokasiDonor::query()->find(
-                $jadwalTerdekat->getAttribute(
-                    'lokasi_donor_id'
-                )
-            )
-            : null;
-
-        $ringkasanStok = app(
-            LayananStokDarah::class
-        )->ringkasanPublik();
-
-        $stokPerGolongan =
-            $this->stokPerGolongan(
-                collect(
-                    $ringkasanStok['data']
-                    ?? []
-                )
-            );
-
-        $jumlahRiwayat =
-            PendaftaranDonor::query()
-                ->where(
-                    'pendonor_id',
-                    $pengguna->id
-                )
-                ->count();
-
-        $donorSelesai =
-            PendaftaranDonor::query()
-                ->where(
-                    'pendonor_id',
-                    $pengguna->id
-                )
-                ->where(
-                    'status',
-                    StatusPendaftaranDonor
-                        ::Selesai
-                        ->value
-                )
-                ->count();
-
-        return [
-            'jadwalTerdekat' =>
-                $jadwalTerdekat,
-
-            'namaLokasiJadwal' =>
-                $lokasiJadwal
-                    ? $this->namaLokasi(
-                        $lokasiJadwal
-                    )
-                    : 'Lokasi belum tersedia',
-
-            'stokPerGolongan' =>
-                $stokPerGolongan,
-
-            'jumlahLokasi' =>
-                LokasiDonor::query()
-                    ->count(),
-
-            'totalStok' =>
-                (int) (
-                    $ringkasanStok['meta']
-                    ['total_kantong_tersedia']
-                    ?? 0
-                ),
-
-            'jumlahRiwayat' =>
-                $jumlahRiwayat,
-
-            'donorSelesai' =>
-                $donorSelesai,
-        ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function dataJadwal(): array
+    private function penggunaSaatIni(): ?User
     {
-        $query = JadwalDonor::query()
-            ->where(
-                'status',
-                StatusJadwalDonor
-                    ::Dipublikasikan
-                    ->value
-            )
-            ->where(
-                'selesai_pada',
-                '>=',
-                now()
-            );
+        $user = Auth::user();
 
-        if (filled($this->search)) {
-            $query->where(
-                'judul',
-                'like',
-                '%' . trim($this->search) . '%'
-            );
+        if ($user instanceof User) {
+            return $user;
         }
 
-        $jadwal = $query
-            ->orderBy('mulai_pada')
-            ->paginate(6);
-
-        $lokasiIds = collect(
-            $jadwal->items()
-        )
-            ->pluck('lokasi_donor_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        $lokasi = LokasiDonor::query()
-            ->whereIn(
-                'id',
-                $lokasiIds
-            )
-            ->get()
-            ->mapWithKeys(
-                fn (
-                    LokasiDonor $record
-                ): array => [
-                    $record->id =>
-                        $this->namaLokasi(
-                            $record
-                        ),
-                ]
-            );
-
-        return [
-            'jadwal' =>
-                $jadwal,
-
-            'lokasiJadwal' =>
-                $lokasi,
-        ];
+        return null;
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function dataLokasi(): array
+    private function ringkasanBeranda(): array
     {
-        $model = new LokasiDonor();
+        $profil = $this->profilPendonor();
+        $user = $this->penggunaSaatIni();
 
-        $columns = Schema::getColumnListing(
-            $model->getTable()
-        );
+        return [
+            'nama_user' => (string) (
+                $this->atribut($user, 'name')
+                ?? 'Pendonor'
+            ),
 
-        $query = LokasiDonor::query();
+            'kode_pendonor' => (string) (
+                $this->atribut($profil, 'kode_pendonor')
+                ?? '-'
+            ),
 
-        if (filled($this->search)) {
-            $search = trim(
-                $this->search
-            );
+            'golongan_rhesus' => $this->golonganRhesusProfil($profil),
 
-            $searchableColumns = array_values(
-                array_filter([
-                    $this->kolomTersedia(
-                        $columns,
-                        [
-                            'nama',
-                            'nama_lokasi',
-                            'judul',
-                        ]
-                    ),
+            'profil_lengkap' => $this->persentaseProfil($profil),
 
-                    $this->kolomTersedia(
-                        $columns,
-                        [
-                            'alamat',
-                            'alamat_lengkap',
-                        ]
-                    ),
+            'total_pendaftaran' => PendaftaranDonor::query()
+                ->where('pendonor_id', Auth::id())
+                ->count(),
 
-                    $this->kolomTersedia(
-                        $columns,
-                        [
-                            'kota',
-                            'kabupaten_kota',
-                            'kabupaten',
-                        ]
-                    ),
+            'pendaftaran_proses' => PendaftaranDonor::query()
+                ->where('pendonor_id', Auth::id())
+                ->whereIn('status', [
+                    'pending',
+                    'approved',
+                    'attended',
+                    'eligible',
                 ])
-            );
+                ->count(),
 
-            if ($searchableColumns !== []) {
-                $query->where(
-                    function (
-                        Builder $subQuery
-                    ) use (
-                        $searchableColumns,
-                        $search
-                    ): void {
-                        foreach (
-                            $searchableColumns
-                            as $index => $column
-                        ) {
-                            if ($index === 0) {
-                                $subQuery->where(
-                                    $column,
-                                    'like',
-                                    '%' . $search . '%'
-                                );
+            'donor_selesai' => PendaftaranDonor::query()
+                ->where('pendonor_id', Auth::id())
+                ->where('status', 'completed')
+                ->count(),
 
-                                continue;
-                            }
+            'stok_tersedia' => KantongDarah::query()
+                ->where('status', $this->statusKantongTersedia())
+                ->where('status_mutu', $this->statusMutuLulus())
+                ->count(),
 
-                            $subQuery->orWhere(
-                                $column,
-                                'like',
-                                '%' . $search . '%'
-                            );
-                        }
-                    }
-                );
-            }
-        }
+            'jadwal_aktif' => $this->queryJadwalAktif()
+                ->count(),
 
-        $lokasi = $query
-            ->latest('id')
-            ->paginate(9);
-
-        $lokasiCards = collect(
-            $lokasi->items()
-        )->map(
-            fn (
-                LokasiDonor $record
-            ): array => $this
-                ->normalisasiLokasi(
-                    $record
-                )
-        );
-
-        return [
-            'lokasi' =>
-                $lokasi,
-
-            'lokasiCards' =>
-                $lokasiCards,
+            'lokasi_aktif' => $this->queryLokasiAktif()
+                ->count(),
         ];
     }
 
     /**
-     * @return array<string, mixed>
+     * @return Collection<int, JadwalDonor>
      */
-    private function dataStok(): array
+    private function jadwalTerdekat(): Collection
     {
-        $ringkasan = app(
-            LayananStokDarah::class
-        )->ringkasanPublik();
-
-        return [
-            'stokDarah' =>
-                collect(
-                    $ringkasan['data']
-                    ?? []
-                ),
-
-            'metaStok' =>
-                $ringkasan['meta']
-                ?? [],
-        ];
+        return $this->queryJadwalAktif()
+            ->with('lokasi')
+            ->limit(3)
+            ->get();
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<int, array<string, mixed>>
      */
-    private function dataRiwayat(
-        User $pengguna
-    ): array {
-        $riwayat =
-            PendaftaranDonor::query()
-                ->with('jadwal')
-                ->where(
-                    'pendonor_id',
-                    $pengguna->id
-                )
-                ->latest()
-                ->paginate(10);
-
-        return [
-            'riwayat' =>
-                $riwayat,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function dataProfil(
-        User $pengguna
-    ): array {
-        return [
-            'profil' =>
-                ProfilPendonor::query()
-                    ->where(
-                        'pengguna_id',
-                        $pengguna->id
-                    )
-                    ->first(),
-        ];
-    }
-
-    private function isiFormProfil(
-        User $pengguna
-    ): void {
-        $profil = ProfilPendonor::query()
-            ->where(
-                'pengguna_id',
-                $pengguna->id
-            )
-            ->first();
-
-        $this->name =
-            (string) $pengguna->name;
-
-        $this->nomorTelepon =
-            (string) (
-                $pengguna->nomor_telepon
-                ?? ''
-            );
-
-        if ($profil === null) {
-            return;
-        }
-
-        $this->tanggalLahir =
-            $profil->tanggal_lahir
-                ?->format('Y-m-d')
-            ?? '';
-
-        $this->jenisKelamin =
-            $this->valueEnum(
-                $profil->jenis_kelamin
-            );
-
-        $this->alamat =
-            (string) (
-                $profil->alamat
-                ?? ''
-            );
-
-        $this->provinsi =
-            (string) (
-                $profil->provinsi
-                ?? ''
-            );
-
-        $this->kota =
-            (string) (
-                $profil->kota
-                ?? ''
-            );
-
-        $this->kecamatan =
-            (string) (
-                $profil->kecamatan
-                ?? ''
-            );
-
-        $this->kodePos =
-            (string) (
-                $profil->kode_pos
-                ?? ''
-            );
-
-        $this->namaKontakDarurat =
-            (string) (
-                $profil
-                    ->nama_kontak_darurat
-                ?? ''
-            );
-
-        $this->teleponKontakDarurat =
-            (string) (
-                $profil
-                    ->telepon_kontak_darurat
-                ?? ''
-            );
-
-        $this->bersediaDihubungi =
-            (bool) $profil
-                ->bersedia_dihubungi;
-    }
-
-    private function judulHalaman(): string
+    private function stokRingkas(): array
     {
-        return match ($this->section) {
-            'jadwal' =>
-                'Jadwal Donor',
+        $rows = KantongDarah::query()
+            ->select([
+                'golongan_darah',
+                'rhesus',
+                DB::raw('COUNT(*) as total'),
+            ])
+            ->where('status', $this->statusKantongTersedia())
+            ->where('status_mutu', $this->statusMutuLulus())
+            ->groupBy([
+                'golongan_darah',
+                'rhesus',
+            ])
+            ->get();
 
-            'lokasi' =>
-                'Lokasi Donor',
+        $hasil = [];
 
-            'stok' =>
-                'Stok Darah',
-
-            'riwayat' =>
-                'Riwayat Donor',
-
-            'profil' =>
-                'Profil Saya',
-
-            default =>
-                'Beranda Pendonor',
-        };
-    }
-
-    private function namaLokasi(
-        LokasiDonor $lokasi
-    ): string {
-        return (string) (
-            $lokasi->getAttribute('nama')
-            ?? $lokasi->getAttribute(
-                'nama_lokasi'
-            )
-            ?? $lokasi->getAttribute(
-                'judul'
-            )
-            ?? 'Lokasi Donor'
-        );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function normalisasiLokasi(
-        LokasiDonor $lokasi
-    ): array {
-        return [
-            'id' =>
-                $lokasi->id,
-
-            'nama' =>
-                $this->namaLokasi(
-                    $lokasi
-                ),
-
-            'alamat' =>
-                $lokasi->getAttribute(
-                    'alamat'
+        foreach ([
+            'A',
+            'B',
+            'AB',
+            'O',
+        ] as $golongan) {
+            $positif = $rows
+                ->filter(
+                    fn (KantongDarah $row): bool =>
+                        $this->normalisasiGolongan(
+                            $this->atribut($row, 'golongan_darah')
+                        ) === $golongan
+                        && $this->normalisasiRhesus(
+                            $this->atribut($row, 'rhesus')
+                        ) === 'positive'
                 )
-                ?? $lokasi->getAttribute(
-                    'alamat_lengkap'
-                )
-                ?? '-',
+                ->sum('total');
 
-            'kota' =>
-                $lokasi->getAttribute(
-                    'kota'
+            $negatif = $rows
+                ->filter(
+                    fn (KantongDarah $row): bool =>
+                        $this->normalisasiGolongan(
+                            $this->atribut($row, 'golongan_darah')
+                        ) === $golongan
+                        && $this->normalisasiRhesus(
+                            $this->atribut($row, 'rhesus')
+                        ) === 'negative'
                 )
-                ?? $lokasi->getAttribute(
-                    'kabupaten_kota'
-                )
-                ?? $lokasi->getAttribute(
-                    'kabupaten'
-                )
-                ?? '-',
+                ->sum('total');
 
-            'provinsi' =>
-                $lokasi->getAttribute(
-                    'provinsi'
-                )
-                ?? '-',
+            $total = (int) $positif + (int) $negatif;
 
-            'telepon' =>
-                $lokasi->getAttribute(
-                    'nomor_telepon'
-                )
-                ?? $lokasi->getAttribute(
-                    'telepon'
-                )
-                ?? '-',
-        ];
-    }
-
-    /**
-     * @param Collection<int, array<string, mixed>> $data
-     *
-     * @return array<string, int>
-     */
-    private function stokPerGolongan(
-        Collection $data
-    ): array {
-        $hasil = [
-            'A' => 0,
-            'B' => 0,
-            'O' => 0,
-            'AB' => 0,
-        ];
-
-        foreach ($data as $item) {
-            $golongan = (string) (
-                $item['golongan_darah']
-                ['label']
-                ?? $item['golongan_darah']
-                ['value']
-                ?? ''
-            );
-
-            if (
-                array_key_exists(
-                    $golongan,
-                    $hasil
-                )
-            ) {
-                $hasil[$golongan] +=
-                    (int) (
-                        $item['jumlah_kantong']
-                        ?? 0
-                    );
-            }
+            $hasil[] = [
+                'golongan' => $golongan,
+                'positif' => (int) $positif,
+                'negatif' => (int) $negatif,
+                'total' => $total,
+                'status' => $this->labelStatusStok($total),
+                'class' => $this->classStatusStok($total),
+            ];
         }
 
         return $hasil;
     }
 
     /**
-     * @param array<int, string> $columns
-     * @param array<int, string> $candidates
+     * @return Collection<int, LokasiDonor>
      */
-    private function kolomTersedia(
-        array $columns,
-        array $candidates
-    ): ?string {
-        foreach ($candidates as $candidate) {
-            if (
-                in_array(
-                    $candidate,
-                    $columns,
-                    true
-                )
-            ) {
-                return $candidate;
-            }
+    private function lokasiTerdekat(): Collection
+    {
+        return $this->queryLokasiAktif()
+            ->limit(3)
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, PendaftaranDonor>
+     */
+    private function riwayatTerbaru(): Collection
+    {
+        return PendaftaranDonor::query()
+            ->with([
+                'jadwal.lokasi',
+            ])
+            ->where('pendonor_id', Auth::id())
+            ->latest()
+            ->limit(3)
+            ->get();
+    }
+
+    private function queryJadwalAktif(): Builder
+    {
+        $query = JadwalDonor::query();
+
+        if ($this->kolomAdaJadwal('status')) {
+            $query->whereIn('status', [
+                'published',
+                'dipublikasikan',
+                'active',
+                'aktif',
+            ]);
         }
 
-        return null;
+        if ($this->kolomAdaJadwal('aktif')) {
+            $query->where('aktif', true);
+        }
+
+        if ($this->kolomAdaJadwal('mulai_pada')) {
+            return $query
+                ->where('mulai_pada', '>=', now()->startOfDay())
+                ->orderBy('mulai_pada');
+        }
+
+        if ($this->kolomAdaJadwal('tanggal_mulai')) {
+            return $query
+                ->where('tanggal_mulai', '>=', now()->startOfDay())
+                ->orderBy('tanggal_mulai');
+        }
+
+        return $query->latest();
+    }
+
+    private function queryLokasiAktif(): Builder
+    {
+        $query = LokasiDonor::query();
+
+        if ($this->kolomAdaLokasi('status')) {
+            $query->whereIn('status', [
+                'active',
+                'aktif',
+                'published',
+                'dipublikasikan',
+            ]);
+        }
+
+        if ($this->kolomAdaLokasi('aktif')) {
+            $query->where('aktif', true);
+        }
+
+        if ($this->kolomAdaLokasi('nama')) {
+            return $query->orderBy('nama');
+        }
+
+        if ($this->kolomAdaLokasi('nama_lokasi')) {
+            return $query->orderBy('nama_lokasi');
+        }
+
+        return $query->latest();
+    }
+
+    public function judulJadwal(?JadwalDonor $jadwal): string
+    {
+        if ($jadwal === null) {
+            return 'Jadwal Donor';
+        }
+
+        return (string) (
+            $this->atribut($jadwal, 'judul')
+            ?? $this->atribut($jadwal, 'nama')
+            ?? 'Jadwal Donor'
+        );
+    }
+
+    public function tanggalJadwal(?JadwalDonor $jadwal): string
+    {
+        if ($jadwal === null) {
+            return '-';
+        }
+
+        $tanggal = $this->tanggalCarbon(
+            $this->atribut($jadwal, 'mulai_pada')
+                ?? $this->atribut($jadwal, 'tanggal_mulai')
+        );
+
+        return $tanggal
+            ? $tanggal->translatedFormat('d F Y')
+            : '-';
+    }
+
+    public function jamJadwal(?JadwalDonor $jadwal): string
+    {
+        if ($jadwal === null) {
+            return '-';
+        }
+
+        $mulai = $this->tanggalCarbon(
+            $this->atribut($jadwal, 'mulai_pada')
+                ?? $this->atribut($jadwal, 'tanggal_mulai')
+        );
+
+        $selesai = $this->tanggalCarbon(
+            $this->atribut($jadwal, 'selesai_pada')
+                ?? $this->atribut($jadwal, 'tanggal_selesai')
+        );
+
+        if ($mulai === null) {
+            return '-';
+        }
+
+        if ($selesai === null) {
+            return $mulai->format('H:i');
+        }
+
+        return $mulai->format('H:i') . ' — ' . $selesai->format('H:i');
+    }
+
+    public function namaLokasi(?LokasiDonor $lokasi): string
+    {
+        if ($lokasi === null) {
+            return 'Lokasi belum ditentukan';
+        }
+
+        return (string) (
+            $this->atribut($lokasi, 'nama')
+            ?? $this->atribut($lokasi, 'nama_lokasi')
+            ?? 'Lokasi Donor'
+        );
+    }
+
+    public function alamatLokasi(?LokasiDonor $lokasi): string
+    {
+        if ($lokasi === null) {
+            return '-';
+        }
+
+        return (string) (
+            $this->atribut($lokasi, 'alamat')
+            ?? $this->atribut($lokasi, 'alamat_lengkap')
+            ?? '-'
+        );
+    }
+
+    public function wilayahLokasi(?LokasiDonor $lokasi): string
+    {
+        if ($lokasi === null) {
+            return '-';
+        }
+
+        $wilayah = collect([
+            $this->atribut($lokasi, 'kota')
+                ?? $this->atribut($lokasi, 'kabupaten'),
+
+            $this->atribut($lokasi, 'provinsi'),
+        ])
+            ->filter()
+            ->implode(', ');
+
+        return $wilayah !== '' ? $wilayah : '-';
+    }
+
+    public function mapsUrl(?LokasiDonor $lokasi): string
+    {
+        if ($lokasi === null) {
+            return 'https://www.google.com/maps';
+        }
+
+        $urlGoogleMaps = $this->atribut($lokasi, 'url_google_maps');
+
+        if (
+            $this->kolomAdaLokasi('url_google_maps')
+            && filled($urlGoogleMaps)
+        ) {
+            return (string) $urlGoogleMaps;
+        }
+
+        $latitude = $this->atribut($lokasi, 'latitude');
+        $longitude = $this->atribut($lokasi, 'longitude');
+
+        if (
+            filled($latitude)
+            && filled($longitude)
+        ) {
+            return 'https://www.google.com/maps/search/?api=1&query='
+                . rawurlencode(
+                    $latitude . ',' . $longitude
+                );
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query='
+            . rawurlencode(
+                collect([
+                    $this->namaLokasi($lokasi),
+                    $this->alamatLokasi($lokasi),
+                    $this->wilayahLokasi($lokasi),
+                ])
+                    ->filter(fn (string $value): bool => $value !== '-')
+                    ->implode(', ')
+            );
+    }
+
+    public function nomorPendaftaran(PendaftaranDonor $pendaftaran): string
+    {
+        return (string) (
+            $this->atribut($pendaftaran, 'nomor_pendaftaran')
+            ?? 'REG-' . str_pad(
+                (string) $pendaftaran->id,
+                5,
+                '0',
+                STR_PAD_LEFT
+            )
+        );
+    }
+
+    public function labelStatusPendaftaran(mixed $status): string
+    {
+        if (
+            is_object($status)
+            && method_exists($status, 'label')
+        ) {
+            return $status->label();
+        }
+
+        $value = $this->nilaiDariEnum($status);
+
+        return match ($value) {
+            'pending' => 'Menunggu Verifikasi',
+            'approved' => 'Disetujui',
+            'attended' => 'Hadir',
+            'eligible' => 'Layak Donor',
+            'ineligible' => 'Tidak Layak',
+            'completed' => 'Donor Selesai',
+            'rejected' => 'Ditolak',
+            'cancelled' => 'Dibatalkan',
+            'absent',
+            'not_attended' => 'Tidak Hadir',
+            default => $value !== '' ? Str::headline($value) : '-',
+        };
+    }
+
+    public function statusBadgeClass(mixed $status): string
+    {
+        return match ($this->nilaiDariEnum($status)) {
+            'completed',
+            'eligible',
+            'attended',
+            'approved' => 'is-success',
+
+            'rejected',
+            'cancelled',
+            'ineligible',
+            'absent',
+            'not_attended' => 'is-danger',
+
+            default => 'is-warning',
+        };
+    }
+
+    private function persentaseProfil(?ProfilPendonor $profil): int
+    {
+        $user = $this->penggunaSaatIni();
+
+        $items = [
+            filled($this->atribut($user, 'name')),
+            filled($this->atribut($user, 'email')),
+            filled($this->atribut($user, 'nomor_telepon')),
+            filled($this->atribut($profil, 'tanggal_lahir')),
+            filled($this->atribut($profil, 'jenis_kelamin')),
+            filled($this->atribut($profil, 'golongan_darah')),
+            filled($this->atribut($profil, 'rhesus')),
+            filled($this->atribut($profil, 'alamat')),
+            filled($this->atribut($profil, 'provinsi')),
+            filled($this->atribut($profil, 'kota')),
+        ];
+
+        $total = count($items);
+
+        $terisi = collect($items)
+            ->filter()
+            ->count();
+
+        return $total > 0
+            ? (int) round(($terisi / $total) * 100)
+            : 0;
+    }
+
+    private function golonganRhesusProfil(?ProfilPendonor $profil): string
+    {
+        if ($profil === null) {
+            return '-';
+        }
+
+        $golongan = $this->normalisasiGolongan(
+            $this->atribut($profil, 'golongan_darah')
+        );
+
+        $rhesus = match (
+            $this->normalisasiRhesus(
+                $this->atribut($profil, 'rhesus')
+            )
+        ) {
+            'positive' => '+',
+            'negative' => '-',
+            default => '',
+        };
+
+        if (blank($golongan)) {
+            return '-';
+        }
+
+        return $golongan . $rhesus;
+    }
+
+    private function labelStatusStok(int $total): string
+    {
+        if ($total <= 0) {
+            return 'Kosong';
+        }
+
+        if ($total <= 2) {
+            return 'Rendah';
+        }
+
+        return 'Aman';
+    }
+
+    private function classStatusStok(int $total): string
+    {
+        if ($total <= 0) {
+            return 'is-danger';
+        }
+
+        if ($total <= 2) {
+            return 'is-warning';
+        }
+
+        return 'is-success';
+    }
+
+    private function statusKantongTersedia(): string
+    {
+        return StatusKantongDarah::Tersedia->value;
+    }
+
+    private function statusMutuLulus(): string
+    {
+        return StatusMutuKantongDarah::Lulus->value;
+    }
+
+    private function normalisasiGolongan(mixed $value): string
+    {
+        $value = strtoupper(
+            trim($this->nilaiDariEnum($value))
+        );
+
+        return match ($value) {
+            'A' => 'A',
+            'B' => 'B',
+            'AB' => 'AB',
+            'O' => 'O',
+            default => $value,
+        };
+    }
+
+    private function normalisasiRhesus(mixed $value): string
+    {
+        $value = strtolower(
+            trim($this->nilaiDariEnum($value))
+        );
+
+        return match ($value) {
+            '+',
+            'plus',
+            'positif',
+            'positive',
+            'rh+',
+            'rhesus_positive' => 'positive',
+
+            '-',
+            'minus',
+            'negatif',
+            'negative',
+            'rh-',
+            'rhesus_negative' => 'negative',
+
+            default => $value,
+        };
+    }
+
+    private function tanggalCarbon(mixed $value): ?CarbonInterface
+    {
+        if ($value instanceof CarbonInterface) {
+            return $value;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value);
+        }
+
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function nilaiDariEnum(mixed $value): string
+    {
+        if ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return (string) $value->name;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        if (blank($value)) {
+            return '';
+        }
+
+        if (
+            is_object($value)
+            && ! method_exists($value, '__toString')
+        ) {
+            return '';
+        }
+
+        return (string) $value;
+    }
+
+    private function atribut(
+        mixed $model,
+        string $key,
+        mixed $default = null
+    ): mixed {
+        if ($model === null) {
+            return $default;
+        }
+
+        if ($model instanceof Model) {
+            $value = $model->getAttribute($key);
+
+            return $value ?? $default;
+        }
+
+        if (
+            is_array($model)
+            && array_key_exists($key, $model)
+        ) {
+            return $model[$key] ?? $default;
+        }
+
+        if (
+            is_object($model)
+            && isset($model->{$key})
+        ) {
+            return $model->{$key};
+        }
+
+        return $default;
+    }
+
+    private function kolomAdaJadwal(string $column): bool
+    {
+        return Schema::hasColumn(
+            (new JadwalDonor())->getTable(),
+            $column
+        );
+    }
+
+    private function kolomAdaLokasi(string $column): bool
+    {
+        return Schema::hasColumn(
+            (new LokasiDonor())->getTable(),
+            $column
+        );
     }
 }

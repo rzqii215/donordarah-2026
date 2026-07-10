@@ -1,0 +1,697 @@
+<div class="donor-location-page">
+    
+<section class="donor-location-hero">
+        <div>
+            <p class="donor-location-eyebrow">
+                Lokasi Kegiatan
+            </p>
+
+            <h1>
+                Lokasi Donor
+            </h1>
+
+            <p>
+                Cari lokasi donor yang sudah ditentukan oleh petugas.
+                Anda dapat melihat alamat, kontak, catatan lokasi, dan membuka
+                lokasi langsung melalui Google Maps.
+            </p>
+        </div>
+
+        <div class="donor-location-search">
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+            >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+            </svg>
+
+            <input
+                type="search"
+                wire:model.live.debounce.400ms="pencarian"
+                placeholder="Cari lokasi, alamat, atau kota..."
+            >
+        </div>
+    </section>
+
+    @if ($lokasiDonors->isEmpty())
+        <section class="donor-location-empty">
+            <div class="donor-location-empty-icon">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path
+                        d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
+                    />
+
+                    <circle cx="12" cy="10" r="2.5" />
+                </svg>
+            </div>
+
+            <h2>
+                Lokasi belum tersedia
+            </h2>
+
+            <p>
+                Belum ada lokasi donor yang dapat ditampilkan.
+                Silakan cek kembali nanti.
+            </p>
+        </section>
+    @else
+        <section class="donor-location-grid">
+            @foreach ($lokasiDonors as $lokasi)
+                @php
+                    $catatanLokasi = (string) ($lokasi->catatan_lokasi ?? '');
+                @endphp
+
+                <article
+                    class="donor-location-card"
+                    wire:key="lokasi-donor-{{ $lokasi->id }}"
+                >
+                    <div class="donor-location-map-preview">
+                        <iframe
+                            src="{{ $this->embedMapsUrl($lokasi) }}"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            title="Peta {{ $this->namaLokasi($lokasi) }}"
+                        ></iframe>
+
+                        <div class="donor-location-pin">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
+                                />
+
+                                <circle cx="12" cy="10" r="2.5" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="donor-location-card-body">
+                        <h2>
+                            {{ $this->namaLokasi($lokasi) }}
+                        </h2>
+
+                        <p class="donor-location-address">
+                            {{ $this->alamatLokasi($lokasi) }}
+                        </p>
+
+                        <div class="donor-location-meta">
+                            <span>
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
+                                    />
+
+                                    <circle cx="12" cy="10" r="2.5" />
+                                </svg>
+
+                                {{ $this->wilayahLokasi($lokasi) }}
+                            </span>
+
+                            <span>
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.95.35 1.88.66 2.77a2 2 0 0 1-.45 2.11L8.05 9.87a16 16 0 0 0 6.08 6.08l1.27-1.27a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.77.66A2 2 0 0 1 22 16.92Z"
+                                    />
+                                </svg>
+
+                                {{ $this->kontakLokasi($lokasi) }}
+                            </span>
+                        </div>
+
+                        @if (filled($catatanLokasi))
+                            <div class="donor-location-note">
+                                <span>
+                                    Catatan Lokasi
+                                </span>
+
+                                <p>
+                                    {{ $catatanLokasi }}
+                                </p>
+                            </div>
+                        @endif
+
+                        <div class="donor-location-actions">
+                            <button
+                                type="button"
+                                wire:click="pilihLokasi({{ $lokasi->id }})"
+                            >
+                                Lihat Detail
+                            </button>
+
+                            <a
+                                href="{{ $this->mapsUrl($lokasi) }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Buka Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
+        </section>
+    @endif
+
+    @if ($lokasiTerpilih !== null)
+        @php
+            $catatanLokasiTerpilih = (string) ($lokasiTerpilih->catatan_lokasi ?? '');
+        @endphp
+
+        <div
+            class="donor-location-modal-backdrop"
+            wire:click="tutupDetailLokasi"
+        >
+            <section
+                class="donor-location-modal"
+                wire:click.stop
+            >
+                <div class="donor-location-modal-header">
+                    <div>
+                        <p>
+                            Detail Lokasi Donor
+                        </p>
+
+                        <h2>
+                            {{ $this->namaLokasi($lokasiTerpilih) }}
+                        </h2>
+                    </div>
+
+                    <button
+                        type="button"
+                        wire:click="tutupDetailLokasi"
+                        aria-label="Tutup detail lokasi"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div class="donor-location-modal-map">
+                    <iframe
+                        src="{{ $this->embedMapsUrl($lokasiTerpilih) }}"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        title="Peta {{ $this->namaLokasi($lokasiTerpilih) }}"
+                    ></iframe>
+                </div>
+
+                <div class="donor-location-modal-info">
+                    <div>
+                        <span>Alamat</span>
+                        <strong>{{ $this->alamatLokasi($lokasiTerpilih) }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Wilayah</span>
+                        <strong>{{ $this->wilayahLokasi($lokasiTerpilih) }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Kontak</span>
+                        <strong>{{ $this->kontakLokasi($lokasiTerpilih) }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Koordinat</span>
+                        <strong>{{ $this->koordinatLokasi($lokasiTerpilih) }}</strong>
+                    </div>
+
+                    <div class="donor-location-modal-info-full">
+                        <span>Catatan Lokasi</span>
+
+                        <strong>
+                            {{ filled($catatanLokasiTerpilih) ? $catatanLokasiTerpilih : '-' }}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="donor-location-modal-actions">
+                    <a
+                        href="{{ $this->mapsUrl($lokasiTerpilih) }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Buka di Google Maps
+                    </a>
+
+                    <button
+                        type="button"
+                        wire:click="tutupDetailLokasi"
+                    >
+                        Tutup
+                    </button>
+                </div>
+            </section>
+        </div>
+    @endif
+
+    <style>
+        .donor-location-page {
+            display: grid;
+            gap: 28px;
+        }
+
+        .donor-location-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 365px);
+            gap: 24px;
+            align-items: end;
+        }
+
+        .donor-location-eyebrow {
+            margin: 0 0 12px;
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .donor-location-hero h1 {
+            margin: 0;
+            color: #0f172a;
+            font-size: clamp(36px, 5vw, 54px);
+            line-height: 1.05;
+            letter-spacing: -0.06em;
+        }
+
+        .donor-location-hero p:not(.donor-location-eyebrow) {
+            max-width: 720px;
+            margin: 16px 0 0;
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .donor-location-search {
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 0 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 16px 42px rgba(15, 23, 42, 0.06);
+        }
+
+        .donor-location-search svg {
+            width: 21px;
+            height: 21px;
+            color: #94a3b8;
+        }
+
+        .donor-location-search input {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            color: #0f172a;
+            background: transparent;
+            font: inherit;
+            font-size: 14px;
+        }
+
+        .donor-location-search input::placeholder {
+            color: #94a3b8;
+        }
+
+        .donor-location-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+        }
+
+        .donor-location-card {
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            background: #ffffff;
+            box-shadow: 0 16px 46px rgba(15, 23, 42, 0.06);
+        }
+
+        .donor-location-map-preview {
+            position: relative;
+            height: 190px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .donor-location-map-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            filter: grayscale(0.08);
+        }
+
+        .donor-location-pin {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            transform: translate(-50%, -50%);
+            border: 8px solid rgba(254, 202, 202, 0.55);
+            border-radius: 999px;
+            color: #ffffff;
+            background: #dc2626;
+            box-shadow: 0 16px 34px rgba(220, 38, 38, 0.28);
+            pointer-events: none;
+        }
+
+        .donor-location-pin svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .donor-location-card-body {
+            padding: 24px;
+        }
+
+        .donor-location-card-body h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 21px;
+            line-height: 1.3;
+            letter-spacing: -0.03em;
+        }
+
+        .donor-location-address {
+            margin: 10px 0 0;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .donor-location-meta {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .donor-location-meta span {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .donor-location-meta svg {
+            width: 17px;
+            height: 17px;
+            color: #ef4444;
+        }
+
+        .donor-location-note {
+            margin-top: 18px;
+            padding: 15px;
+            border: 1px solid #fee2e2;
+            border-radius: 18px;
+            background: #fff7f7;
+        }
+
+        .donor-location-note span {
+            display: block;
+            margin-bottom: 6px;
+            color: #dc2626;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .donor-location-note p {
+            margin: 0;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .donor-location-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 22px;
+        }
+
+        .donor-location-actions button,
+        .donor-location-actions a {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+            transition: 160ms ease;
+        }
+
+        .donor-location-actions button {
+            border: 0;
+            color: #ffffff;
+            background: #dc2626;
+            cursor: pointer;
+            box-shadow: 0 14px 26px rgba(220, 38, 38, 0.18);
+        }
+
+        .donor-location-actions a {
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        .donor-location-actions button:hover,
+        .donor-location-actions a:hover {
+            transform: translateY(-1px);
+        }
+
+        .donor-location-empty {
+            display: grid;
+            place-items: center;
+            padding: 60px 24px;
+            border: 1px dashed #fecaca;
+            border-radius: 26px;
+            background: #fff7f7;
+            text-align: center;
+        }
+
+        .donor-location-empty-icon {
+            width: 68px;
+            height: 68px;
+            display: grid;
+            place-items: center;
+            border-radius: 22px;
+            color: #dc2626;
+            background: #fee2e2;
+        }
+
+        .donor-location-empty-icon svg {
+            width: 34px;
+            height: 34px;
+        }
+
+        .donor-location-empty h2 {
+            margin: 18px 0 8px;
+            color: #0f172a;
+        }
+
+        .donor-location-empty p {
+            margin: 0;
+            max-width: 420px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .donor-location-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(15, 23, 42, 0.42);
+            backdrop-filter: blur(8px);
+        }
+
+        .donor-location-modal {
+            width: min(100%, 860px);
+            max-height: calc(100vh - 48px);
+            overflow: auto;
+            border-radius: 28px;
+            background: #ffffff;
+            box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
+        }
+
+        .donor-location-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 26px 28px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .donor-location-modal-header p {
+            margin: 0 0 8px;
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .donor-location-modal-header h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 28px;
+            line-height: 1.2;
+            letter-spacing: -0.04em;
+        }
+
+        .donor-location-modal-header button {
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 14px;
+            color: #0f172a;
+            background: #f1f5f9;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .donor-location-modal-map {
+            height: 360px;
+            background: #f1f5f9;
+        }
+
+        .donor-location-modal-map iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .donor-location-modal-info {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            padding: 24px 28px;
+        }
+
+        .donor-location-modal-info div {
+            display: grid;
+            gap: 7px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #f8fafc;
+        }
+
+        .donor-location-modal-info .donor-location-modal-info-full {
+            grid-column: 1 / -1;
+            border-color: #fee2e2;
+            background: #fff7f7;
+        }
+
+        .donor-location-modal-info span {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .donor-location-modal-info strong {
+            color: #0f172a;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .donor-location-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 0 28px 28px;
+        }
+
+        .donor-location-modal-actions a,
+        .donor-location-modal-actions button {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 18px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .donor-location-modal-actions a {
+            border: 0;
+            color: #ffffff;
+            background: #dc2626;
+        }
+
+        .donor-location-modal-actions button {
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        @media (max-width: 900px) {
+            .donor-location-hero {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-location-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .donor-location-modal-info {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-location-modal-info .donor-location-modal-info-full {
+                grid-column: auto;
+            }
+
+            .donor-location-modal-actions {
+                flex-direction: column;
+            }
+
+            .donor-location-modal-actions a,
+            .donor-location-modal-actions button {
+                width: 100%;
+            }
+        }
+    </style>
+</div>

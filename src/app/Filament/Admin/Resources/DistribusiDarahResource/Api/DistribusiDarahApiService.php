@@ -13,8 +13,8 @@ class DistribusiDarahApiService extends ApiService
         DistribusiDarahResource::class;
 
     /**
-     * API Distribusi Darah hanya menyediakan operasi baca
-     * untuk Rumah Sakit pemilik permintaan.
+     * API Distribusi Kantong Darah hanya menyediakan operasi baca
+     * untuk Pemohon Donor pemilik pengajuan.
      *
      * @return array<class-string>
      */

@@ -20,7 +20,7 @@ class PaginationHandler extends Handlers
         PermintaanDarahResource::class;
 
     /**
-     * Daftar permintaan darah milik Rumah Sakit yang sedang login.
+     * Daftar pengajuan kebutuhan donor milik Pemohon Donor yang sedang login.
      */
     public function handler(
         Request $request

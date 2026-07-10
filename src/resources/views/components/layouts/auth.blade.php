@@ -45,5 +45,7 @@
     {{ $slot }}
 
     @livewireScripts
+    @include('components.shared.safe-flash-message')
+    @include('components.auth.auth-ui-final-polish')
 </body>
 </html>

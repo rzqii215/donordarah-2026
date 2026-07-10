@@ -18,7 +18,7 @@ class DetailHandler extends Handlers
         ProfilRumahSakitResource::class;
 
     /**
-     * Menampilkan profil Rumah Sakit yang sedang login.
+     * Menampilkan profil Pemohon Donor yang sedang login.
      */
     public function handler(
         Request $request

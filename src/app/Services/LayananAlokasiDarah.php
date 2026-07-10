@@ -96,7 +96,10 @@ class LayananAlokasiDarah
             }
 
             $record->unsetRelation('itemAktif');
-            $record->load('itemAktif');
+
+            $record->load(
+                'itemAktif'
+            );
 
             $this->sinkronkanStatusPermintaan(
                 $record
@@ -140,7 +143,7 @@ class LayananAlokasiDarah
             ) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Seluruh kebutuhan kantong pada permintaan ini sudah terpenuhi.',
+                        'Seluruh kebutuhan kantong pada pengajuan ini sudah terpenuhi.',
                 ]);
             }
 
@@ -311,7 +314,7 @@ class LayananAlokasiDarah
         if (! $permintaan->dapatDialokasikan()) {
             throw ValidationException::withMessages([
                 'permintaan_darah_id' =>
-                    'Permintaan darah belum disetujui atau tidak dapat dialokasikan.',
+                    'Pengajuan kebutuhan donor belum disetujui atau tidak dapat dialokasikan.',
             ]);
         }
 
@@ -337,7 +340,7 @@ class LayananAlokasiDarah
         if ($kantong->alokasiAktif !== null) {
             throw ValidationException::withMessages([
                 'kantong_darah_id' =>
-                    'Kantong darah sudah dialokasikan pada permintaan lain.',
+                    'Kantong darah sudah dialokasikan pada pengajuan lain.',
             ]);
         }
 
@@ -347,7 +350,7 @@ class LayananAlokasiDarah
         ) {
             throw ValidationException::withMessages([
                 'kantong_darah_id' =>
-                    'Golongan darah kantong tidak sesuai dengan permintaan.',
+                    'Golongan darah kantong tidak sesuai dengan pengajuan kebutuhan donor.',
             ]);
         }
 
@@ -357,7 +360,7 @@ class LayananAlokasiDarah
         ) {
             throw ValidationException::withMessages([
                 'kantong_darah_id' =>
-                    'Rhesus kantong tidak sesuai dengan permintaan.',
+                    'Rhesus kantong tidak sesuai dengan pengajuan kebutuhan donor.',
             ]);
         }
     }

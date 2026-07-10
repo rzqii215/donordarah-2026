@@ -18,29 +18,33 @@ class PermintaanDarahSeeder extends Seeder
             return;
         }
 
-        $rumahSakit =
-            ProfilRumahSakit::query()
-                ->where(
-                    'kode_rumah_sakit',
-                    'HSP-2026-000001'
-                )
-                ->first();
+        $pemohonDonor = ProfilRumahSakit::query()
+            ->where(
+                'kode_rumah_sakit',
+                'PMH-2026-000001'
+            )
+            ->first();
 
-        if ($rumahSakit === null) {
+        if ($pemohonDonor === null) {
+            $pemohonDonor = ProfilRumahSakit::query()
+                ->latest('id')
+                ->first();
+        }
+
+        if ($pemohonDonor === null) {
             return;
         }
 
-        $sudahAda =
-            PermintaanDarah::withTrashed()
-                ->where(
-                    'profil_rumah_sakit_id',
-                    $rumahSakit->id
-                )
-                ->where(
-                    'referensi_pasien',
-                    'PSN-DEMO-0001'
-                )
-                ->exists();
+        $sudahAda = PermintaanDarah::withTrashed()
+            ->where(
+                'profil_rumah_sakit_id',
+                $pemohonDonor->id
+            )
+            ->where(
+                'referensi_pasien',
+                'PGJ-DEMO-0001'
+            )
+            ->exists();
 
         if ($sudahAda) {
             return;
@@ -49,13 +53,13 @@ class PermintaanDarahSeeder extends Seeder
         app(
             LayananPermintaanDarah::class
         )->buat(
-            rumahSakit: $rumahSakit,
+            rumahSakit: $pemohonDonor,
             data: [
                 'referensi_pasien' =>
-                    'PSN-DEMO-0001',
+                    'PGJ-DEMO-0001',
 
                 'nama_dokter' =>
-                    'dr. Ahmad Pratama',
+                    'Budi Santoso',
 
                 'golongan_darah' =>
                     GolonganDarah::O,
@@ -67,8 +71,7 @@ class PermintaanDarahSeeder extends Seeder
                     1,
 
                 'tingkat_urgensi' =>
-                    TingkatUrgensiPermintaanDarah
-                        ::Mendesak,
+                    TingkatUrgensiPermintaanDarah::Mendesak,
 
                 'dibutuhkan_pada' =>
                     now()->addDays(2),
@@ -77,7 +80,7 @@ class PermintaanDarahSeeder extends Seeder
                     null,
 
                 'catatan' =>
-                    'Data permintaan darah pengujian.',
+                    'Data pengajuan kebutuhan donor pengujian.',
             ],
         );
     }

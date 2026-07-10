@@ -11,12 +11,11 @@ use App\Models\PermintaanDarah;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class PermintaanDarahTerbaru extends TableWidget
 {
     protected static ?string $heading =
-        'Permintaan Darah Terbaru';
+        'Pengajuan Kebutuhan Donor Terbaru';
 
     protected static ?int $sort = 3;
 
@@ -27,7 +26,9 @@ class PermintaanDarahTerbaru extends TableWidget
         return $table
             ->query(
                 PermintaanDarah::query()
-                    ->with('rumahSakit')
+                    ->with([
+                        'rumahSakit',
+                    ])
                     ->latest('created_at')
                     ->limit(8)
             )
@@ -42,7 +43,8 @@ class PermintaanDarahTerbaru extends TableWidget
                 Tables\Columns\TextColumn::make(
                     'rumahSakit.nama_rumah_sakit'
                 )
-                    ->label('Rumah Sakit')
+                    ->label('Pemohon Donor')
+                    ->placeholder('-')
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make(
@@ -136,7 +138,7 @@ class PermintaanDarahTerbaru extends TableWidget
             ])
             ->paginated(false)
             ->emptyStateHeading(
-                'Belum ada permintaan darah'
+                'Belum ada pengajuan kebutuhan donor'
             )
             ->emptyStateIcon(
                 'heroicon-o-document-text'
@@ -146,33 +148,31 @@ class PermintaanDarahTerbaru extends TableWidget
     private static function statusEnum(
         StatusPermintaanDarah|string $status
     ): StatusPermintaanDarah {
-        return $status instanceof
-            StatusPermintaanDarah
-                ? $status
-                : StatusPermintaanDarah::from(
-                    $status
-                );
+        return $status instanceof StatusPermintaanDarah
+            ? $status
+            : StatusPermintaanDarah::from(
+                $status
+            );
     }
 
     private static function urgensiEnum(
         TingkatUrgensiPermintaanDarah|string $urgensi
     ): TingkatUrgensiPermintaanDarah {
-        return $urgensi instanceof
-            TingkatUrgensiPermintaanDarah
-                ? $urgensi
-                : TingkatUrgensiPermintaanDarah
-                    ::from($urgensi);
+        return $urgensi instanceof TingkatUrgensiPermintaanDarah
+            ? $urgensi
+            : TingkatUrgensiPermintaanDarah::from(
+                $urgensi
+            );
     }
 
     private static function labelGolongan(
         GolonganDarah|string $golonganDarah
     ): string {
-        return $golonganDarah instanceof
-            GolonganDarah
-                ? $golonganDarah->label()
-                : GolonganDarah::from(
-                    $golonganDarah
-                )->label();
+        return $golonganDarah instanceof GolonganDarah
+            ? $golonganDarah->label()
+            : GolonganDarah::from(
+                $golonganDarah
+            )->label();
     }
 
     private static function labelRhesus(

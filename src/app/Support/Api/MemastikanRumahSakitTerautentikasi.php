@@ -27,11 +27,11 @@ trait MemastikanRumahSakitTerautentikasi
 
         if (
             ! $pengguna->hasRole(
-                PeranPengguna::RumahSakit->value
+                PeranPengguna::PemohonDonor->value
             )
         ) {
             throw new AuthorizationException(
-                'Endpoint ini hanya dapat diakses oleh Rumah Sakit.'
+                'Endpoint ini hanya dapat diakses oleh Pemohon Donor.'
             );
         }
 
@@ -40,7 +40,7 @@ trait MemastikanRumahSakitTerautentikasi
             StatusPengguna::Aktif
         ) {
             throw new AuthorizationException(
-                'Akun Rumah Sakit belum aktif atau sedang dibatasi.'
+                'Akun Pemohon Donor belum aktif atau sedang dibatasi.'
             );
         }
 
@@ -65,7 +65,7 @@ trait MemastikanRumahSakitTerautentikasi
         if ($profil === null) {
             throw ValidationException::withMessages([
                 'profil' =>
-                    'Profil Rumah Sakit belum tersedia.',
+                    'Profil Pemohon Donor belum tersedia.',
             ]);
         }
 
@@ -75,7 +75,7 @@ trait MemastikanRumahSakitTerautentikasi
                 StatusVerifikasiRumahSakit::Disetujui
         ) {
             throw new AuthorizationException(
-                'Profil Rumah Sakit belum disetujui.'
+                'Profil Pemohon Donor belum disetujui.'
             );
         }
 

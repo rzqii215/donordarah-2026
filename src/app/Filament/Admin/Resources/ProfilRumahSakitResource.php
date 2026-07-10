@@ -11,7 +11,6 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -29,11 +28,11 @@ class ProfilRumahSakitResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationLabel = 'Rumah Sakit';
+    protected static ?string $navigationLabel = 'Profil Pemohon Donor';
 
-    protected static ?string $modelLabel = 'Rumah Sakit';
+    protected static ?string $modelLabel = 'Profil Pemohon Donor';
 
-    protected static ?string $pluralModelLabel = 'Rumah Sakit';
+    protected static ?string $pluralModelLabel = 'Profil Pemohon Donor';
 
     protected static ?string $navigationGroup = 'Manajemen Pengguna';
 
@@ -44,7 +43,7 @@ class ProfilRumahSakitResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Informasi Akun')
-                    ->description('Pilih akun yang telah memiliki role Rumah Sakit.')
+                    ->description('Pilih akun yang telah memiliki role Pemohon Donor.')
                     ->schema([
                         Forms\Components\Select::make('pengguna_id')
                             ->label('Akun Pengguna')
@@ -52,7 +51,7 @@ class ProfilRumahSakitResource extends Resource
                                 name: 'pengguna',
                                 titleAttribute: 'name',
                                 modifyQueryUsing: fn (Builder $query): Builder => $query
-                                    ->role(PeranPengguna::RumahSakit->value),
+                                    ->role(PeranPengguna::PemohonDonor->value),
                             )
                             ->getOptionLabelFromRecordUsing(
                                 fn (User $record): string => sprintf(
@@ -75,7 +74,7 @@ class ProfilRumahSakitResource extends Resource
                             ->disabledOn('edit'),
 
                         Forms\Components\TextInput::make('kode_rumah_sakit')
-                            ->label('Kode Rumah Sakit')
+                            ->label('Kode Pemohon')
                             ->required()
                             ->maxLength(30)
                             ->unique(
@@ -83,7 +82,7 @@ class ProfilRumahSakitResource extends Resource
                                 column: 'kode_rumah_sakit',
                                 ignoreRecord: true,
                             )
-                            ->placeholder('HSP-2026-000001'),
+                            ->placeholder('PMH-2026-000001'),
 
                         Forms\Components\Hidden::make('status_verifikasi')
                             ->default(
@@ -92,15 +91,16 @@ class ProfilRumahSakitResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Identitas Rumah Sakit')
+                Forms\Components\Section::make('Identitas Pemohon Donor')
                     ->schema([
                         Forms\Components\TextInput::make('nama_rumah_sakit')
-                            ->label('Nama Rumah Sakit')
+                            ->label('Nama Pemohon Donor')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->placeholder('Yayasan, komunitas, instansi, organisasi, atau pihak umum'),
 
                         Forms\Components\TextInput::make('nomor_izin')
-                            ->label('Nomor Izin Operasional')
+                            ->label('Nomor Identitas/Izin')
                             ->required()
                             ->maxLength(100)
                             ->unique(
@@ -109,12 +109,10 @@ class ProfilRumahSakitResource extends Resource
                                 ignoreRecord: true,
                             ),
 
-                        Forms\Components\FileUpload::make(
-                            'path_dokumen_izin'
-                        )
-                            ->label('Dokumen Izin Operasional')
+                        Forms\Components\FileUpload::make('path_dokumen_izin')
+                            ->label('Dokumen Pendukung')
                             ->disk('public')
-                            ->directory('hospital-documents')
+                            ->directory('pemohon-donor-documents')
                             ->acceptedFileTypes([
                                 'application/pdf',
                                 'image/jpeg',
@@ -124,31 +122,25 @@ class ProfilRumahSakitResource extends Resource
                             ->downloadable()
                             ->openable()
                             ->previewable()
-                            ->helperText(
-                                'Format PDF, JPG, atau PNG. Maksimal 5 MB.'
-                            )
+                            ->helperText('Format PDF, JPG, atau PNG. Maksimal 5 MB.')
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
 
                 Forms\Components\Section::make('Penanggung Jawab')
                     ->schema([
-                        Forms\Components\TextInput::make(
-                            'nama_penanggung_jawab'
-                        )
+                        Forms\Components\TextInput::make('nama_penanggung_jawab')
                             ->label('Nama Penanggung Jawab')
                             ->required()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make(
-                            'jabatan_penanggung_jawab'
-                        )
-                            ->label('Jabatan Penanggung Jawab')
+                        Forms\Components\TextInput::make('jabatan_penanggung_jawab')
+                            ->label('Jabatan/Peran Penanggung Jawab')
                             ->maxLength(150),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Alamat Rumah Sakit')
+                Forms\Components\Section::make('Alamat Pemohon')
                     ->schema([
                         Forms\Components\Textarea::make('alamat')
                             ->label('Alamat Lengkap')
@@ -177,9 +169,7 @@ class ProfilRumahSakitResource extends Resource
                     ->columns(2),
 
                 Forms\Components\Section::make('Koordinat Lokasi')
-                    ->description(
-                        'Koordinat digunakan untuk integrasi peta digital.'
-                    )
+                    ->description('Koordinat digunakan apabila lokasi pemohon perlu ditampilkan pada peta digital.')
                     ->schema([
                         Forms\Components\TextInput::make('latitude')
                             ->label('Latitude')
@@ -200,26 +190,16 @@ class ProfilRumahSakitResource extends Resource
                     ->columns(2),
 
                 Forms\Components\Section::make('Informasi Verifikasi')
-                    ->visible(
-                        fn (Get $get): bool => filled(
-                            $get('status_verifikasi')
-                        )
-                    )
                     ->schema([
-                        Forms\Components\Placeholder::make(
-                            'status_verifikasi_label'
-                        )
+                        Forms\Components\Placeholder::make('status_verifikasi_label')
                             ->label('Status Saat Ini')
                             ->content(
                                 fn (?ProfilRumahSakit $record): string => $record
                                     ? $record->status_verifikasi->label()
-                                    : StatusVerifikasiRumahSakit::Menunggu
-                                        ->label()
+                                    : StatusVerifikasiRumahSakit::Menunggu->label()
                             ),
 
-                        Forms\Components\Placeholder::make(
-                            'verifikator_label'
-                        )
+                        Forms\Components\Placeholder::make('verifikator_label')
                             ->label('Diverifikasi Oleh')
                             ->content(
                                 fn (?ProfilRumahSakit $record): string => $record
@@ -227,23 +207,15 @@ class ProfilRumahSakitResource extends Resource
                                     : '-'
                             ),
 
-                        Forms\Components\Placeholder::make(
-                            'diverifikasi_pada_label'
-                        )
+                        Forms\Components\Placeholder::make('diverifikasi_pada_label')
                             ->label('Diverifikasi Pada')
                             ->content(
                                 fn (?ProfilRumahSakit $record): string => $record
-                                    ? (
-                                        $record->diverifikasi_pada
-                                            ?->format('d M Y H:i')
-                                        ?? '-'
-                                    )
+                                    ? ($record->diverifikasi_pada?->format('d M Y H:i') ?? '-')
                                     : '-'
                             ),
 
-                        Forms\Components\Textarea::make(
-                            'alasan_penolakan'
-                        )
+                        Forms\Components\Textarea::make('alasan_penolakan')
                             ->label('Alasan Penolakan/Penangguhan')
                             ->disabled()
                             ->dehydrated(false)
@@ -262,92 +234,52 @@ class ProfilRumahSakitResource extends Resource
                 InfolistSection::make('Informasi Akun')
                     ->schema([
                         TextEntry::make('pengguna.name')
-                            ->label('Nama Pengguna'),
+                            ->label('Nama Akun'),
 
                         TextEntry::make('pengguna.email')
                             ->label('Email'),
 
-                        TextEntry::make('pengguna.nomor_telepon')
-                            ->label('Nomor Telepon')
-                            ->placeholder('-'),
-
                         TextEntry::make('kode_rumah_sakit')
-                            ->label('Kode Rumah Sakit')
+                            ->label('Kode Pemohon')
                             ->copyable(),
 
                         TextEntry::make('status_verifikasi')
                             ->label('Status Verifikasi')
                             ->badge()
                             ->formatStateUsing(
-                                fn (
-                                    StatusVerifikasiRumahSakit|string $state
-                                ): string => $state instanceof
-                                    StatusVerifikasiRumahSakit
-                                        ? $state->label()
-                                        : StatusVerifikasiRumahSakit::from(
-                                            $state
-                                        )->label()
+                                fn (StatusVerifikasiRumahSakit|string $state): string => self::statusLabel($state)
                             )
                             ->color(
-                                fn (
-                                    StatusVerifikasiRumahSakit|string $state
-                                ): string => match (
-                                    $state instanceof
-                                    StatusVerifikasiRumahSakit
-                                        ? $state
-                                        : StatusVerifikasiRumahSakit::from(
-                                            $state
-                                        )
-                                ) {
-                                    StatusVerifikasiRumahSakit::Menunggu
-                                        => 'warning',
-                                    StatusVerifikasiRumahSakit::Disetujui
-                                        => 'success',
-                                    StatusVerifikasiRumahSakit::Ditolak
-                                        => 'danger',
-                                    StatusVerifikasiRumahSakit::Ditangguhkan
-                                        => 'gray',
-                                }
+                                fn (StatusVerifikasiRumahSakit|string $state): string => self::statusColor($state)
                             ),
                     ])
                     ->columns(3),
 
-                InfolistSection::make('Identitas Rumah Sakit')
+                InfolistSection::make('Identitas Pemohon Donor')
                     ->schema([
                         TextEntry::make('nama_rumah_sakit')
-                            ->label('Nama Rumah Sakit'),
+                            ->label('Nama Pemohon Donor'),
 
                         TextEntry::make('nomor_izin')
-                            ->label('Nomor Izin Operasional'),
+                            ->label('Nomor Identitas/Izin'),
 
                         TextEntry::make('nama_penanggung_jawab')
                             ->label('Nama Penanggung Jawab'),
 
-                        TextEntry::make(
-                            'jabatan_penanggung_jawab'
-                        )
-                            ->label('Jabatan Penanggung Jawab')
+                        TextEntry::make('jabatan_penanggung_jawab')
+                            ->label('Jabatan/Peran Penanggung Jawab')
                             ->placeholder('-'),
 
                         TextEntry::make('path_dokumen_izin')
-                            ->label('Dokumen Izin')
+                            ->label('Dokumen Pendukung')
                             ->formatStateUsing(
                                 fn (?string $state): string => filled($state)
                                     ? 'Lihat dokumen'
                                     : 'Belum diunggah'
                             )
                             ->url(
-                                fn (
-                                    ProfilRumahSakit $record
-                                ): ?string => filled(
-                                    $record->path_dokumen_izin
-                                )
-                                    ? asset(
-                                        'storage/' . ltrim(
-                                            $record->path_dokumen_izin,
-                                            '/'
-                                        )
-                                    )
+                                fn (ProfilRumahSakit $record): ?string => filled($record->path_dokumen_izin)
+                                    ? asset('storage/' . ltrim($record->path_dokumen_izin, '/'))
                                     : null
                             )
                             ->openUrlInNewTab(),
@@ -415,7 +347,7 @@ class ProfilRumahSakitResource extends Resource
                     ->copyable(),
 
                 Tables\Columns\TextColumn::make('nama_rumah_sakit')
-                    ->label('Nama Rumah Sakit')
+                    ->label('Nama Pemohon Donor')
                     ->searchable()
                     ->sortable()
                     ->wrap(),
@@ -426,7 +358,7 @@ class ProfilRumahSakitResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('nomor_izin')
-                    ->label('Nomor Izin')
+                    ->label('Nomor Identitas/Izin')
                     ->searchable()
                     ->toggleable(),
 
@@ -439,33 +371,10 @@ class ProfilRumahSakitResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->formatStateUsing(
-                        fn (
-                            StatusVerifikasiRumahSakit|string $state
-                        ): string => $state instanceof
-                            StatusVerifikasiRumahSakit
-                                ? $state->label()
-                                : StatusVerifikasiRumahSakit::from(
-                                    $state
-                                )->label()
+                        fn (StatusVerifikasiRumahSakit|string $state): string => self::statusLabel($state)
                     )
                     ->color(
-                        fn (
-                            StatusVerifikasiRumahSakit|string $state
-                        ): string => match (
-                            $state instanceof
-                            StatusVerifikasiRumahSakit
-                                ? $state
-                                : StatusVerifikasiRumahSakit::from($state)
-                        ) {
-                            StatusVerifikasiRumahSakit::Menunggu
-                                => 'warning',
-                            StatusVerifikasiRumahSakit::Disetujui
-                                => 'success',
-                            StatusVerifikasiRumahSakit::Ditolak
-                                => 'danger',
-                            StatusVerifikasiRumahSakit::Ditangguhkan
-                                => 'gray',
-                        }
+                        fn (StatusVerifikasiRumahSakit|string $state): string => self::statusColor($state)
                     )
                     ->sortable(),
 
@@ -494,13 +403,9 @@ class ProfilRumahSakitResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make(
-                    'status_verifikasi'
-                )
+                Tables\Filters\SelectFilter::make('status_verifikasi')
                     ->label('Status Verifikasi')
-                    ->options(
-                        StatusVerifikasiRumahSakit::options()
-                    ),
+                    ->options(StatusVerifikasiRumahSakit::options()),
 
                 Tables\Filters\SelectFilter::make('kota')
                     ->label('Kota/Kabupaten')
@@ -525,59 +430,40 @@ class ProfilRumahSakitResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(
-                        fn (
-                            ProfilRumahSakit $record
-                        ): bool => $record->status_verifikasi !==
-                            StatusVerifikasiRumahSakit::Disetujui
+                        fn (ProfilRumahSakit $record): bool => $record->status_verifikasi !== StatusVerifikasiRumahSakit::Disetujui
                     )
                     ->requiresConfirmation()
-                    ->modalHeading('Setujui Rumah Sakit')
-                    ->modalDescription(
-                        'Rumah sakit akan diaktifkan dan dapat mengajukan permintaan darah.'
-                    )
-                    ->action(
-                        function (ProfilRumahSakit $record): void {
-                            DB::transaction(
-                                function () use ($record): void {
-                                    $record->update([
-                                        'status_verifikasi' =>
-                                            StatusVerifikasiRumahSakit::Disetujui,
-                                        'diverifikasi_oleh' =>
-                                            Filament::auth()->id(),
-                                        'diverifikasi_pada' => now(),
-                                        'alasan_penolakan' => null,
-                                    ]);
+                    ->modalHeading('Setujui Pemohon Donor')
+                    ->modalDescription('Pemohon Donor yang disetujui dapat menggunakan portal untuk membuat pengajuan kebutuhan donor.')
+                    ->action(function (ProfilRumahSakit $record): void {
+                        DB::transaction(function () use ($record): void {
+                            $record->update([
+                                'status_verifikasi' => StatusVerifikasiRumahSakit::Disetujui,
+                                'diverifikasi_oleh' => Filament::auth()->id(),
+                                'diverifikasi_pada' => now(),
+                                'alasan_penolakan' => null,
+                            ]);
 
-                                    $record->pengguna()->update([
-                                        'status' =>
-                                            StatusPengguna::Aktif,
-                                    ]);
-                                }
-                            );
+                            $record->pengguna()->update([
+                                'status' => StatusPengguna::Aktif,
+                            ]);
+                        });
 
-                            Notification::make()
-                                ->title(
-                                    'Rumah sakit berhasil disetujui.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Pemohon Donor berhasil disetujui.')
+                            ->success()
+                            ->send();
+                    }),
 
                 Tables\Actions\Action::make('tolak')
                     ->label('Tolak')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(
-                        fn (
-                            ProfilRumahSakit $record
-                        ): bool => $record->status_verifikasi !==
-                            StatusVerifikasiRumahSakit::Ditolak
+                        fn (ProfilRumahSakit $record): bool => $record->status_verifikasi !== StatusVerifikasiRumahSakit::Ditolak
                     )
                     ->form([
-                        Forms\Components\Textarea::make(
-                            'alasan_penolakan'
-                        )
+                        Forms\Components\Textarea::make('alasan_penolakan')
                             ->label('Alasan Penolakan')
                             ->required()
                             ->minLength(10)
@@ -585,57 +471,36 @@ class ProfilRumahSakitResource extends Resource
                             ->rows(4),
                     ])
                     ->requiresConfirmation()
-                    ->modalHeading('Tolak Rumah Sakit')
-                    ->action(
-                        function (
-                            ProfilRumahSakit $record,
-                            array $data
-                        ): void {
-                            DB::transaction(
-                                function () use (
-                                    $record,
-                                    $data
-                                ): void {
-                                    $record->update([
-                                        'status_verifikasi' =>
-                                            StatusVerifikasiRumahSakit::Ditolak,
-                                        'diverifikasi_oleh' =>
-                                            Filament::auth()->id(),
-                                        'diverifikasi_pada' => now(),
-                                        'alasan_penolakan' =>
-                                            $data['alasan_penolakan'],
-                                    ]);
+                    ->modalHeading('Tolak Pemohon Donor')
+                    ->action(function (ProfilRumahSakit $record, array $data): void {
+                        DB::transaction(function () use ($record, $data): void {
+                            $record->update([
+                                'status_verifikasi' => StatusVerifikasiRumahSakit::Ditolak,
+                                'diverifikasi_oleh' => Filament::auth()->id(),
+                                'diverifikasi_pada' => now(),
+                                'alasan_penolakan' => $data['alasan_penolakan'],
+                            ]);
 
-                                    $record->pengguna()->update([
-                                        'status' =>
-                                            StatusPengguna::Ditolak,
-                                    ]);
-                                }
-                            );
+                            $record->pengguna()->update([
+                                'status' => StatusPengguna::Ditolak,
+                            ]);
+                        });
 
-                            Notification::make()
-                                ->title(
-                                    'Pendaftaran rumah sakit ditolak.'
-                                )
-                                ->danger()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Pemohon Donor berhasil ditolak.')
+                            ->danger()
+                            ->send();
+                    }),
 
                 Tables\Actions\Action::make('tangguhkan')
                     ->label('Tangguhkan')
                     ->icon('heroicon-o-pause-circle')
                     ->color('warning')
                     ->visible(
-                        fn (
-                            ProfilRumahSakit $record
-                        ): bool => $record->status_verifikasi ===
-                            StatusVerifikasiRumahSakit::Disetujui
+                        fn (ProfilRumahSakit $record): bool => $record->status_verifikasi === StatusVerifikasiRumahSakit::Disetujui
                     )
                     ->form([
-                        Forms\Components\Textarea::make(
-                            'alasan_penangguhan'
-                        )
+                        Forms\Components\Textarea::make('alasan_penangguhan')
                             ->label('Alasan Penangguhan')
                             ->required()
                             ->minLength(10)
@@ -643,50 +508,33 @@ class ProfilRumahSakitResource extends Resource
                             ->rows(4),
                     ])
                     ->requiresConfirmation()
-                    ->action(
-                        function (
-                            ProfilRumahSakit $record,
-                            array $data
-                        ): void {
-                            DB::transaction(
-                                function () use (
-                                    $record,
-                                    $data
-                                ): void {
-                                    $record->update([
-                                        'status_verifikasi' =>
-                                            StatusVerifikasiRumahSakit::Ditangguhkan,
-                                        'diverifikasi_oleh' =>
-                                            Filament::auth()->id(),
-                                        'diverifikasi_pada' => now(),
-                                        'alasan_penolakan' =>
-                                            $data['alasan_penangguhan'],
-                                    ]);
+                    ->modalHeading('Tangguhkan Pemohon Donor')
+                    ->action(function (ProfilRumahSakit $record, array $data): void {
+                        DB::transaction(function () use ($record, $data): void {
+                            $record->update([
+                                'status_verifikasi' => StatusVerifikasiRumahSakit::Ditangguhkan,
+                                'diverifikasi_oleh' => Filament::auth()->id(),
+                                'diverifikasi_pada' => now(),
+                                'alasan_penolakan' => $data['alasan_penangguhan'],
+                            ]);
 
-                                    $record->pengguna()->update([
-                                        'status' =>
-                                            StatusPengguna::Ditangguhkan,
-                                    ]);
-                                }
-                            );
+                            $record->pengguna()->update([
+                                'status' => StatusPengguna::Ditangguhkan,
+                            ]);
+                        });
 
-                            Notification::make()
-                                ->title(
-                                    'Akses rumah sakit ditangguhkan.'
-                                )
-                                ->warning()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Akses Pemohon Donor berhasil ditangguhkan.')
+                            ->warning()
+                            ->send();
+                    }),
 
                 Tables\Actions\Action::make('kembalikan_menunggu')
                     ->label('Tinjau Ulang')
                     ->icon('heroicon-o-arrow-path')
                     ->color('gray')
                     ->visible(
-                        fn (
-                            ProfilRumahSakit $record
-                        ): bool => in_array(
+                        fn (ProfilRumahSakit $record): bool => in_array(
                             $record->status_verifikasi,
                             [
                                 StatusVerifikasiRumahSakit::Ditolak,
@@ -696,45 +544,32 @@ class ProfilRumahSakitResource extends Resource
                         )
                     )
                     ->requiresConfirmation()
-                    ->action(
-                        function (ProfilRumahSakit $record): void {
-                            DB::transaction(
-                                function () use ($record): void {
-                                    $record->update([
-                                        'status_verifikasi' =>
-                                            StatusVerifikasiRumahSakit::Menunggu,
-                                        'diverifikasi_oleh' => null,
-                                        'diverifikasi_pada' => null,
-                                        'alasan_penolakan' => null,
-                                    ]);
+                    ->modalHeading('Kembalikan ke Tahap Verifikasi')
+                    ->action(function (ProfilRumahSakit $record): void {
+                        DB::transaction(function () use ($record): void {
+                            $record->update([
+                                'status_verifikasi' => StatusVerifikasiRumahSakit::Menunggu,
+                                'diverifikasi_oleh' => null,
+                                'diverifikasi_pada' => null,
+                                'alasan_penolakan' => null,
+                            ]);
 
-                                    $record->pengguna()->update([
-                                        'status' =>
-                                            StatusPengguna::Menunggu,
-                                    ]);
-                                }
-                            );
+                            $record->pengguna()->update([
+                                'status' => StatusPengguna::Menunggu,
+                            ]);
+                        });
 
-                            Notification::make()
-                                ->title(
-                                    'Rumah sakit dikembalikan ke tahap verifikasi.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
+                        Notification::make()
+                            ->title('Pemohon Donor dikembalikan ke tahap verifikasi.')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([])
             ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading(
-                'Belum ada profil Rumah Sakit'
-            )
-            ->emptyStateDescription(
-                'Tambahkan profil Rumah Sakit atau tunggu registrasi dari frontend.'
-            )
-            ->emptyStateIcon(
-                'heroicon-o-building-office-2'
-            );
+            ->emptyStateHeading('Belum ada profil Pemohon Donor')
+            ->emptyStateDescription('Tambahkan profil Pemohon Donor atau tunggu registrasi dari portal.')
+            ->emptyStateIcon('heroicon-o-building-office-2');
     }
 
     public static function getRelations(): array
@@ -746,27 +581,19 @@ class ProfilRumahSakitResource extends Resource
     {
         return [
             'index' => Pages\ListProfilRumahSakits::route('/'),
-            'create' => Pages\CreateProfilRumahSakit::route(
-                '/create'
-            ),
-            'view' => Pages\ViewProfilRumahSakit::route(
-                '/{record}'
-            ),
-            'edit' => Pages\EditProfilRumahSakit::route(
-                '/{record}/edit'
-            ),
+            'create' => Pages\CreateProfilRumahSakit::route('/create'),
+            'view' => Pages\ViewProfilRumahSakit::route('/{record}'),
+            'edit' => Pages\EditProfilRumahSakit::route('/{record}/edit'),
         ];
     }
 
-    public static function getGlobalSearchResultTitle(
-        Model $record
-    ): string {
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
         return $record->nama_rumah_sakit;
     }
 
-    public static function getGlobalSearchResultDetails(
-        Model $record
-    ): array {
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
         return [
             'Kode' => $record->kode_rumah_sakit,
             'Kota' => $record->kota,
@@ -781,5 +608,27 @@ class ProfilRumahSakitResource extends Resource
                 'pengguna',
                 'verifikator',
             ]);
+    }
+
+    private static function normalizeStatus(StatusVerifikasiRumahSakit|string $state): StatusVerifikasiRumahSakit
+    {
+        return $state instanceof StatusVerifikasiRumahSakit
+            ? $state
+            : StatusVerifikasiRumahSakit::from($state);
+    }
+
+    private static function statusLabel(StatusVerifikasiRumahSakit|string $state): string
+    {
+        return self::normalizeStatus($state)->label();
+    }
+
+    private static function statusColor(StatusVerifikasiRumahSakit|string $state): string
+    {
+        return match (self::normalizeStatus($state)) {
+            StatusVerifikasiRumahSakit::Menunggu => 'warning',
+            StatusVerifikasiRumahSakit::Disetujui => 'success',
+            StatusVerifikasiRumahSakit::Ditolak => 'danger',
+            StatusVerifikasiRumahSakit::Ditangguhkan => 'gray',
+        };
     }
 }

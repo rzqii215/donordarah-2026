@@ -1,55 +1,39 @@
 <?php
 
+use App\Http\Controllers\Auth\KeluarController;
+use App\Livewire\Donor\Jadwal;
+use App\Livewire\Donor\Lokasi;
 use App\Livewire\Donor\Portal;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Livewire\Donor\Profil;
+use App\Livewire\Donor\Riwayat;
+use App\Livewire\Donor\Stok;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([
     'web',
     'auth',
-])
-    ->prefix('donor')
-    ->name('donor.')
-    ->group(function (): void {
-        Route::get('/', function () {
-            return redirect()->route(
-                'donor.beranda'
-            );
-        })->name('index');
+])->group(function (): void {
+    Route::get('/donor', Portal::class)
+        ->defaults('section', 'beranda')
+        ->name('donor.beranda');
 
-        Route::get('/beranda', Portal::class)
-            ->defaults('section', 'beranda')
-            ->name('beranda');
+    Route::get('/donor/jadwal', Jadwal::class)
+        ->name('donor.jadwal');
 
-        Route::get('/jadwal-donor', Portal::class)
-            ->defaults('section', 'jadwal')
-            ->name('jadwal');
+    Route::get('/donor/lokasi', Lokasi::class)
+        ->name('donor.lokasi');
 
-        Route::get('/lokasi-donor', Portal::class)
-            ->defaults('section', 'lokasi')
-            ->name('lokasi');
+    Route::get('/donor/stok', Stok::class)
+        ->name('donor.stok');
 
-        Route::get('/stok-darah', Portal::class)
-            ->defaults('section', 'stok')
-            ->name('stok');
+    Route::get('/donor/riwayat', Riwayat::class)
+        ->name('donor.riwayat');
 
-        Route::get('/riwayat-donor', Portal::class)
-            ->defaults('section', 'riwayat')
-            ->name('riwayat');
+    Route::get('/donor/profil', Profil::class)
+        ->name('donor.profil');
 
-        Route::get('/profil', Portal::class)
-            ->defaults('section', 'profil')
-            ->name('profil');
-
-        Route::post('/keluar', function (
-            Request $request
-        ) {
-            Auth::guard('web')->logout();
-
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect('/');
-        })->name('logout');
-    });
+    if (! Route::has('donor.logout')) {
+        Route::post('/donor/logout', KeluarController::class)
+            ->name('donor.logout');
+    }
+});

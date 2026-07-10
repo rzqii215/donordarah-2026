@@ -21,7 +21,7 @@ class PaginationHandler extends Handlers
         DistribusiDarahResource::class;
 
     /**
-     * Daftar distribusi darah milik Rumah Sakit yang sedang login.
+     * Daftar distribusi kantong darah milik Pemohon Donor yang sedang login.
      *
      * Filter:
      *
@@ -39,7 +39,7 @@ class PaginationHandler extends Handlers
     public function handler(
         Request $request
     ) {
-        $profilRumahSakit = $this->profilRumahSakit(
+        $profilPemohonDonor = $this->profilRumahSakit(
             request: $request,
             harusTerverifikasi: true,
         );
@@ -64,11 +64,11 @@ class PaginationHandler extends Handlers
                 function (
                     Builder $query
                 ) use (
-                    $profilRumahSakit
+                    $profilPemohonDonor
                 ): void {
                     $query->where(
                         'profil_rumah_sakit_id',
-                        $profilRumahSakit->id
+                        $profilPemohonDonor->id
                     );
                 }
             );

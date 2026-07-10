@@ -24,10 +24,10 @@ Route::get('/', function () {
         return redirect('/admin');
     }
 
-    if ($pengguna->hasRole('hospital')) {
-        if (Route::has('rumah-sakit.beranda')) {
+    if ($pengguna->hasRole('pemohon_donor')) {
+        if (Route::has('pemohon-donor.beranda')) {
             return redirect()->route(
-                'rumah-sakit.beranda'
+                'pemohon-donor.beranda'
             );
         }
 
@@ -40,7 +40,7 @@ Route::get('/', function () {
             ->route('login')
             ->with(
                 'error',
-                'Portal Rumah Sakit belum tersedia.'
+                'Portal Pemohon Donor belum tersedia.'
             );
     }
 
@@ -59,3 +59,15 @@ Route::get('/', function () {
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/donor.php';
+
+if (file_exists(__DIR__ . '/pemohon-donor.php')) {
+    require __DIR__ . '/pemohon-donor.php';
+require __DIR__ . '/pemohon-donor-riwayat-bukti.php';
+}
+require __DIR__ . '/auth-public.php';
+
+require __DIR__ . '/google-auth.php';
+
+require __DIR__ . '/logout-public.php';
+
+require __DIR__ . '/password-reset.php';

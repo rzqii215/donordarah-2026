@@ -27,12 +27,12 @@ class CreateHandler extends Handlers
     }
 
     /**
-     * Membuat permintaan darah untuk Rumah Sakit yang sedang login.
+     * Membuat pengajuan kebutuhan donor untuk Pemohon Donor yang sedang login.
      */
     public function handler(
         CreatePermintaanDarahRequest $request
     ): JsonResponse {
-        $profil = $this->profilRumahSakit(
+        $profilPemohonDonor = $this->profilRumahSakit(
             request: $request,
             harusTerverifikasi: true,
         );
@@ -45,7 +45,7 @@ class CreateHandler extends Handlers
             $pathDokumen = $request
                 ->file('dokumen_permintaan')
                 ?->store(
-                    'dokumen-permintaan-darah',
+                    'dokumen-pengajuan-kebutuhan-donor',
                     'public'
                 );
         }
@@ -54,7 +54,7 @@ class CreateHandler extends Handlers
             $record = app(
                 LayananPermintaanDarah::class
             )->buat(
-                rumahSakit: $profil,
+                rumahSakit: $profilPemohonDonor,
                 data: [
                     'referensi_pasien' =>
                         $data['referensi_pasien'],

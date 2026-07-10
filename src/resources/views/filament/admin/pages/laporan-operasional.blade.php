@@ -143,7 +143,7 @@
             font-weight: 600;
         }
 
-        .laporan-distribusi-hospital {
+        .laporan-distribusi-pemohon-donor {
             margin: 0.25rem 0 0;
             color: rgb(75 85 99);
             font-size: 0.875rem;
@@ -178,7 +178,7 @@
 
         .dark .laporan-card-label,
         .dark .laporan-card-description,
-        .dark .laporan-distribusi-hospital,
+        .dark .laporan-distribusi-pemohon-donor,
         .dark .laporan-distribusi-date,
         .dark .laporan-empty-state {
             color: rgb(161 161 170);
@@ -259,7 +259,8 @@
         </x-slot>
 
         <div class="laporan-filter-grid">
-            <div>
+            
+<div>
                 <label
                     for="tanggal-mulai"
                     class="mb-2 block text-sm font-medium text-gray-950 dark:text-white"
@@ -383,11 +384,11 @@
     <div class="laporan-content-grid">
         <x-filament::section>
             <x-slot name="heading">
-                Permintaan Berdasarkan Status
+                Pengajuan Berdasarkan Status
             </x-slot>
 
             <x-slot name="description">
-                Jumlah permintaan yang dibuat pada periode terpilih.
+                Jumlah pengajuan kebutuhan donor yang dibuat pada periode terpilih.
             </x-slot>
 
             <div class="laporan-status-grid">
@@ -423,7 +424,7 @@
                                     {{ $distribusi->nomor_distribusi }}
                                 </p>
 
-                                <p class="laporan-distribusi-hospital">
+                                <p class="laporan-distribusi-pemohon-donor">
                                     {{ $distribusi->permintaan?->rumahSakit?->nama_rumah_sakit ?? '-' }}
                                 </p>
 

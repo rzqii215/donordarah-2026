@@ -74,12 +74,12 @@ class UserSeeder extends Seeder
             PeranPengguna::Pendonor->value,
         ]);
 
-        $rumahSakit = User::updateOrCreate(
+        $pemohonDonor = User::updateOrCreate(
             [
-                'email' => 'rumahsakit@donordarah.test',
+                'email' => 'pemohon@donordarah.test',
             ],
             [
-                'name' => 'RS Harapan Sehat',
+                'name' => 'Yayasan Harapan Sehat',
                 'nomor_telepon' => '081200000004',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
@@ -87,8 +87,8 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $rumahSakit->syncRoles([
-            PeranPengguna::RumahSakit->value,
+        $pemohonDonor->syncRoles([
+            PeranPengguna::PemohonDonor->value,
         ]);
     }
 }

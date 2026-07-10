@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class DistribusiDarahTransformer extends JsonResource
 {
     /**
-     * Mengubah Distribusi Darah menjadi response API Rumah Sakit.
+     * Mengubah Distribusi Kantong Darah menjadi response API Pemohon Donor.
      *
      * @return array<string, mixed>
      */
@@ -25,7 +25,7 @@ class DistribusiDarahTransformer extends JsonResource
         $permintaan = $this->resource
             ->getRelationValue('permintaan');
 
-        $rumahSakit = $permintaan
+        $pemohonDonor = $permintaan
             ?->getRelationValue('rumahSakit');
 
         return [
@@ -36,16 +36,16 @@ class DistribusiDarahTransformer extends JsonResource
                     'nomor_distribusi'
                 ),
 
-            'permintaan' => [
+            'pengajuan' => [
                 'id' =>
                     $permintaan?->getKey(),
 
-                'nomor_permintaan' =>
+                'nomor_pengajuan' =>
                     $permintaan?->getAttribute(
                         'nomor_permintaan'
                     ),
 
-                'referensi_pasien' =>
+                'referensi_pengajuan' =>
                     $permintaan?->getAttribute(
                         'referensi_pasien'
                     ),
@@ -113,17 +113,17 @@ class DistribusiDarahTransformer extends JsonResource
                 ],
             ],
 
-            'rumah_sakit' => [
+            'pemohon_donor' => [
                 'id' =>
-                    $rumahSakit?->getKey(),
+                    $pemohonDonor?->getKey(),
 
                 'kode' =>
-                    $rumahSakit?->getAttribute(
+                    $pemohonDonor?->getAttribute(
                         'kode_rumah_sakit'
                     ),
 
                 'nama' =>
-                    $rumahSakit?->getAttribute(
+                    $pemohonDonor?->getAttribute(
                         'nama_rumah_sakit'
                     ),
             ],
@@ -170,11 +170,26 @@ class DistribusiDarahTransformer extends JsonResource
                     $this->resource->getAttribute(
                         'jabatan_penerima'
                     ),
+
+                'nomor_identitas' =>
+                    $this->resource->getAttribute(
+                        'nomor_identitas_penerima'
+                    ),
             ],
+
+            'bukti_serah_terima' =>
+                $this->resource->getAttribute(
+                    'path_bukti_serah_terima'
+                ),
 
             'catatan' =>
                 $this->resource->getAttribute(
                     'catatan'
+                ),
+
+            'alasan_pembatalan' =>
+                $this->resource->getAttribute(
+                    'alasan_pembatalan'
                 ),
 
             'dibuat_pada' =>

@@ -24,7 +24,7 @@ class UpdateHandler extends Handlers
     }
 
     /**
-     * Memperbarui profil Rumah Sakit yang sedang login.
+     * Memperbarui profil Pemohon Donor yang sedang login.
      */
     public function handler(
         UpdateProfilRumahSakitRequest $request

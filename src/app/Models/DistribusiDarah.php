@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use App\Enums\StatusDistribusiDarah;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\StatusPermintaanDarah;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DistribusiDarah extends Model
 {
-    use HasFactory;
-
     protected $table = 'distribusi_darah';
 
     protected $fillable = [
@@ -30,14 +28,22 @@ class DistribusiDarah extends Model
         'catatan',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'dijadwalkan_pada' => 'datetime',
+        'status' => StatusDistribusiDarah::class,
+        'diserahkan_pada' => 'datetime',
+        'dibatalkan_pada' => 'datetime',
+    ];
+
+    protected static function booted(): void
     {
-        return [
-            'dijadwalkan_pada' => 'datetime',
-            'status' => StatusDistribusiDarah::class,
-            'diserahkan_pada' => 'datetime',
-            'dibatalkan_pada' => 'datetime',
-        ];
+        static::saved(function (DistribusiDarah $distribusi): void {
+            $distribusi->sinkronkanStatusPermintaan();
+        });
+
+        static::deleted(function (DistribusiDarah $distribusi): void {
+            $distribusi->kembalikanStatusPermintaanSetelahDistribusiDihapus();
+        });
     }
 
     public function permintaan(): BelongsTo
@@ -48,7 +54,7 @@ class DistribusiDarah extends Model
         );
     }
 
-    public function penyiap(): BelongsTo
+    public function disiapkanOleh(): BelongsTo
     {
         return $this->belongsTo(
             User::class,
@@ -56,7 +62,7 @@ class DistribusiDarah extends Model
         );
     }
 
-    public function penyerah(): BelongsTo
+    public function diserahkanOleh(): BelongsTo
     {
         return $this->belongsTo(
             User::class,
@@ -64,39 +70,86 @@ class DistribusiDarah extends Model
         );
     }
 
-    public function dapatDitandaiSiap(): bool
+    private function sinkronkanStatusPermintaan(): void
     {
-        return $this->status ===
-            StatusDistribusiDarah::Dijadwalkan;
+        $this->loadMissing('permintaan');
+
+        $permintaan = $this->permintaan;
+
+        if ($permintaan === null) {
+            return;
+        }
+
+        $statusDistribusi = $this->status instanceof StatusDistribusiDarah
+            ? $this->status->value
+            : (string) $this->status;
+
+        $statusPermintaanBaru = match ($statusDistribusi) {
+            StatusDistribusiDarah::Dijadwalkan->value,
+            StatusDistribusiDarah::SiapDiserahkan->value => StatusPermintaanDarah::SiapDiambil,
+
+            StatusDistribusiDarah::Selesai->value => StatusPermintaanDarah::Selesai,
+
+            StatusDistribusiDarah::Dibatalkan->value => StatusPermintaanDarah::Dibatalkan,
+
+            default => null,
+        };
+
+        if ($statusPermintaanBaru === null) {
+            return;
+        }
+
+        $statusPermintaanSekarang = $permintaan->status instanceof StatusPermintaanDarah
+            ? $permintaan->status->value
+            : (string) $permintaan->status;
+
+        if ($statusPermintaanSekarang === $statusPermintaanBaru->value) {
+            return;
+        }
+
+        $permintaan
+            ->forceFill([
+                'status' => $statusPermintaanBaru->value,
+            ])
+            ->saveQuietly();
     }
 
-    public function dapatDiselesaikan(): bool
+    private function kembalikanStatusPermintaanSetelahDistribusiDihapus(): void
     {
-        return in_array(
-            $this->status,
-            [
-                StatusDistribusiDarah::Dijadwalkan,
-                StatusDistribusiDarah::SiapDiserahkan,
-            ],
-            true
-        );
-    }
+        $this->loadMissing('permintaan');
 
-    public function dapatDibatalkan(): bool
-    {
-        return in_array(
-            $this->status,
-            [
-                StatusDistribusiDarah::Dijadwalkan,
-                StatusDistribusiDarah::SiapDiserahkan,
-            ],
-            true
-        );
-    }
+        $permintaan = $this->permintaan;
 
-    public function dapatDiubah(): bool
-    {
-        return $this->status ===
-            StatusDistribusiDarah::Dijadwalkan;
+        if ($permintaan === null) {
+            return;
+        }
+
+        $masihPunyaDistribusiLain = self::query()
+            ->where('permintaan_darah_id', $permintaan->id)
+            ->exists();
+
+        if ($masihPunyaDistribusiLain) {
+            return;
+        }
+
+        $statusPermintaanSekarang = $permintaan->status instanceof StatusPermintaanDarah
+            ? $permintaan->status->value
+            : (string) $permintaan->status;
+
+        $statusYangBolehDikembalikan = [
+            StatusPermintaanDarah::SiapDiambil->value,
+            StatusPermintaanDarah::Selesai->value,
+            StatusPermintaanDarah::Dibatalkan->value,
+        ];
+
+        if (! in_array($statusPermintaanSekarang, $statusYangBolehDikembalikan, true)) {
+            return;
+        }
+
+        $permintaan
+            ->forceFill([
+                'status' => StatusPermintaanDarah::Disetujui->value,
+            ])
+            ->saveQuietly();
     }
 }

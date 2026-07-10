@@ -31,65 +31,39 @@ class LayananDistribusiDarah
         ): DistribusiDarah {
             $record = PermintaanDarah::query()
                 ->with([
-                    'distribusi',
                     'itemAktif.kantongDarah',
                 ])
                 ->lockForUpdate()
                 ->findOrFail($permintaan->id);
 
-            $this->pastikanPermintaanSiapDistribusi(
-                $record
-            );
+            $this->pastikanPermintaanSiapDistribusi($record);
 
-            if ($record->distribusi !== null) {
+            $sudahAdaDistribusi = DistribusiDarah::query()
+                ->where('permintaan_darah_id', $record->id)
+                ->exists();
+
+            if ($sudahAdaDistribusi) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Permintaan ini sudah mempunyai data distribusi.',
+                        'Pengajuan ini sudah mempunyai data distribusi.',
                 ]);
             }
 
             return DistribusiDarah::query()->create([
-                'nomor_distribusi' =>
-                    $this->buatNomorDistribusi(),
-
-                'permintaan_darah_id' =>
-                    $record->id,
-
-                'disiapkan_oleh' =>
-                    $petugasId,
-
-                'dijadwalkan_pada' =>
-                    $data['dijadwalkan_pada'],
-
-                'status' =>
-                    StatusDistribusiDarah::Dijadwalkan,
-
-                'diserahkan_oleh' =>
-                    null,
-
-                'nama_penerima' =>
-                    null,
-
-                'jabatan_penerima' =>
-                    null,
-
-                'nomor_identitas_penerima' =>
-                    null,
-
-                'path_bukti_serah_terima' =>
-                    null,
-
-                'diserahkan_pada' =>
-                    null,
-
-                'dibatalkan_pada' =>
-                    null,
-
-                'alasan_pembatalan' =>
-                    null,
-
-                'catatan' =>
-                    $data['catatan'] ?? null,
+                'nomor_distribusi' => $this->buatNomorDistribusi(),
+                'permintaan_darah_id' => $record->id,
+                'disiapkan_oleh' => $petugasId,
+                'dijadwalkan_pada' => $data['dijadwalkan_pada'],
+                'status' => StatusDistribusiDarah::Dijadwalkan->value,
+                'diserahkan_oleh' => null,
+                'nama_penerima' => null,
+                'jabatan_penerima' => null,
+                'nomor_identitas_penerima' => null,
+                'path_bukti_serah_terima' => null,
+                'diserahkan_pada' => null,
+                'dibatalkan_pada' => null,
+                'alasan_pembatalan' => null,
+                'catatan' => $data['catatan'] ?? null,
             ]);
         });
     }
@@ -109,7 +83,10 @@ class LayananDistribusiDarah
                 ->lockForUpdate()
                 ->findOrFail($distribusi->id);
 
-            if (! $record->dapatDiubah()) {
+            if (
+                $this->statusDistribusiValue($record) !==
+                StatusDistribusiDarah::Dijadwalkan->value
+            ) {
                 throw ValidationException::withMessages([
                     'status' =>
                         'Distribusi tidak dapat diubah dari status saat ini.',
@@ -117,11 +94,8 @@ class LayananDistribusiDarah
             }
 
             $record->update([
-                'dijadwalkan_pada' =>
-                    $data['dijadwalkan_pada'],
-
-                'catatan' =>
-                    $data['catatan'] ?? null,
+                'dijadwalkan_pada' => $data['dijadwalkan_pada'],
+                'catatan' => $data['catatan'] ?? null,
             ]);
 
             return $record->refresh();
@@ -135,26 +109,30 @@ class LayananDistribusiDarah
             $distribusi
         ): DistribusiDarah {
             $record = DistribusiDarah::query()
-                ->with([
-                    'permintaan.itemAktif.kantongDarah',
-                ])
                 ->lockForUpdate()
                 ->findOrFail($distribusi->id);
 
-            if (! $record->dapatDitandaiSiap()) {
+            if (
+                $this->statusDistribusiValue($record) !==
+                StatusDistribusiDarah::Dijadwalkan->value
+            ) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Distribusi tidak dapat ditandai siap dari status saat ini.',
+                        'Distribusi hanya dapat ditandai siap dari status Dijadwalkan.',
                 ]);
             }
 
-            $this->pastikanPermintaanSiapDistribusi(
-                $record->permintaan
-            );
+            $permintaan = PermintaanDarah::query()
+                ->with([
+                    'itemAktif.kantongDarah',
+                ])
+                ->lockForUpdate()
+                ->findOrFail($record->permintaan_darah_id);
+
+            $this->pastikanPermintaanSiapDistribusi($permintaan);
 
             $record->update([
-                'status' =>
-                    StatusDistribusiDarah::SiapDiserahkan,
+                'status' => StatusDistribusiDarah::SiapDiserahkan->value,
             ]);
 
             return $record->refresh();
@@ -178,7 +156,16 @@ class LayananDistribusiDarah
                 ->lockForUpdate()
                 ->findOrFail($distribusi->id);
 
-            if (! $record->dapatDiselesaikan()) {
+            if (
+                ! in_array(
+                    $this->statusDistribusiValue($record),
+                    [
+                        StatusDistribusiDarah::Dijadwalkan->value,
+                        StatusDistribusiDarah::SiapDiserahkan->value,
+                    ],
+                    true
+                )
+            ) {
                 throw ValidationException::withMessages([
                     'status' =>
                         'Distribusi tidak dapat diselesaikan dari status saat ini.',
@@ -190,153 +177,106 @@ class LayananDistribusiDarah
             );
 
             $jabatanPenerima = trim(
-                (string) (
-                    $data['jabatan_penerima'] ?? ''
-                )
+                (string) ($data['jabatan_penerima'] ?? '')
             );
 
             if ($namaPenerima === '') {
                 throw ValidationException::withMessages([
-                    'nama_penerima' =>
-                        'Nama penerima wajib diisi.',
+                    'nama_penerima' => 'Nama penerima wajib diisi.',
                 ]);
             }
 
             if ($jabatanPenerima === '') {
                 throw ValidationException::withMessages([
-                    'jabatan_penerima' =>
-                        'Jabatan penerima wajib diisi.',
+                    'jabatan_penerima' => 'Jabatan penerima wajib diisi.',
                 ]);
             }
 
             $permintaan = PermintaanDarah::query()
                 ->lockForUpdate()
-                ->findOrFail(
-                    $record->permintaan_darah_id
-                );
+                ->findOrFail($record->permintaan_darah_id);
 
             if (
-                $permintaan->status !==
-                StatusPermintaanDarah::SiapDiambil
+                $this->statusPermintaanValue($permintaan) !==
+                StatusPermintaanDarah::SiapDiambil->value
             ) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Permintaan tidak berada pada status Siap Diambil.',
+                        'Pengajuan tidak berada pada status Siap Diambil.',
                 ]);
             }
 
             $itemAktif = ItemPermintaanDarah::query()
-                ->where(
-                    'permintaan_darah_id',
-                    $permintaan->id
-                )
+                ->where('permintaan_darah_id', $permintaan->id)
                 ->where('aktif', true)
                 ->lockForUpdate()
                 ->get();
 
-            if (
-                $itemAktif->count() <
-                $permintaan->jumlah_kantong
-            ) {
+            if ($itemAktif->count() < (int) $permintaan->jumlah_kantong) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Jumlah kantong yang dialokasikan belum memenuhi permintaan.',
+                        'Jumlah kantong yang dialokasikan belum memenuhi pengajuan.',
                 ]);
             }
 
             foreach ($itemAktif as $item) {
-                if (! $item->dapatDidistribusikan()) {
+                if (
+                    $this->statusItemValue($item) !==
+                    StatusItemPermintaanDarah::Dialokasikan->value
+                ) {
                     throw ValidationException::withMessages([
                         'status' =>
-                            'Terdapat item alokasi yang tidak dapat didistribusikan.',
+                            'Terdapat item alokasi yang tidak berstatus Dialokasikan.',
                     ]);
                 }
 
                 $kantong = KantongDarah::query()
                     ->lockForUpdate()
-                    ->findOrFail(
-                        $item->kantong_darah_id
-                    );
+                    ->findOrFail($item->kantong_darah_id);
 
                 if (
-                    $kantong->status !==
-                    StatusKantongDarah::Dipesan
+                    $this->statusKantongValue($kantong) !==
+                    StatusKantongDarah::Dipesan->value
                 ) {
                     throw ValidationException::withMessages([
                         'kantong_darah_id' =>
-                            'Terdapat kantong darah yang tidak berstatus Dialokasikan.',
+                            'Terdapat kantong darah yang belum berstatus Dialokasikan.',
                     ]);
                 }
 
                 $item->update([
                     'status' =>
-                        StatusItemPermintaanDarah
-                            ::Didistribusikan,
-
-                    'aktif' =>
-                        null,
-
-                    'didistribusikan_pada' =>
-                        now(),
+                        StatusItemPermintaanDarah::Didistribusikan->value,
+                    'aktif' => false,
+                    'didistribusikan_pada' => now(),
                 ]);
 
                 $kantong->update([
-                    'status' =>
-                        StatusKantongDarah
-                            ::Didistribusikan,
-
-                    'didistribusikan_pada' =>
-                        now(),
+                    'status' => StatusKantongDarah::Didistribusikan->value,
+                    'didistribusikan_pada' => now(),
                 ]);
             }
 
             $record->update([
-                'status' =>
-                    StatusDistribusiDarah::Selesai,
-
-                'diserahkan_oleh' =>
-                    $petugasId,
-
-                'nama_penerima' =>
-                    $namaPenerima,
-
-                'jabatan_penerima' =>
-                    $jabatanPenerima,
-
-                'nomor_identitas_penerima' =>
-                    filled(
-                        $data[
-                            'nomor_identitas_penerima'
-                        ] ?? null
-                    )
-                        ? trim(
-                            (string) $data[
-                                'nomor_identitas_penerima'
-                            ]
-                        )
-                        : null,
-
+                'status' => StatusDistribusiDarah::Selesai->value,
+                'diserahkan_oleh' => $petugasId,
+                'nama_penerima' => $namaPenerima,
+                'jabatan_penerima' => $jabatanPenerima,
+                'nomor_identitas_penerima' => filled(
+                    $data['nomor_identitas_penerima'] ?? null
+                )
+                    ? trim((string) $data['nomor_identitas_penerima'])
+                    : null,
                 'path_bukti_serah_terima' =>
-                    $data[
-                        'path_bukti_serah_terima'
-                    ] ?? null,
-
-                'diserahkan_pada' =>
-                    now(),
-
-                'dibatalkan_pada' =>
-                    null,
-
-                'alasan_pembatalan' =>
-                    null,
+                    $data['path_bukti_serah_terima'] ?? null,
+                'diserahkan_pada' => now(),
+                'dibatalkan_pada' => null,
+                'alasan_pembatalan' => null,
             ]);
 
             $permintaan->update([
-                'status' =>
-                    StatusPermintaanDarah::Selesai,
-
-                'selesai_pada' =>
-                    now(),
+                'status' => StatusPermintaanDarah::Selesai->value,
+                'selesai_pada' => now(),
             ]);
 
             return $record->refresh();
@@ -357,7 +297,16 @@ class LayananDistribusiDarah
                 ->lockForUpdate()
                 ->findOrFail($distribusi->id);
 
-            if (! $record->dapatDibatalkan()) {
+            if (
+                ! in_array(
+                    $this->statusDistribusiValue($record),
+                    [
+                        StatusDistribusiDarah::Dijadwalkan->value,
+                        StatusDistribusiDarah::SiapDiserahkan->value,
+                    ],
+                    true
+                )
+            ) {
                 throw ValidationException::withMessages([
                     'status' =>
                         'Distribusi tidak dapat dibatalkan dari status saat ini.',
@@ -368,22 +317,16 @@ class LayananDistribusiDarah
 
             if ($alasanBersih === '') {
                 throw ValidationException::withMessages([
-                    'alasan' =>
-                        'Alasan pembatalan wajib diisi.',
+                    'alasan' => 'Alasan pembatalan wajib diisi.',
                 ]);
             }
 
             $permintaan = PermintaanDarah::query()
                 ->lockForUpdate()
-                ->findOrFail(
-                    $record->permintaan_darah_id
-                );
+                ->findOrFail($record->permintaan_darah_id);
 
             $itemAktif = ItemPermintaanDarah::query()
-                ->where(
-                    'permintaan_darah_id',
-                    $permintaan->id
-                )
+                ->where('permintaan_darah_id', $permintaan->id)
                 ->where('aktif', true)
                 ->lockForUpdate()
                 ->get();
@@ -391,57 +334,34 @@ class LayananDistribusiDarah
             foreach ($itemAktif as $item) {
                 $kantong = KantongDarah::query()
                     ->lockForUpdate()
-                    ->findOrFail(
-                        $item->kantong_darah_id
-                    );
+                    ->findOrFail($item->kantong_darah_id);
 
                 $item->update([
-                    'status' =>
-                        StatusItemPermintaanDarah
-                            ::Dilepaskan,
-
-                    'aktif' =>
-                        null,
-
-                    'dilepas_oleh' =>
-                        $petugasId,
-
-                    'dilepas_pada' =>
-                        now(),
-
+                    'status' => StatusItemPermintaanDarah::Dilepaskan->value,
+                    'aktif' => false,
+                    'dilepas_oleh' => $petugasId,
+                    'dilepas_pada' => now(),
                     'alasan_pelepasan' =>
-                        'Distribusi dibatalkan: '
-                        . $alasanBersih,
+                        'Distribusi dibatalkan: ' . $alasanBersih,
                 ]);
 
                 $kantong->update([
-                    'status' =>
-                        $kantong->sudahKedaluwarsa()
-                            ? StatusKantongDarah
-                                ::Kedaluwarsa
-                            : StatusKantongDarah
-                                ::Tersedia,
+                    'status' => $kantong->sudahKedaluwarsa()
+                        ? StatusKantongDarah::Kedaluwarsa->value
+                        : StatusKantongDarah::Tersedia->value,
+                    'didistribusikan_pada' => null,
                 ]);
             }
 
             $record->update([
-                'status' =>
-                    StatusDistribusiDarah::Dibatalkan,
-
-                'dibatalkan_pada' =>
-                    now(),
-
-                'alasan_pembatalan' =>
-                    $alasanBersih,
+                'status' => StatusDistribusiDarah::Dibatalkan->value,
+                'dibatalkan_pada' => now(),
+                'alasan_pembatalan' => $alasanBersih,
             ]);
 
             $permintaan->update([
-                'status' =>
-                    StatusPermintaanDarah
-                        ::MenungguStok,
-
-                'siap_diambil_pada' =>
-                    null,
+                'status' => StatusPermintaanDarah::MenungguStok->value,
+                'siap_diambil_pada' => null,
             ]);
 
             return $record->refresh();
@@ -452,60 +372,48 @@ class LayananDistribusiDarah
         PermintaanDarah $permintaan
     ): void {
         if (
-            $permintaan->status !==
-            StatusPermintaanDarah::SiapDiambil
+            $this->statusPermintaanValue($permintaan) !==
+            StatusPermintaanDarah::SiapDiambil->value
         ) {
             throw ValidationException::withMessages([
                 'permintaan_darah_id' =>
-                    'Distribusi hanya dapat dibuat untuk permintaan berstatus Siap Diambil.',
+                    'Distribusi hanya dapat dibuat untuk pengajuan berstatus Siap Diambil.',
             ]);
         }
 
-        $jumlahItemAktif = $permintaan
-            ->relationLoaded('itemAktif')
-                ? $permintaan->itemAktif->count()
-                : $permintaan
-                    ->itemAktif()
-                    ->count();
+        $itemAktif = $permintaan->relationLoaded('itemAktif')
+            ? $permintaan->itemAktif
+            : $permintaan
+                ->itemAktif()
+                ->with('kantongDarah')
+                ->get();
 
-        if (
-            $jumlahItemAktif <
-            $permintaan->jumlah_kantong
-        ) {
+        if ($itemAktif->count() < (int) $permintaan->jumlah_kantong) {
             throw ValidationException::withMessages([
                 'permintaan_darah_id' =>
-                    'Jumlah kantong darah yang dialokasikan belum memenuhi permintaan.',
+                    'Jumlah kantong darah yang dialokasikan belum memenuhi pengajuan.',
             ]);
         }
-
-        $itemAktif = $permintaan
-            ->relationLoaded('itemAktif')
-                ? $permintaan->itemAktif
-                : $permintaan
-                    ->itemAktif()
-                    ->with('kantongDarah')
-                    ->get();
 
         foreach ($itemAktif as $item) {
             if (
-                $item->status !==
-                StatusItemPermintaanDarah
-                    ::Dialokasikan
+                $this->statusItemValue($item) !==
+                StatusItemPermintaanDarah::Dialokasikan->value
             ) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Terdapat item yang tidak berstatus Dialokasikan.',
+                        'Terdapat item alokasi yang tidak berstatus Dialokasikan.',
                 ]);
             }
 
             if (
                 $item->kantongDarah === null
-                || $item->kantongDarah->status !==
-                    StatusKantongDarah::Dipesan
+                || $this->statusKantongValue($item->kantongDarah) !==
+                    StatusKantongDarah::Dipesan->value
             ) {
                 throw ValidationException::withMessages([
                     'permintaan_darah_id' =>
-                        'Terdapat kantong darah yang tidak siap didistribusikan.',
+                        'Terdapat kantong darah yang belum siap didistribusikan.',
                 ]);
             }
         }
@@ -513,23 +421,59 @@ class LayananDistribusiDarah
 
     private function buatNomorDistribusi(): string
     {
-        do {
-            $nomor = sprintf(
-                'DST-%s-%s',
-                now()->format('Ymd'),
-                Str::upper(
-                    Str::random(6)
-                )
-            );
-        } while (
-            DistribusiDarah::query()
-                ->where(
-                    'nomor_distribusi',
-                    $nomor
-                )
-                ->exists()
-        );
+        $tanggal = now()->format('Ymd');
 
-        return $nomor;
+        $nomorUrut = DistribusiDarah::query()
+            ->whereDate('created_at', now()->toDateString())
+            ->count() + 1;
+
+        do {
+            $nomorDistribusi = 'DST-' . $tanggal . '-' . str_pad(
+                (string) $nomorUrut,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            $sudahAda = DistribusiDarah::query()
+                ->where('nomor_distribusi', $nomorDistribusi)
+                ->exists();
+
+            $nomorUrut++;
+        } while ($sudahAda);
+
+        return $nomorDistribusi;
+    }
+
+    private function statusDistribusiValue(
+        DistribusiDarah $distribusi
+    ): string {
+        return $distribusi->status instanceof StatusDistribusiDarah
+            ? $distribusi->status->value
+            : (string) $distribusi->status;
+    }
+
+    private function statusPermintaanValue(
+        PermintaanDarah $permintaan
+    ): string {
+        return $permintaan->status instanceof StatusPermintaanDarah
+            ? $permintaan->status->value
+            : (string) $permintaan->status;
+    }
+
+    private function statusItemValue(
+        ItemPermintaanDarah $item
+    ): string {
+        return $item->status instanceof StatusItemPermintaanDarah
+            ? $item->status->value
+            : (string) $item->status;
+    }
+
+    private function statusKantongValue(
+        KantongDarah $kantong
+    ): string {
+        return $kantong->status instanceof StatusKantongDarah
+            ? $kantong->status->value
+            : (string) $kantong->status;
     }
 }

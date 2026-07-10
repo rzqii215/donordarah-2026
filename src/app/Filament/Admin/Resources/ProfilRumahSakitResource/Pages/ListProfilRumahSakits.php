@@ -14,8 +14,23 @@ class ListProfilRumahSakits extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Tambah Rumah Sakit')
+                ->label('Tambah Pemohon Donor')
                 ->icon('heroicon-o-plus'),
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'Profil Pemohon Donor';
+    }
+
+    public function getHeading(): string
+    {
+        return 'Profil Pemohon Donor';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Kelola data yayasan, komunitas, instansi, organisasi, atau pihak umum yang mengajukan kebutuhan donor darah.';
     }
 }

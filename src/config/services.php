@@ -7,10 +7,9 @@ return [
     | Third Party Services
     |--------------------------------------------------------------------------
     |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | File ini menyimpan konfigurasi service pihak ketiga seperti Google OAuth,
+    | email provider, dan service eksternal lain. Semua credential wajib
+    | diambil dari .env agar aman untuk local dan production.
     |
     */
 
@@ -33,6 +32,17 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+
+        'redirect' => env(
+            'GOOGLE_REDIRECT_URI',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/') . '/auth/google/callback'
+        ),
     ],
 
 ];

@@ -12,6 +12,7 @@ use App\Models\PendaftaranDonor;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -48,74 +49,75 @@ class PemeriksaanKesehatanResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make(
-                    'Data Pendonor'
+                    'Data Pendaftaran Donor'
                 )
-                    ->description(
-                        'Pemeriksaan hanya dapat dilakukan setelah Pendonor tercatat hadir.'
-                    )
                     ->schema([
                         Forms\Components\Select::make(
                             'pendaftaran_donor_id'
                         )
                             ->label('Pendaftaran Donor')
-                            ->relationship(
-                                name: 'pendaftaran',
-                                titleAttribute:
-                                    'nomor_pendaftaran',
-                                modifyQueryUsing:
-                                    fn (
-                                        Builder $query
-                                    ): Builder => $query
-                                        ->where(
-                                            'status',
-                                            StatusPendaftaranDonor
-                                                ::Hadir
-                                                ->value
+                            ->options(
+                                function (
+                                    ?PemeriksaanKesehatan $record
+                                ): array {
+                                    $query =
+                                        PendaftaranDonor::query()
+                                            ->with([
+                                                'pendonor',
+                                                'jadwal',
+                                            ]);
+
+                                    if (
+                                        $record instanceof
+                                            PemeriksaanKesehatan
+                                        && $record
+                                            ->pendaftaran_donor_id
+                                    ) {
+                                        $query->whereKey(
+                                            $record
+                                                ->pendaftaran_donor_id
+                                        );
+                                    } else {
+                                        $query
+                                            ->where(
+                                                'status',
+                                                StatusPendaftaranDonor
+                                                    ::Hadir
+                                                    ->value
+                                            )
+                                            ->whereDoesntHave(
+                                                'pemeriksaanKesehatan'
+                                            );
+                                    }
+
+                                    return $query
+                                        ->latest()
+                                        ->limit(100)
+                                        ->get()
+                                        ->mapWithKeys(
+                                            fn (
+                                                PendaftaranDonor $pendaftaran
+                                            ): array => [
+                                                $pendaftaran->id =>
+                                                    self::labelPendaftaran(
+                                                        $pendaftaran
+                                                    ),
+                                            ]
                                         )
-                                        ->whereDoesntHave(
-                                            'pemeriksaanKesehatan'
-                                        )
-                                        ->with([
-                                            'pendonor',
-                                            'jadwal',
-                                        ])
-                                        ->orderByDesc(
-                                            'hadir_pada'
-                                        ),
+                                        ->all();
+                                }
                             )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (
-                                    PendaftaranDonor $record
-                                ): string => sprintf(
-                                    '%s — %s — %s',
-                                    $record
-                                        ->nomor_pendaftaran,
-                                    $record
-                                        ->pendonor
-                                        ->name,
-                                    $record
-                                        ->jadwal
-                                        ->judul,
-                                )
-                            )
-                            ->searchable([
-                                'nomor_pendaftaran',
-                            ])
+                            ->searchable()
                             ->preload()
                             ->required()
-                            ->disabledOn('edit'),
-
-                        Forms\Components\DateTimePicker::make(
-                            'diperiksa_pada'
-                        )
-                            ->label('Waktu Pemeriksaan')
-                            ->required()
-                            ->native(false)
-                            ->seconds(false)
-                            ->displayFormat('d/m/Y H:i')
-                            ->default(now()),
-                    ])
-                    ->columns(2),
+                            ->disabled(
+                                fn (
+                                    ?PemeriksaanKesehatan $record
+                                ): bool => $record instanceof
+                                    PemeriksaanKesehatan
+                            )
+                            ->dehydrated(true),
+                    ]),
 
                 Forms\Components\Section::make(
                     'Pemeriksaan Fisik'
@@ -125,69 +127,65 @@ class PemeriksaanKesehatanResource extends Resource
                             'berat_badan_kg'
                         )
                             ->label('Berat Badan')
-                            ->required()
                             ->numeric()
-                            ->minValue(20)
-                            ->maxValue(300)
-                            ->step('0.01')
-                            ->suffix('kg'),
+                            ->suffix('kg')
+                            ->minValue(30)
+                            ->maxValue(250)
+                            ->required(),
 
                         Forms\Components\TextInput::make(
                             'tekanan_sistolik'
                         )
                             ->label('Tekanan Sistolik')
-                            ->required()
                             ->numeric()
-                            ->integer()
-                            ->minValue(50)
-                            ->maxValue(300)
-                            ->suffix('mmHg'),
+                            ->suffix('mmHg')
+                            ->minValue(70)
+                            ->maxValue(250)
+                            ->required(),
 
                         Forms\Components\TextInput::make(
                             'tekanan_diastolik'
                         )
                             ->label('Tekanan Diastolik')
-                            ->required()
                             ->numeric()
-                            ->integer()
-                            ->minValue(30)
-                            ->maxValue(200)
-                            ->suffix('mmHg'),
+                            ->suffix('mmHg')
+                            ->minValue(40)
+                            ->maxValue(150)
+                            ->required(),
 
                         Forms\Components\TextInput::make(
                             'kadar_hemoglobin'
                         )
-                            ->label('Kadar Hemoglobin')
+                            ->label('Hemoglobin')
                             ->numeric()
-                            ->minValue(0)
-                            ->maxValue(30)
-                            ->step('0.01')
-                            ->suffix('g/dL'),
+                            ->step('0.1')
+                            ->suffix('g/dL')
+                            ->minValue(5)
+                            ->maxValue(25),
 
                         Forms\Components\TextInput::make(
                             'suhu_tubuh'
                         )
                             ->label('Suhu Tubuh')
                             ->numeric()
+                            ->step('0.1')
+                            ->suffix('°C')
                             ->minValue(30)
-                            ->maxValue(45)
-                            ->step('0.01')
-                            ->suffix('°C'),
+                            ->maxValue(45),
 
                         Forms\Components\TextInput::make(
                             'denyut_nadi'
                         )
                             ->label('Denyut Nadi')
                             ->numeric()
-                            ->integer()
+                            ->suffix('bpm')
                             ->minValue(30)
-                            ->maxValue(220)
-                            ->suffix('bpm'),
+                            ->maxValue(220),
                     ])
                     ->columns(3),
 
                 Forms\Components\Section::make(
-                    'Golongan Darah'
+                    'Hasil Pemeriksaan'
                 )
                     ->schema([
                         Forms\Components\Select::make(
@@ -195,76 +193,86 @@ class PemeriksaanKesehatanResource extends Resource
                         )
                             ->label('Golongan Darah')
                             ->options(
-                                GolonganDarah::options()
+                                self::opsiEnum(
+                                    GolonganDarah::class
+                                )
                             )
-                            ->native(false)
-                            ->nullable(),
+                            ->searchable(),
 
                         Forms\Components\Select::make(
                             'rhesus'
                         )
                             ->label('Rhesus')
                             ->options(
-                                RhesusDarah::options()
+                                self::opsiEnum(
+                                    RhesusDarah::class
+                                )
                             )
-                            ->native(false)
-                            ->nullable(),
-                    ])
-                    ->columns(2),
+                            ->searchable(),
 
-                Forms\Components\Section::make(
-                    'Hasil Pemeriksaan'
-                )
-                    ->description(
-                        'Keputusan kelayakan ditentukan oleh Petugas, bukan dihitung otomatis oleh sistem.'
-                    )
-                    ->schema([
                         Forms\Components\Select::make(
                             'status_kelayakan'
                         )
                             ->label('Status Kelayakan')
                             ->options(
-                                StatusKelayakanDonor::options()
+                                self::opsiStatusKelayakan()
                             )
                             ->required()
+                            ->live()
+                            ->afterStateUpdated(
+                                function (
+                                    Set $set,
+                                    mixed $state
+                                ): void {
+                                    if (
+                                        ! self
+                                            ::statusKelayakanTidakLayak(
+                                                $state
+                                            )
+                                    ) {
+                                        $set(
+                                            'alasan_tidak_layak',
+                                            null
+                                        );
+                                    }
+                                }
+                            ),
+
+                        Forms\Components\DateTimePicker::make(
+                            'diperiksa_pada'
+                        )
+                            ->label('Diperiksa Pada')
                             ->native(false)
-                            ->live(),
+                            ->seconds(false)
+                            ->default(now())
+                            ->required(),
 
                         Forms\Components\Textarea::make(
                             'alasan_tidak_layak'
                         )
                             ->label('Alasan Tidak Layak')
+                            ->rows(3)
+                            ->maxLength(1000)
                             ->visible(
-                                fn (
-                                    Get $get
-                                ): bool => $get(
-                                    'status_kelayakan'
-                                ) ===
-                                    StatusKelayakanDonor
-                                        ::TidakLayak
-                                        ->value
+                                fn (Get $get): bool => self
+                                    ::statusKelayakanTidakLayak(
+                                        $get('status_kelayakan')
+                                    )
                             )
                             ->required(
-                                fn (
-                                    Get $get
-                                ): bool => $get(
-                                    'status_kelayakan'
-                                ) ===
-                                    StatusKelayakanDonor
-                                        ::TidakLayak
-                                        ->value
+                                fn (Get $get): bool => self
+                                    ::statusKelayakanTidakLayak(
+                                        $get('status_kelayakan')
+                                    )
                             )
-                            ->minLength(5)
-                            ->maxLength(2000)
-                            ->rows(3)
                             ->columnSpanFull(),
 
                         Forms\Components\Textarea::make(
                             'catatan_medis'
                         )
-                            ->label('Catatan Pemeriksaan')
-                            ->maxLength(3000)
+                            ->label('Catatan Medis')
                             ->rows(4)
+                            ->maxLength(2000)
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
@@ -277,7 +285,7 @@ class PemeriksaanKesehatanResource extends Resource
         return $infolist
             ->schema([
                 InfolistSection::make(
-                    'Data Pendonor'
+                    'Informasi Pemeriksaan'
                 )
                     ->schema([
                         TextEntry::make(
@@ -287,15 +295,25 @@ class PemeriksaanKesehatanResource extends Resource
                             ->copyable(),
 
                         TextEntry::make(
-                            'pendaftaran.pendonor.name'
+                            'pendaftaran.status'
                         )
-                            ->label('Nama Pendonor'),
+                            ->label('Status Pendaftaran')
+                            ->badge()
+                            ->formatStateUsing(
+                                fn (mixed $state): string =>
+                                    self::labelDariEnum($state)
+                            )
+                            ->color(
+                                fn (mixed $state): string =>
+                                    self::warnaStatusPendaftaran(
+                                        $state
+                                    )
+                            ),
 
                         TextEntry::make(
-                            'pendaftaran.pendonor.profilPendonor.kode_pendonor'
+                            'pendaftaran.pendonor.name'
                         )
-                            ->label('Kode Pendonor')
-                            ->placeholder('-'),
+                            ->label('Pendonor'),
 
                         TextEntry::make(
                             'pendaftaran.jadwal.judul'
@@ -305,7 +323,8 @@ class PemeriksaanKesehatanResource extends Resource
                         TextEntry::make(
                             'pemeriksa.name'
                         )
-                            ->label('Diperiksa Oleh'),
+                            ->label('Diperiksa Oleh')
+                            ->placeholder('-'),
 
                         TextEntry::make(
                             'diperiksa_pada'
@@ -313,12 +332,48 @@ class PemeriksaanKesehatanResource extends Resource
                             ->label('Diperiksa Pada')
                             ->dateTime('d M Y H:i'),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 InfolistSection::make(
-                    'Hasil Pemeriksaan Fisik'
+                    'Hasil Pemeriksaan'
                 )
                     ->schema([
+                        TextEntry::make(
+                            'status_kelayakan'
+                        )
+                            ->label('Status Kelayakan')
+                            ->badge()
+                            ->formatStateUsing(
+                                fn (mixed $state): string =>
+                                    self::labelStatusKelayakan(
+                                        $state
+                                    )
+                            )
+                            ->color(
+                                fn (mixed $state): string =>
+                                    self::warnaStatusKelayakan(
+                                        $state
+                                    )
+                            ),
+
+                        TextEntry::make(
+                            'golongan_darah'
+                        )
+                            ->label('Golongan Darah')
+                            ->formatStateUsing(
+                                fn (mixed $state): string =>
+                                    self::labelDariEnum($state)
+                            )
+                            ->placeholder('-'),
+
+                        TextEntry::make('rhesus')
+                            ->label('Rhesus')
+                            ->formatStateUsing(
+                                fn (mixed $state): string =>
+                                    self::labelDariEnum($state)
+                            )
+                            ->placeholder('-'),
+
                         TextEntry::make(
                             'berat_badan_kg'
                         )
@@ -344,73 +399,19 @@ class PemeriksaanKesehatanResource extends Resource
                             ->suffix(' g/dL')
                             ->placeholder('-'),
 
-                        TextEntry::make('suhu_tubuh')
+                        TextEntry::make(
+                            'suhu_tubuh'
+                        )
                             ->label('Suhu Tubuh')
                             ->suffix(' °C')
                             ->placeholder('-'),
 
-                        TextEntry::make('denyut_nadi')
+                        TextEntry::make(
+                            'denyut_nadi'
+                        )
                             ->label('Denyut Nadi')
                             ->suffix(' bpm')
                             ->placeholder('-'),
-
-                        TextEntry::make(
-                            'golongan_darah'
-                        )
-                            ->label('Golongan Darah')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    mixed $state
-                                ): string => self
-                                    ::labelGolonganDarah(
-                                        $state
-                                    )
-                            )
-                            ->placeholder('-'),
-
-                        TextEntry::make('rhesus')
-                            ->label('Rhesus')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    mixed $state
-                                ): string => self
-                                    ::labelRhesus(
-                                        $state
-                                    )
-                            )
-                            ->placeholder('-'),
-                    ])
-                    ->columns(4),
-
-                InfolistSection::make(
-                    'Keputusan Pemeriksaan'
-                )
-                    ->schema([
-                        TextEntry::make(
-                            'status_kelayakan'
-                        )
-                            ->label('Status Kelayakan')
-                            ->badge()
-                            ->formatStateUsing(
-                                fn (
-                                    StatusKelayakanDonor|string $state
-                                ): string => self
-                                    ::statusKelayakanEnum(
-                                        $state
-                                    )
-                                    ->label()
-                            )
-                            ->color(
-                                fn (
-                                    StatusKelayakanDonor|string $state
-                                ): string => self
-                                    ::statusKelayakanEnum(
-                                        $state
-                                    )
-                                    ->warna()
-                            ),
 
                         TextEntry::make(
                             'alasan_tidak_layak'
@@ -422,11 +423,11 @@ class PemeriksaanKesehatanResource extends Resource
                         TextEntry::make(
                             'catatan_medis'
                         )
-                            ->label('Catatan Pemeriksaan')
+                            ->label('Catatan Medis')
                             ->placeholder('-')
                             ->columnSpanFull(),
                     ])
-                    ->columns(2),
+                    ->columns(3),
             ]);
     }
 
@@ -446,99 +447,82 @@ class PemeriksaanKesehatanResource extends Resource
                     'pendaftaran.pendonor.name'
                 )
                     ->label('Pendonor')
-                    ->description(
-                        fn (
-                            PemeriksaanKesehatan $record
-                        ): string => $record
-                            ->pendaftaran
-                            ->pendonor
-                            ->profilPendonor
-                            ?->kode_pendonor
-                            ?? '-'
-                    )
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make(
                     'pendaftaran.jadwal.judul'
                 )
-                    ->label('Jadwal')
+                    ->label('Jadwal Donor')
                     ->searchable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
+                    'status_kelayakan'
+                )
+                    ->label('Kelayakan')
+                    ->badge()
+                    ->formatStateUsing(
+                        fn (mixed $state): string =>
+                            self::labelStatusKelayakan($state)
+                    )
+                    ->color(
+                        fn (mixed $state): string =>
+                            self::warnaStatusKelayakan(
+                                $state
+                            )
+                    )
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make(
+                    'pendaftaran.status'
+                )
+                    ->label('Status Pendaftaran')
+                    ->badge()
+                    ->formatStateUsing(
+                        fn (mixed $state): string =>
+                            self::labelDariEnum($state)
+                    )
+                    ->color(
+                        fn (mixed $state): string =>
+                            self::warnaStatusPendaftaran(
+                                $state
+                            )
+                    )
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make(
                     'berat_badan_kg'
                 )
-                    ->label('Berat')
+                    ->label('BB')
                     ->suffix(' kg')
-                    ->sortable(),
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
                     'tekanan_sistolik'
                 )
-                    ->label('Tekanan Darah')
-                    ->formatStateUsing(
-                        fn (
-                            mixed $state,
-                            PemeriksaanKesehatan $record
-                        ): string => sprintf(
-                            '%s/%s mmHg',
-                            $record->tekanan_sistolik,
-                            $record
-                                ->tekanan_diastolik,
-                        )
-                    ),
+                    ->label('Sistolik')
+                    ->suffix(' mmHg')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
-                    'golongan_darah'
+                    'tekanan_diastolik'
                 )
-                    ->label('Golongan')
-                    ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            mixed $state
-                        ): string => self
-                            ::labelGolonganDarah(
-                                $state
-                            )
-                    )
-                    ->placeholder('-'),
-
-                Tables\Columns\TextColumn::make(
-                    'status_kelayakan'
-                )
-                    ->label('Status')
-                    ->badge()
-                    ->formatStateUsing(
-                        fn (
-                            StatusKelayakanDonor|string $state
-                        ): string => self
-                            ::statusKelayakanEnum(
-                                $state
-                            )
-                            ->label()
-                    )
-                    ->color(
-                        fn (
-                            StatusKelayakanDonor|string $state
-                        ): string => self
-                            ::statusKelayakanEnum(
-                                $state
-                            )
-                            ->warna()
-                    )
-                    ->sortable(),
+                    ->label('Diastolik')
+                    ->suffix(' mmHg')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
                     'pemeriksa.name'
                 )
                     ->label('Petugas')
+                    ->placeholder('-')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
                     'diperiksa_pada'
                 )
-                    ->label('Diperiksa')
+                    ->label('Diperiksa Pada')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
@@ -548,57 +532,84 @@ class PemeriksaanKesehatanResource extends Resource
                 )
                     ->label('Status Kelayakan')
                     ->options(
-                        StatusKelayakanDonor::options()
+                        self::opsiStatusKelayakan()
                     ),
 
-                Tables\Filters\SelectFilter::make(
-                    'golongan_darah'
+                Tables\Filters\Filter::make(
+                    'masih_bisa_diubah'
                 )
-                    ->label('Golongan Darah')
-                    ->options(
-                        GolonganDarah::options()
+                    ->label('Masih Bisa Diubah')
+                    ->query(
+                        fn (Builder $query): Builder => $query
+                            ->whereHas(
+                                'pendaftaran',
+                                fn (
+                                    Builder $query
+                                ): Builder => $query
+                                    ->where(
+                                        'status',
+                                        StatusPendaftaranDonor
+                                            ::Hadir
+                                            ->value
+                                    )
+                                    ->whereDoesntHave(
+                                        'kantongDarah'
+                                    )
+                            )
                     ),
-
-                Tables\Filters\SelectFilter::make(
-                    'rhesus'
-                )
-                    ->label('Rhesus')
-                    ->options(
-                        RhesusDarah::options()
-                    ),
-
-                Tables\Filters\SelectFilter::make(
-                    'diperiksa_oleh'
-                )
-                    ->label('Petugas Pemeriksa')
-                    ->relationship(
-                        'pemeriksa',
-                        'name'
-                    )
-                    ->searchable()
-                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->label('Lihat'),
 
                 Tables\Actions\EditAction::make()
-                    ->label('Ubah'),
+                    ->label('Ubah')
+                    ->visible(
+                        fn (
+                            PemeriksaanKesehatan $record
+                        ): bool => self::bolehDiubah(
+                            $record
+                        )
+                    ),
             ])
             ->bulkActions([])
-            ->defaultSort(
-                'diperiksa_pada',
-                'desc'
-            )
+            ->defaultSort('diperiksa_pada', 'desc')
             ->emptyStateHeading(
                 'Belum ada pemeriksaan kesehatan'
             )
             ->emptyStateDescription(
-                'Catat kehadiran Pendonor sebelum membuat pemeriksaan kesehatan.'
+                'Pemeriksaan dibuat setelah pendonor hadir pada jadwal donor.'
             )
-            ->emptyStateIcon(
-                'heroicon-o-heart'
-            );
+            ->emptyStateIcon('heroicon-o-heart');
+    }
+
+    public static function canEdit(
+        Model $record
+    ): bool {
+        return $record instanceof PemeriksaanKesehatan
+            && self::bolehDiubah($record);
+    }
+
+    public static function canDelete(
+        Model $record
+    ): bool {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function canForceDelete(
+        Model $record
+    ): bool {
+        return false;
+    }
+
+    public static function canForceDeleteAny(): bool
+    {
+        return false;
     }
 
     public static function getRelations(): array
@@ -610,20 +621,22 @@ class PemeriksaanKesehatanResource extends Resource
     {
         return [
             'index' =>
-                Pages\ListPemeriksaanKesehatans
-                    ::route('/'),
+                Pages\ListPemeriksaanKesehatans::route('/'),
 
             'create' =>
-                Pages\CreatePemeriksaanKesehatan
-                    ::route('/create'),
+                Pages\CreatePemeriksaanKesehatan::route(
+                    '/create'
+                ),
 
             'view' =>
-                Pages\ViewPemeriksaanKesehatan
-                    ::route('/{record}'),
+                Pages\ViewPemeriksaanKesehatan::route(
+                    '/{record}'
+                ),
 
             'edit' =>
-                Pages\EditPemeriksaanKesehatan
-                    ::route('/{record}/edit'),
+                Pages\EditPemeriksaanKesehatan::route(
+                    '/{record}/edit'
+                ),
         ];
     }
 
@@ -632,29 +645,25 @@ class PemeriksaanKesehatanResource extends Resource
     ): string {
         return $record
             ->pendaftaran
-            ?->pendonor
-            ?->name
-            ?? 'Pemeriksaan Kesehatan';
+            ?->nomor_pendaftaran
+            ?? 'Pemeriksaan #' . $record->getKey();
     }
 
     public static function getGlobalSearchResultDetails(
         Model $record
     ): array {
         return [
-            'Nomor Pendaftaran' =>
-                $record
-                    ->pendaftaran
-                    ?->nomor_pendaftaran
+            'Pendonor' =>
+                $record->pendaftaran?->pendonor?->name
                 ?? '-',
 
             'Status' =>
-                $record
-                    ->status_kelayakan
-                    ->label(),
+                self::labelStatusKelayakan(
+                    $record->status_kelayakan
+                ),
 
             'Diperiksa Pada' =>
-                $record
-                    ->diperiksa_pada
+                $record->diperiksa_pada
                     ?->format('d M Y H:i')
                 ?? '-',
         ];
@@ -664,52 +673,183 @@ class PemeriksaanKesehatanResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
-                'pendaftaran.jadwal',
                 'pendaftaran.pendonor.profilPendonor',
+                'pendaftaran.jadwal.lokasi',
+                'pendaftaran.kantongDarah',
                 'pemeriksa',
             ]);
     }
 
-    private static function statusKelayakanEnum(
-        StatusKelayakanDonor|string $status
-    ): StatusKelayakanDonor {
-        return $status instanceof
-            StatusKelayakanDonor
-                ? $status
-                : StatusKelayakanDonor::from(
-                    $status
+    private static function bolehDiubah(
+        PemeriksaanKesehatan $record
+    ): bool {
+        $pendaftaran = $record->pendaftaran;
+
+        if ($pendaftaran === null) {
+            return false;
+        }
+
+        if (
+            $pendaftaran->relationLoaded('kantongDarah')
+            && $pendaftaran->kantongDarah !== null
+        ) {
+            return false;
+        }
+
+        if (
+            ! $pendaftaran->relationLoaded('kantongDarah')
+            && $pendaftaran->kantongDarah()->exists()
+        ) {
+            return false;
+        }
+
+        $status =
+            $pendaftaran->status instanceof StatusPendaftaranDonor
+                ? $pendaftaran->status
+                : StatusPendaftaranDonor::tryFrom(
+                    (string) $pendaftaran->status
                 );
+
+        return $status === StatusPendaftaranDonor::Hadir;
     }
 
-    private static function labelGolonganDarah(
-        mixed $state
+    private static function labelPendaftaran(
+        PendaftaranDonor $pendaftaran
     ): string {
-        if ($state instanceof GolonganDarah) {
-            return $state->label();
+        return sprintf(
+            '%s — %s — %s',
+            $pendaftaran->nomor_pendaftaran,
+            $pendaftaran->pendonor?->name ?? 'Pendonor',
+            $pendaftaran->jadwal?->judul ?? 'Jadwal Donor'
+        );
+    }
+
+    /**
+     * @param class-string $enumClass
+     *
+     * @return array<string, string>
+     */
+    private static function opsiEnum(
+        string $enumClass
+    ): array {
+        $options = [];
+
+        foreach ($enumClass::cases() as $case) {
+            $options[$case->value] =
+                self::labelDariEnum($case);
         }
 
+        return $options;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function opsiStatusKelayakan(): array
+    {
+        return [
+            StatusKelayakanDonor::Layak->value =>
+                'Layak Donor',
+
+            StatusKelayakanDonor::TidakLayak->value =>
+                'Tidak Layak Donor',
+        ];
+    }
+
+    private static function statusKelayakanTidakLayak(
+        mixed $state
+    ): bool {
+        $status = self::statusKelayakanEnum($state);
+
+        return $status === StatusKelayakanDonor::TidakLayak;
+    }
+
+    private static function statusKelayakanEnum(
+        mixed $state
+    ): ?StatusKelayakanDonor {
+        if ($state instanceof StatusKelayakanDonor) {
+            return $state;
+        }
+
+        if (blank($state)) {
+            return null;
+        }
+
+        return StatusKelayakanDonor::tryFrom(
+            (string) $state
+        );
+    }
+
+    private static function labelStatusKelayakan(
+        mixed $state
+    ): string {
+        $status = self::statusKelayakanEnum($state);
+
+        return match ($status) {
+            StatusKelayakanDonor::Layak =>
+                'Layak Donor',
+
+            StatusKelayakanDonor::TidakLayak =>
+                'Tidak Layak Donor',
+
+            default => '-',
+        };
+    }
+
+    private static function warnaStatusKelayakan(
+        mixed $state
+    ): string {
+        $status = self::statusKelayakanEnum($state);
+
+        return match ($status) {
+            StatusKelayakanDonor::Layak =>
+                'success',
+
+            StatusKelayakanDonor::TidakLayak =>
+                'danger',
+
+            default => 'gray',
+        };
+    }
+
+    private static function warnaStatusPendaftaran(
+        mixed $state
+    ): string {
+        $status =
+            $state instanceof StatusPendaftaranDonor
+                ? $state
+                : StatusPendaftaranDonor::tryFrom(
+                    (string) $state
+                );
+
+        if (
+            $status !== null
+            && method_exists($status, 'warna')
+        ) {
+            return $status->warna();
+        }
+
+        return 'gray';
+    }
+
+    private static function labelDariEnum(
+        mixed $state
+    ): string {
         if (blank($state)) {
             return '-';
         }
 
-        return GolonganDarah::tryFrom(
-            (string) $state
-        )?->label() ?? (string) $state;
-    }
-
-    private static function labelRhesus(
-        mixed $state
-    ): string {
-        if ($state instanceof RhesusDarah) {
+        if (
+            is_object($state)
+            && method_exists($state, 'label')
+        ) {
             return $state->label();
         }
 
-        if (blank($state)) {
-            return '-';
+        if ($state instanceof \BackedEnum) {
+            return (string) $state->value;
         }
 
-        return RhesusDarah::tryFrom(
-            (string) $state
-        )?->label() ?? (string) $state;
+        return (string) $state;
     }
 }

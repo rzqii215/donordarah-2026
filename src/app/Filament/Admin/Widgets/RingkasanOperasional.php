@@ -25,7 +25,7 @@ class RingkasanOperasional extends StatsOverviewWidget
             ->tersedia()
             ->count();
 
-        $permintaanAktif = PermintaanDarah::query()
+        $pengajuanAktif = PermintaanDarah::query()
             ->whereIn('status', [
                 StatusPermintaanDarah::Diajukan->value,
                 StatusPermintaanDarah::Ditinjau->value,
@@ -64,24 +64,22 @@ class RingkasanOperasional extends StatsOverviewWidget
                 ),
 
             Stat::make(
-                'Permintaan Aktif',
-                number_format($permintaanAktif)
+                'Pengajuan Aktif',
+                number_format($pengajuanAktif)
             )
                 ->description(
-                    'Permintaan yang masih diproses'
+                    'Pengajuan kebutuhan donor yang masih diproses'
                 )
                 ->descriptionIcon(
                     'heroicon-m-document-text'
                 )
                 ->color(
-                    $permintaanAktif > 0
+                    $pengajuanAktif > 0
                         ? 'warning'
                         : 'success'
                 )
                 ->url(
-                    PermintaanDarahResource::getUrl(
-                        'index'
-                    )
+                    PermintaanDarahResource::getUrl('index')
                 ),
 
             Stat::make(
@@ -96,9 +94,7 @@ class RingkasanOperasional extends StatsOverviewWidget
                 )
                 ->color('info')
                 ->url(
-                    PendaftaranDonorResource::getUrl(
-                        'index'
-                    )
+                    PendaftaranDonorResource::getUrl('index')
                 ),
 
             Stat::make(
@@ -113,9 +109,7 @@ class RingkasanOperasional extends StatsOverviewWidget
                 )
                 ->color('primary')
                 ->url(
-                    DistribusiDarahResource::getUrl(
-                        'index'
-                    )
+                    DistribusiDarahResource::getUrl('index')
                 ),
         ];
     }

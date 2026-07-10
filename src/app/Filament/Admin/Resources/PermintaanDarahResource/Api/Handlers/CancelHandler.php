@@ -26,12 +26,12 @@ class CancelHandler extends Handlers
     }
 
     /**
-     * Membatalkan permintaan darah milik Rumah Sakit yang sedang login.
+     * Membatalkan pengajuan kebutuhan donor milik Pemohon Donor yang sedang login.
      */
     public function handler(
         CancelPermintaanDarahRequest $request
     ): JsonResponse {
-        $profilRumahSakit = $this->profilRumahSakit(
+        $profilPemohonDonor = $this->profilRumahSakit(
             request: $request,
             harusTerverifikasi: true,
         );
@@ -39,7 +39,7 @@ class CancelHandler extends Handlers
         $permintaanDarah = PermintaanDarah::query()
             ->where(
                 'profil_rumah_sakit_id',
-                $profilRumahSakit->id
+                $profilPemohonDonor->id
             )
             ->whereKey(
                 $request->route('id')

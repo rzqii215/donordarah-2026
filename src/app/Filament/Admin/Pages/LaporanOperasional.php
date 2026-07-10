@@ -112,7 +112,7 @@ class LaporanOperasional extends Page
                 'keterangan' => 'Kantong baru pada periode terpilih',
             ],
             [
-                'label' => 'Permintaan Masuk',
+                'label' => 'Pengajuan Masuk',
                 'nilai' => PermintaanDarah::query()
                     ->whereBetween(
                         'created_at',
@@ -122,10 +122,10 @@ class LaporanOperasional extends Page
                         ]
                     )
                     ->count(),
-                'keterangan' => 'Permintaan dari Rumah Sakit',
+                'keterangan' => 'Pengajuan dari Pemohon Donor',
             ],
             [
-                'label' => 'Permintaan Selesai',
+                'label' => 'Pengajuan Selesai',
                 'nilai' => PermintaanDarah::query()
                     ->where(
                         'status',
@@ -141,7 +141,7 @@ class LaporanOperasional extends Page
                         ]
                     )
                     ->count(),
-                'keterangan' => 'Permintaan yang telah dipenuhi',
+                'keterangan' => 'Pengajuan yang telah dipenuhi',
             ],
             [
                 'label' => 'Distribusi Selesai',
@@ -333,7 +333,7 @@ class LaporanOperasional extends Page
             Actions\Action::make(
                 'export_permintaan'
             )
-                ->label('Export Permintaan')
+                ->label('Export Pengajuan')
                 ->icon(
                     'heroicon-o-arrow-down-tray'
                 )
@@ -397,14 +397,14 @@ class LaporanOperasional extends Page
 
         return $this->unduhCsv(
             namaFile: sprintf(
-                'laporan-permintaan-darah-%s.csv',
+                'laporan-pengajuan-kebutuhan-donor-%s.csv',
                 now()->format('Ymd-His')
             ),
             header: [
-                'Nomor Permintaan',
-                'Rumah Sakit',
-                'Referensi Pasien',
-                'Nama Dokter',
+                'Nomor Pengajuan',
+                'Pemohon Donor',
+                'Referensi Pengajuan',
+                'Nama Penanggung Jawab',
                 'Golongan Darah',
                 'Rhesus',
                 'Jumlah Kantong',
@@ -467,13 +467,13 @@ class LaporanOperasional extends Page
 
         return $this->unduhCsv(
             namaFile: sprintf(
-                'laporan-distribusi-darah-%s.csv',
+                'laporan-distribusi-kantong-darah-%s.csv',
                 now()->format('Ymd-His')
             ),
             header: [
                 'Nomor Distribusi',
-                'Nomor Permintaan',
-                'Rumah Sakit',
+                'Nomor Pengajuan',
+                'Pemohon Donor',
                 'Jumlah Kantong',
                 'Status',
                 'Dijadwalkan Pada',

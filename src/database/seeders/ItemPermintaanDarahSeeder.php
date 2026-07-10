@@ -29,26 +29,27 @@ class ItemPermintaanDarahSeeder extends Seeder
             return;
         }
 
-        $permintaan =
-            PermintaanDarah::query()
-                ->where(
-                    'referensi_pasien',
-                    'PSN-DEMO-0001'
-                )
-                ->first();
+        $pengajuan = PermintaanDarah::query()
+            ->where(
+                'referensi_pasien',
+                'PGJ-DEMO-0001'
+            )
+            ->first();
 
-        if ($permintaan === null) {
+        if ($pengajuan === null) {
             return;
         }
 
-        $sudahDialokasikan =
-            ItemPermintaanDarah::query()
-                ->where(
-                    'permintaan_darah_id',
-                    $permintaan->id
-                )
-                ->where('aktif', true)
-                ->exists();
+        $sudahDialokasikan = ItemPermintaanDarah::query()
+            ->where(
+                'permintaan_darah_id',
+                $pengajuan->id
+            )
+            ->where(
+                'aktif',
+                true
+            )
+            ->exists();
 
         if ($sudahDialokasikan) {
             return;
@@ -56,7 +57,7 @@ class ItemPermintaanDarahSeeder extends Seeder
 
         if (
             in_array(
-                $permintaan->status,
+                $pengajuan->status,
                 [
                     StatusPermintaanDarah::Diajukan,
                     StatusPermintaanDarah::Ditinjau,
@@ -68,17 +69,17 @@ class ItemPermintaanDarahSeeder extends Seeder
             app(
                 LayananPermintaanDarah::class
             )->setujui(
-                permintaan: $permintaan,
+                permintaan: $pengajuan,
                 petugasId: $petugas->id,
             );
 
-            $permintaan->refresh();
+            $pengajuan->refresh();
         }
 
         app(
             LayananAlokasiDarah::class
         )->alokasikanOtomatis(
-            permintaan: $permintaan,
+            permintaan: $pengajuan,
             petugasId: $petugas->id,
         );
     }

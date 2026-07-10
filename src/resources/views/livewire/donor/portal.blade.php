@@ -1,1034 +1,830 @@
-<div class="donor-page">
-    @if (session()->has('success'))
-        <div class="donor-alert donor-alert-success">
-            {{ session('success') }}
+<div class="donor-home-page">
+    
+
+    @include('components.shared.safe-flash-message')
+<section class="donor-home-hero">
+        <div class="donor-home-hero-content">
+            <p class="donor-home-eyebrow">
+                Portal Pendonor
+            </p>
+
+            <h1>
+                Selamat datang, {{ $ringkasan['nama_user'] }}
+            </h1>
+
+            <p>
+                Pantau jadwal donor, lokasi kegiatan, stok darah, dan riwayat
+                donor Anda dalam satu halaman yang terhubung langsung dengan data terbaru.
+            </p>
+
+            <div class="donor-home-hero-actions">
+                <a href="{{ route('donor.jadwal') }}">
+                    Cari Jadwal Donor
+                </a>
+
+                <a href="{{ route('donor.riwayat') }}" class="is-outline">
+                    Lihat Riwayat
+                </a>
+            </div>
         </div>
-    @endif
 
-    @switch($section)
-        @case('beranda')
-            <section class="donor-hero">
-                <div class="donor-hero-decoration donor-hero-cross-one">
-                    +
-                </div>
+        <div class="donor-home-profile-card">
+            <span>Profil Pendonor</span>
 
-                <div class="donor-hero-decoration donor-hero-cross-two">
-                    +
-                </div>
+            <strong>
+                {{ $ringkasan['profil_lengkap'] }}%
+            </strong>
 
-                <div class="donor-hero-decoration donor-hero-cross-three">
-                    +
-                </div>
+            <div class="donor-home-progress">
+                <div style="width: {{ $ringkasan['profil_lengkap'] }}%;"></div>
+            </div>
 
-                <div class="donor-hero-copy">
-                    <span class="donor-eyebrow">
-                        Portal Pendonor
-                    </span>
+            <p>
+                Kode: {{ $ringkasan['kode_pendonor'] }}
+            </p>
 
-                    <h1>
-                        Setetes Darah Anda,
-                        <br>
-                        Sejuta Harapan Mereka
-                    </h1>
+            <p>
+                Golongan darah: {{ $ringkasan['golongan_rhesus'] }}
+            </p>
 
-                    <p>
-                        Donor darah hari ini, selamatkan
-                        nyawa esok hari.
-                    </p>
+            <a href="{{ route('donor.profil') }}">
+                Lengkapi Profil
+            </a>
+        </div>
+    </section>
 
-                    <a
-                        href="{{ route('donor.jadwal') }}"
-                        wire:navigate
-                        class="donor-primary-button"
-                    >
-                        Cari Jadwal Donor
+    <section class="donor-home-summary">
+        <article>
+            <span>Total Pendaftaran</span>
+            <strong>{{ $ringkasan['total_pendaftaran'] }}</strong>
+            <p>Semua riwayat donor Anda</p>
+        </article>
 
-                        <x-donor.icon name="arrow-right" />
+        <article>
+            <span>Dalam Proses</span>
+            <strong>{{ $ringkasan['pendaftaran_proses'] }}</strong>
+            <p>Menunggu atau sedang berjalan</p>
+        </article>
+
+        <article>
+            <span>Donor Selesai</span>
+            <strong>{{ $ringkasan['donor_selesai'] }}</strong>
+            <p>Donor berhasil diselesaikan</p>
+        </article>
+
+        <article>
+            <span>Stok Tersedia</span>
+            <strong>{{ $ringkasan['stok_tersedia'] }}</strong>
+            <p>Kantong darah siap digunakan</p>
+        </article>
+    </section>
+
+    <section class="donor-home-layout">
+        <div class="donor-home-main">
+            <section class="donor-home-panel">
+                <div class="donor-home-panel-header">
+                    <div>
+                        <p>Jadwal Terdekat</p>
+                        <h2>Donor yang dapat Anda ikuti</h2>
+                    </div>
+
+                    <a href="{{ route('donor.jadwal') }}">
+                        Lihat Semua
                     </a>
                 </div>
 
-                <div class="donor-hero-illustration">
-                    <svg
-                        viewBox="0 0 420 320"
-                        role="img"
-                        aria-label="Ilustrasi kantong donor darah"
-                    >
-                        <defs>
-                            <linearGradient
-                                id="bagGradient"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop
-                                    offset="0%"
-                                    stop-color="#fff7f7"
-                                />
+                <div class="donor-home-schedule-list">
+                    @forelse ($jadwalTerdekat as $jadwal)
+                        @php
+                            $lokasi = $jadwal->lokasi;
+                        @endphp
 
-                                <stop
-                                    offset="100%"
-                                    stop-color="#ffe0e0"
-                                />
-                            </linearGradient>
-
-                            <linearGradient
-                                id="bloodGradient"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop
-                                    offset="0%"
-                                    stop-color="#ef4444"
-                                />
-
-                                <stop
-                                    offset="100%"
-                                    stop-color="#c81e1e"
-                                />
-                            </linearGradient>
-
-                            <filter id="bagShadow">
-                                <feDropShadow
-                                    dx="0"
-                                    dy="14"
-                                    stdDeviation="14"
-                                    flood-color="#ef4444"
-                                    flood-opacity=".18"
-                                />
-                            </filter>
-                        </defs>
-
-                        <path
-                            d="M250 50v32"
-                            stroke="#ef4444"
-                            stroke-width="8"
-                            stroke-linecap="round"
-                        />
-
-                        <rect
-                            x="214"
-                            y="35"
-                            width="72"
-                            height="30"
-                            rx="10"
-                            fill="#fff"
-                            stroke="#fecaca"
-                            stroke-width="5"
-                        />
-
-                        <rect
-                            x="170"
-                            y="70"
-                            width="160"
-                            height="190"
-                            rx="34"
-                            fill="url(#bagGradient)"
-                            stroke="#fecaca"
-                            stroke-width="7"
-                            filter="url(#bagShadow)"
-                        />
-
-                        <path
-                            d="M178 165c24-20 50-13 72 0 25 14 50 18 73-2v71c0 10-8 18-18 18H196c-10 0-18-8-18-18Z"
-                            fill="url(#bloodGradient)"
-                        />
-
-                        <path
-                            d="M250 135c-22-28-66 7 0 57 66-50 22-85 0-57Z"
-                            fill="#fff"
-                        />
-
-                        <path
-                            d="M180 246c-65 18-82 71-64 95"
-                            fill="none"
-                            stroke="#dc2626"
-                            stroke-width="8"
-                            stroke-linecap="round"
-                        />
-
-                        <path
-                            d="M116 340c-15-15-39-5-39 15 0 17 18 29 39 44 21-15 39-27 39-44 0-20-24-30-39-15Z"
-                            fill="none"
-                            stroke="#dc2626"
-                            stroke-width="7"
-                        />
-
-                        <circle
-                            cx="101"
-                            cy="92"
-                            r="7"
-                            fill="#fecaca"
-                        />
-
-                        <path
-                            d="M101 75v34M84 92h34"
-                            stroke="#fecaca"
-                            stroke-width="7"
-                            stroke-linecap="round"
-                        />
-
-                        <path
-                            d="M359 125v34M342 142h34"
-                            stroke="#fecaca"
-                            stroke-width="7"
-                            stroke-linecap="round"
-                        />
-                    </svg>
-                </div>
-            </section>
-
-            <section class="donor-dashboard-grid">
-                <article class="donor-dashboard-card">
-                    <div class="donor-card-icon donor-card-icon-red">
-                        <x-donor.icon name="calendar" />
-                    </div>
-
-                    <div class="donor-card-heading">
-                        <span>Jadwal Terdekat</span>
-                    </div>
-
-                    @if ($jadwalTerdekat)
-                        <strong class="donor-card-primary-value">
-                            {{ $jadwalTerdekat
-                                ->mulai_pada
-                                ?->translatedFormat('d F Y') }}
-                        </strong>
-
-                        <p>
-                            {{ $jadwalTerdekat
-                                ->mulai_pada
-                                ?->format('H:i') }}
-                            –
-                            {{ $jadwalTerdekat
-                                ->selesai_pada
-                                ?->format('H:i') }}
-                        </p>
-
-                        <p>{{ $namaLokasiJadwal }}</p>
-                    @else
-                        <strong class="donor-card-primary-value">
-                            Belum tersedia
-                        </strong>
-
-                        <p>
-                            Jadwal donor berikutnya belum
-                            dipublikasikan.
-                        </p>
-                    @endif
-
-                    <a
-                        href="{{ route('donor.jadwal') }}"
-                        wire:navigate
-                        class="donor-text-link"
-                    >
-                        Lihat Detail
-                    </a>
-                </article>
-
-                <article class="donor-dashboard-card">
-                    <div class="donor-card-icon donor-card-icon-rose">
-                        <x-donor.icon name="droplet" />
-                    </div>
-
-                    <div class="donor-card-heading">
-                        <span>Stok Darah</span>
-
-                        <strong>
-                            {{ number_format($totalStok) }}
-                        </strong>
-                    </div>
-
-                    <div class="donor-blood-stock-list">
-                        @foreach (
-                            ['A', 'B', 'O', 'AB']
-                            as $golongan
-                        )
-                            <div>
-                                <span>{{ $golongan }}</span>
-
+                        <article class="donor-home-schedule-card">
+                            <div class="donor-home-date-box">
                                 <strong>
-                                    {{ $stokPerGolongan[$golongan] ?? 0 }}
-                                    kantong
+                                    {{ $this->tanggalJadwal($jadwal) }}
                                 </strong>
+
+                                <span>
+                                    {{ $this->jamJadwal($jadwal) }}
+                                </span>
                             </div>
-                        @endforeach
-                    </div>
 
-                    <a
-                        href="{{ route('donor.stok') }}"
-                        wire:navigate
-                        class="donor-text-link"
-                    >
-                        Lihat Semua
-                    </a>
-                </article>
+                            <div>
+                                <h3>
+                                    {{ $this->judulJadwal($jadwal) }}
+                                </h3>
 
-                <article class="donor-dashboard-card">
-                    <div class="donor-card-icon donor-card-icon-gray">
-                        <x-donor.icon name="map-pin" />
-                    </div>
+                                <p>
+                                    {{ $this->namaLokasi($lokasi) }}
+                                </p>
 
-                    <div class="donor-card-heading">
-                        <span>Lokasi Terdekat</span>
-                    </div>
+                                <small>
+                                    {{ $this->alamatLokasi($lokasi) }}
+                                </small>
+                            </div>
 
-                    <strong class="donor-card-primary-value">
-                        {{ number_format($jumlahLokasi) }}
-                        lokasi tersedia
-                    </strong>
+                            <div class="donor-home-schedule-actions">
+                                <a href="{{ route('donor.jadwal') }}">
+                                    Detail
+                                </a>
 
-                    <p>
-                        Temukan lokasi donor yang paling
-                        mudah dijangkau.
-                    </p>
-
-                    <a
-                        href="{{ route('donor.lokasi') }}"
-                        wire:navigate
-                        class="donor-text-link"
-                    >
-                        Lihat Semua
-                    </a>
-                </article>
+                                <a
+                                    href="{{ $this->mapsUrl($lokasi) }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="is-outline"
+                                >
+                                    Peta
+                                </a>
+                            </div>
+                        </article>
+                    @empty
+                        <div class="donor-home-empty">
+                            <h3>Belum ada jadwal aktif</h3>
+                            <p>Silakan cek kembali nanti.</p>
+                        </div>
+                    @endforelse
+                </div>
             </section>
 
-            <section class="donor-secondary-grid">
-                <article class="donor-wide-card donor-quick-card">
+            <section class="donor-home-panel">
+                <div class="donor-home-panel-header">
                     <div>
-                        <span class="donor-eyebrow">
-                            Dampak Anda
-                        </span>
-
-                        <h2>
-                            Terima kasih sudah menjadi
-                            bagian dari kebaikan.
-                        </h2>
-
-                        <p>
-                            Setiap pendaftaran dan donor
-                            yang selesai berkontribusi
-                            langsung bagi pasien yang
-                            membutuhkan.
-                        </p>
+                        <p>Riwayat Terbaru</p>
+                        <h2>Perjalanan donor Anda</h2>
                     </div>
 
-                    <div class="donor-impact-stats">
-                        <div>
-                            <strong>
-                                {{ number_format(
-                                    $jumlahRiwayat
-                                ) }}
-                            </strong>
-
-                            <span>Pendaftaran</span>
-                        </div>
-
-                        <div>
-                            <strong>
-                                {{ number_format(
-                                    $donorSelesai
-                                ) }}
-                            </strong>
-
-                            <span>Donor Selesai</span>
-                        </div>
-                    </div>
-                </article>
-
-                <article class="donor-wide-card donor-health-card">
-                    <div class="donor-health-icon">
-                        <x-donor.icon name="droplet" />
-                    </div>
-
-                    <div>
-                        <span class="donor-eyebrow">
-                            Persiapan Donor
-                        </span>
-
-                        <h3>
-                            Pastikan tubuh cukup istirahat.
-                        </h3>
-
-                        <p>
-                            Minum air putih, konsumsi
-                            makanan bergizi, dan hindari
-                            aktivitas berat sebelum donor.
-                        </p>
-                    </div>
-                </article>
-            </section>
-            @break
-
-        @case('jadwal')
-            <section class="donor-page-header">
-                <div>
-                    <span class="donor-eyebrow">
-                        Agenda Kegiatan
-                    </span>
-
-                    <h1>Jadwal Donor</h1>
-
-                    <p>
-                        Temukan jadwal donor yang masih
-                        tersedia dan sesuai dengan waktu
-                        Anda.
-                    </p>
+                    <a href="{{ route('donor.riwayat') }}">
+                        Lihat Semua
+                    </a>
                 </div>
 
-                <label class="donor-search-field">
-                    <x-donor.icon name="search" />
+                <div class="donor-home-history-list">
+                    @forelse ($riwayatTerbaru as $pendaftaran)
+                        @php
+                            $jadwal = $pendaftaran->jadwal;
+                            $lokasi = $jadwal?->lokasi;
+                        @endphp
 
-                    <input
-                        type="search"
-                        wire:model.live.debounce.400ms="search"
-                        placeholder="Cari jadwal donor..."
-                    >
-                </label>
-            </section>
-
-            <section class="donor-content-grid donor-schedule-grid">
-                @forelse ($jadwal as $item)
-                    <article
-                        class="donor-schedule-card"
-                        wire:key="jadwal-{{ $item->id }}"
-                    >
-                        <div class="donor-schedule-date">
-                            <strong>
-                                {{ $item
-                                    ->mulai_pada
-                                    ?->format('d') }}
-                            </strong>
-
-                            <span>
-                                {{ $item
-                                    ->mulai_pada
-                                    ?->translatedFormat('M') }}
-                            </span>
-                        </div>
-
-                        <div class="donor-schedule-content">
-                            <span class="donor-status-pill donor-status-open">
-                                Pendaftaran Dibuka
-                            </span>
-
-                            <h2>{{ $item->judul }}</h2>
-
-                            <div class="donor-schedule-meta">
+                        <article class="donor-home-history-card">
+                            <div>
                                 <span>
-                                    <x-donor.icon name="calendar" />
-
-                                    {{ $item
-                                        ->mulai_pada
-                                        ?->format('H:i') }}
-                                    –
-                                    {{ $item
-                                        ->selesai_pada
-                                        ?->format('H:i') }}
+                                    {{ $this->nomorPendaftaran($pendaftaran) }}
                                 </span>
 
-                                <span>
-                                    <x-donor.icon name="map-pin" />
+                                <h3>
+                                    {{ $this->judulJadwal($jadwal) }}
+                                </h3>
 
-                                    {{ $lokasiJadwal[
-                                        $item->lokasi_donor_id
-                                    ] ?? 'Lokasi donor' }}
+                                <p>
+                                    {{ $this->tanggalJadwal($jadwal) }},
+                                    {{ $this->jamJadwal($jadwal) }}
+                                </p>
+
+                                <small>
+                                    {{ $this->namaLokasi($lokasi) }}
+                                </small>
+                            </div>
+
+                            <strong class="{{ $this->statusBadgeClass($pendaftaran->status) }}">
+                                {{ $this->labelStatusPendaftaran($pendaftaran->status) }}
+                            </strong>
+                        </article>
+                    @empty
+                        <div class="donor-home-empty">
+                            <h3>Belum ada riwayat</h3>
+                            <p>Mulai daftar donor dari menu Jadwal Donor.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </section>
+        </div>
+
+        <aside class="donor-home-side">
+            <section class="donor-home-panel">
+                <div class="donor-home-panel-header">
+                    <div>
+                        <p>Stok Darah</p>
+                        <h2>Ringkasan tersedia</h2>
+                    </div>
+
+                    <a href="{{ route('donor.stok') }}">
+                        Detail
+                    </a>
+                </div>
+
+                <div class="donor-home-stock-grid">
+                    @foreach ($stokRingkas as $stok)
+                        <article class="donor-home-stock-card">
+                            <div>
+                                <strong>{{ $stok['golongan'] }}</strong>
+
+                                <span class="{{ $stok['class'] }}">
+                                    {{ $stok['status'] }}
                                 </span>
                             </div>
 
                             <p>
-                                {{ Str::limit(
-                                    strip_tags(
-                                        (string) $item->deskripsi
-                                    ),
-                                    125
-                                ) }}
+                                {{ $stok['total'] }} kantong
                             </p>
-
-                            <button
-                                type="button"
-                                class="donor-secondary-button"
-                            >
-                                Lihat Detail
-                            </button>
-                        </div>
-                    </article>
-                @empty
-                    <div class="donor-empty-state">
-                        <x-donor.icon name="calendar" />
-
-                        <h2>Jadwal belum tersedia</h2>
-
-                        <p>
-                            Belum ada jadwal yang sesuai
-                            dengan pencarian Anda.
-                        </p>
-                    </div>
-                @endforelse
-            </section>
-
-            @if ($jadwal->hasPages())
-                <div class="donor-pagination">
-                    <button
-                        type="button"
-                        wire:click="previousPage"
-                        @disabled($jadwal->onFirstPage())
-                    >
-                        Sebelumnya
-                    </button>
-
-                    <span>
-                        Halaman {{ $jadwal->currentPage() }}
-                        dari {{ $jadwal->lastPage() }}
-                    </span>
-
-                    <button
-                        type="button"
-                        wire:click="nextPage"
-                        @disabled(! $jadwal->hasMorePages())
-                    >
-                        Berikutnya
-                    </button>
-                </div>
-            @endif
-            @break
-
-        @case('lokasi')
-            <section class="donor-page-header">
-                <div>
-                    <span class="donor-eyebrow">
-                        Lokasi Kegiatan
-                    </span>
-
-                    <h1>Lokasi Donor</h1>
-
-                    <p>
-                        Cari lokasi donor yang paling mudah
-                        dijangkau dari tempat Anda.
-                    </p>
-                </div>
-
-                <label class="donor-search-field">
-                    <x-donor.icon name="search" />
-
-                    <input
-                        type="search"
-                        wire:model.live.debounce.400ms="search"
-                        placeholder="Cari lokasi atau kota..."
-                    >
-                </label>
-            </section>
-
-            <section class="donor-content-grid donor-location-grid">
-                @forelse ($lokasiCards as $lokasiItem)
-                    <article
-                        class="donor-location-card"
-                        wire:key="lokasi-{{ $lokasiItem['id'] }}"
-                    >
-                        <div class="donor-location-map">
-                            <div class="donor-map-pin">
-                                <x-donor.icon name="map-pin" />
-                            </div>
-                        </div>
-
-                        <div class="donor-location-content">
-                            <h2>
-                                {{ $lokasiItem['nama'] }}
-                            </h2>
-
-                            <p>
-                                {{ $lokasiItem['alamat'] }}
-                            </p>
-
-                            <div class="donor-location-meta">
-                                <span>
-                                    {{ $lokasiItem['kota'] }}
-                                </span>
-
-                                <span>
-                                    {{ $lokasiItem['provinsi'] }}
-                                </span>
-                            </div>
-
-                            <button
-                                type="button"
-                                class="donor-secondary-button"
-                            >
-                                Lihat Lokasi
-                            </button>
-                        </div>
-                    </article>
-                @empty
-                    <div class="donor-empty-state">
-                        <x-donor.icon name="map-pin" />
-
-                        <h2>Lokasi belum ditemukan</h2>
-
-                        <p>
-                            Coba gunakan kata pencarian
-                            yang berbeda.
-                        </p>
-                    </div>
-                @endforelse
-            </section>
-
-            @if ($lokasi->hasPages())
-                <div class="donor-pagination">
-                    <button
-                        type="button"
-                        wire:click="previousPage"
-                        @disabled($lokasi->onFirstPage())
-                    >
-                        Sebelumnya
-                    </button>
-
-                    <span>
-                        Halaman {{ $lokasi->currentPage() }}
-                        dari {{ $lokasi->lastPage() }}
-                    </span>
-
-                    <button
-                        type="button"
-                        wire:click="nextPage"
-                        @disabled(! $lokasi->hasMorePages())
-                    >
-                        Berikutnya
-                    </button>
-                </div>
-            @endif
-            @break
-
-        @case('stok')
-            <section class="donor-page-header">
-                <div>
-                    <span class="donor-eyebrow">
-                        Informasi Ketersediaan
-                    </span>
-
-                    <h1>Stok Darah</h1>
-
-                    <p>
-                        Ringkasan stok darah tersedia
-                        berdasarkan golongan darah dan
-                        rhesus.
-                    </p>
-                </div>
-
-                <div class="donor-stock-summary">
-                    <span>Total Stok</span>
-
-                    <strong>
-                        {{ number_format(
-                            $metaStok[
-                                'total_kantong_tersedia'
-                            ] ?? 0
-                        ) }}
-                    </strong>
-
-                    <small>kantong tersedia</small>
-                </div>
-            </section>
-
-            <section class="donor-blood-grid">
-                @foreach ($stokDarah as $stok)
-                    <article
-                        class="donor-blood-card"
-                        wire:key="stok-{{ $stok['kode'] }}"
-                    >
-                        <div class="donor-blood-type">
-                            {{ $stok['kode'] }}
-                        </div>
-
-                        <div class="donor-blood-card-copy">
-                            <span>Kantong tersedia</span>
-
-                            <strong>
-                                {{ number_format(
-                                    $stok['jumlah_kantong']
-                                ) }}
-                            </strong>
 
                             <small>
-                                {{ number_format(
-                                    $stok['total_volume_ml']
-                                ) }}
-                                ml total volume
+                                Rh+ {{ $stok['positif'] }} · Rh- {{ $stok['negatif'] }}
                             </small>
-                        </div>
-
-                        <div class="donor-blood-progress">
-                            <span
-                                style="
-                                    width:
-                                    {{ min(
-                                        100,
-                                        $stok['jumlah_kantong'] * 5
-                                    ) }}%;
-                                "
-                            ></span>
-                        </div>
-                    </article>
-                @endforeach
-            </section>
-            @break
-
-        @case('riwayat')
-            <section class="donor-page-header">
-                <div>
-                    <span class="donor-eyebrow">
-                        Aktivitas Pendonor
-                    </span>
-
-                    <h1>Riwayat Donor</h1>
-
-                    <p>
-                        Pantau status seluruh pendaftaran
-                        donor Anda.
-                    </p>
+                        </article>
+                    @endforeach
                 </div>
             </section>
 
-            <div class="donor-table-card">
-                <div class="donor-table-responsive">
-                    <table class="donor-table">
-                        <thead>
-                            <tr>
-                                <th>Nomor</th>
-                                <th>Jadwal</th>
-                                <th>Tanggal</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
+            <section class="donor-home-panel">
+                <div class="donor-home-panel-header">
+                    <div>
+                        <p>Lokasi Donor</p>
+                        <h2>{{ $ringkasan['lokasi_aktif'] }} lokasi aktif</h2>
+                    </div>
 
-                        <tbody>
-                            @forelse ($riwayat as $item)
-                                <tr>
-                                    <td>
-                                        <strong>
-                                            {{ $item
-                                                ->nomor_pendaftaran }}
-                                        </strong>
-                                    </td>
-
-                                    <td>
-                                        {{ $item
-                                            ->jadwal
-                                            ?->judul
-                                            ?? '-' }}
-                                    </td>
-
-                                    <td>
-                                        {{ $item
-                                            ->jadwal
-                                            ?->mulai_pada
-                                            ?->translatedFormat(
-                                                'd M Y'
-                                            )
-                                            ?? '-' }}
-                                    </td>
-
-                                    <td>
-                                        <span
-                                            class="
-                                                donor-status-pill
-                                                donor-status-{{
-                                                    $this->valueEnum(
-                                                        $item->status
-                                                    )
-                                                }}
-                                            "
-                                        >
-                                            {{ $this->labelEnum(
-                                                $item->status
-                                            ) }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td
-                                        colspan="4"
-                                        class="donor-table-empty"
-                                    >
-                                        Belum ada riwayat
-                                        pendaftaran donor.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    <a href="{{ route('donor.lokasi') }}">
+                        Semua
+                    </a>
                 </div>
 
-                @if ($riwayat->hasPages())
-                    <div class="donor-pagination donor-pagination-card">
-                        <button
-                            type="button"
-                            wire:click="previousPage"
-                            @disabled($riwayat->onFirstPage())
-                        >
-                            Sebelumnya
-                        </button>
+                <div class="donor-home-location-list">
+                    @forelse ($lokasiTerdekat as $lokasi)
+                        <article>
+                            <h3>
+                                {{ $this->namaLokasi($lokasi) }}
+                            </h3>
 
-                        <span>
-                            Halaman
-                            {{ $riwayat->currentPage() }}
-                            dari
-                            {{ $riwayat->lastPage() }}
-                        </span>
+                            <p>
+                                {{ $this->alamatLokasi($lokasi) }}
+                            </p>
 
-                        <button
-                            type="button"
-                            wire:click="nextPage"
-                            @disabled(! $riwayat->hasMorePages())
-                        >
-                            Berikutnya
-                        </button>
-                    </div>
-                @endif
-            </div>
-            @break
+                            <small>
+                                {{ $this->wilayahLokasi($lokasi) }}
+                            </small>
 
-        @case('profil')
-            <section class="donor-page-header">
-                <div>
-                    <span class="donor-eyebrow">
-                        Pengaturan Akun
-                    </span>
-
-                    <h1>Profil Saya</h1>
-
-                    <p>
-                        Pastikan informasi pribadi dan
-                        kontak darurat selalu terbaru.
-                    </p>
+                            <a
+                                href="{{ $this->mapsUrl($lokasi) }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Buka Peta
+                            </a>
+                        </article>
+                    @empty
+                        <div class="donor-home-empty">
+                            <h3>Lokasi belum tersedia</h3>
+                            <p>Petugas belum menambahkan lokasi aktif.</p>
+                        </div>
+                    @endforelse
                 </div>
             </section>
+        </aside>
+    </section>
 
-            <form
-                wire:submit="simpanProfil"
-                class="donor-profile-layout"
-            >
-                <aside class="donor-profile-summary">
-                    <div class="donor-profile-avatar">
-                        {{ strtoupper(
-                            mb_substr(
-                                auth()->user()->name ?? 'P',
-                                0,
-                                1
-                            )
-                        ) }}
-                    </div>
+    <section class="donor-home-cta">
+        <div>
+            <p>Siap berdonor?</p>
 
-                    <h2>
-                        {{ auth()->user()->name }}
-                    </h2>
+            <h2>
+                Satu pendaftaran Anda bisa membantu banyak pasien.
+            </h2>
+        </div>
 
-                    <p>
-                        {{ auth()->user()->email }}
-                    </p>
+        <div>
+            <a href="{{ route('donor.jadwal') }}">
+                Pilih Jadwal
+            </a>
 
-                    @if ($profil)
-                        <div class="donor-profile-blood">
-                            <span>Golongan Darah</span>
+            <a href="{{ route('donor.lokasi') }}" class="is-outline">
+                Cari Lokasi
+            </a>
+        </div>
+    </section>
 
-                            <strong>
-                                {{ $this->labelEnum(
-                                    $profil->golongan_darah
-                                ) }}
-                                {{ $this->simbolRhesus(
-                                    $profil->rhesus
-                                ) }}
-                            </strong>
-                        </div>
-                    @endif
-                </aside>
+    <style>
+        .donor-home-page {
+            display: grid;
+            gap: 28px;
+        }
 
-                <div class="donor-profile-form">
-                    @error('profil')
-                        <div class="donor-alert donor-alert-error">
-                            {{ $message }}
-                        </div>
-                    @enderror
+        .donor-home-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 24px;
+            align-items: stretch;
+            padding: 34px;
+            border: 1px solid #fee2e2;
+            border-radius: 30px;
+            background:
+                radial-gradient(circle at top right, rgba(239, 68, 68, 0.16), transparent 22rem),
+                linear-gradient(135deg, #fff1f2 0%, #ffffff 72%);
+            box-shadow: 0 22px 60px rgba(15, 23, 42, 0.07);
+        }
 
-                    <div class="donor-form-section">
-                        <h2>Informasi Pribadi</h2>
+        .donor-home-eyebrow,
+        .donor-home-panel-header p,
+        .donor-home-cta p {
+            margin: 0 0 12px;
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
 
-                        <div class="donor-form-grid">
-                            <label class="donor-form-field">
-                                <span>Nama Lengkap</span>
+        .donor-home-hero h1 {
+            max-width: 820px;
+            margin: 0;
+            color: #0f172a;
+            font-size: clamp(38px, 6vw, 64px);
+            line-height: 1.03;
+            letter-spacing: -0.065em;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="name"
-                                >
+        .donor-home-hero-content > p:not(.donor-home-eyebrow) {
+            max-width: 720px;
+            margin: 18px 0 0;
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.85;
+        }
 
-                                @error('name')
-                                    <small>{{ $message }}</small>
-                                @enderror
-                            </label>
+        .donor-home-hero-actions,
+        .donor-home-cta > div:last-child {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 26px;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Nomor Telepon</span>
+        .donor-home-hero-actions a,
+        .donor-home-profile-card a,
+        .donor-home-panel-header a,
+        .donor-home-schedule-actions a,
+        .donor-home-location-list a,
+        .donor-home-cta a {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 18px;
+            border-radius: 14px;
+            color: #ffffff;
+            background: #dc2626;
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+            transition: 160ms ease;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="nomorTelepon"
-                                >
+        .donor-home-hero-actions a.is-outline,
+        .donor-home-schedule-actions a.is-outline,
+        .donor-home-cta a.is-outline {
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            background: #ffffff;
+        }
 
-                                @error('nomorTelepon')
-                                    <small>{{ $message }}</small>
-                                @enderror
-                            </label>
+        .donor-home-profile-card {
+            display: grid;
+            align-content: start;
+            gap: 12px;
+            padding: 24px;
+            border: 1px solid #fecaca;
+            border-radius: 26px;
+            background: #ffffff;
+            box-shadow: 0 18px 48px rgba(220, 38, 38, 0.08);
+        }
 
-                            <label class="donor-form-field">
-                                <span>Tanggal Lahir</span>
+        .donor-home-profile-card span {
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
 
-                                <input
-                                    type="date"
-                                    wire:model="tanggalLahir"
-                                >
+        .donor-home-profile-card strong {
+            color: #0f172a;
+            font-size: 54px;
+            line-height: 1;
+            letter-spacing: -0.06em;
+        }
 
-                                @error('tanggalLahir')
-                                    <small>{{ $message }}</small>
-                                @enderror
-                            </label>
+        .donor-home-profile-card p {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 700;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Jenis Kelamin</span>
+        .donor-home-progress {
+            height: 9px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #f1f5f9;
+        }
 
-                                <select wire:model="jenisKelamin">
-                                    <option value="">
-                                        Pilih jenis kelamin
-                                    </option>
+        .donor-home-progress div {
+            height: 100%;
+            border-radius: 999px;
+            background: #dc2626;
+        }
 
-                                    <option value="male">
-                                        Laki-laki
-                                    </option>
+        .donor-home-profile-card a {
+            margin-top: 6px;
+        }
 
-                                    <option value="female">
-                                        Perempuan
-                                    </option>
-                                </select>
+        .donor-home-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+        }
 
-                                @error('jenisKelamin')
-                                    <small>{{ $message }}</small>
-                                @enderror
-                            </label>
-                        </div>
-                    </div>
+        .donor-home-summary article,
+        .donor-home-panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            background: #ffffff;
+            box-shadow: 0 16px 44px rgba(15, 23, 42, 0.06);
+        }
 
-                    <div class="donor-form-section">
-                        <h2>Alamat</h2>
+        .donor-home-summary article {
+            padding: 22px;
+        }
 
-                        <div class="donor-form-grid">
-                            <label class="donor-form-field donor-form-field-full">
-                                <span>Alamat Lengkap</span>
+        .donor-home-summary span {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
 
-                                <textarea
-                                    rows="4"
-                                    wire:model="alamat"
-                                ></textarea>
+        .donor-home-summary strong {
+            display: block;
+            margin-top: 8px;
+            color: #0f172a;
+            font-size: 36px;
+            line-height: 1;
+        }
 
-                                @error('alamat')
-                                    <small>{{ $message }}</small>
-                                @enderror
-                            </label>
+        .donor-home-summary p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Provinsi</span>
+        .donor-home-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 390px;
+            gap: 22px;
+            align-items: start;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="provinsi"
-                                >
-                            </label>
+        .donor-home-main,
+        .donor-home-side {
+            display: grid;
+            gap: 22px;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Kota/Kabupaten</span>
+        .donor-home-panel {
+            overflow: hidden;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="kota"
-                                >
-                            </label>
+        .donor-home-panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 22px 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Kecamatan</span>
+        .donor-home-panel-header h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+            line-height: 1.25;
+            letter-spacing: -0.035em;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="kecamatan"
-                                >
-                            </label>
+        .donor-home-panel-header a {
+            min-height: 38px;
+            padding: 0 14px;
+            border: 1px solid #fee2e2;
+            color: #dc2626;
+            background: #fff7f7;
+            white-space: nowrap;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Kode Pos</span>
+        .donor-home-schedule-list,
+        .donor-home-history-list,
+        .donor-home-location-list {
+            display: grid;
+            gap: 14px;
+            padding: 18px;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="kodePos"
-                                >
-                            </label>
-                        </div>
-                    </div>
+        .donor-home-schedule-card {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            background: #f8fafc;
+        }
 
-                    <div class="donor-form-section">
-                        <h2>Kontak Darurat</h2>
+        .donor-home-date-box {
+            display: grid;
+            gap: 6px;
+            padding: 15px;
+            border-radius: 16px;
+            color: #991b1b;
+            background: #fee2e2;
+        }
 
-                        <div class="donor-form-grid">
-                            <label class="donor-form-field">
-                                <span>Nama Kontak</span>
+        .donor-home-date-box strong {
+            font-size: 14px;
+            line-height: 1.35;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="namaKontakDarurat"
-                                >
-                            </label>
+        .donor-home-date-box span {
+            font-size: 12px;
+            font-weight: 900;
+        }
 
-                            <label class="donor-form-field">
-                                <span>Nomor Telepon</span>
+        .donor-home-schedule-card h3,
+        .donor-home-history-card h3,
+        .donor-home-location-list h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 17px;
+            line-height: 1.35;
+            letter-spacing: -0.02em;
+        }
 
-                                <input
-                                    type="text"
-                                    wire:model="teleponKontakDarurat"
-                                >
-                            </label>
+        .donor-home-schedule-card p,
+        .donor-home-history-card p,
+        .donor-home-location-list p {
+            margin: 7px 0 0;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.65;
+        }
 
-                            <label class="donor-toggle-field donor-form-field-full">
-                                <input
-                                    type="checkbox"
-                                    wire:model="bersediaDihubungi"
-                                >
+        .donor-home-schedule-card small,
+        .donor-home-history-card small,
+        .donor-home-location-list small {
+            display: block;
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.55;
+        }
 
-                                <span class="donor-toggle-control"></span>
+        .donor-home-schedule-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-                                <span>
-                                    Saya bersedia dihubungi
-                                    terkait kebutuhan donor darah.
-                                </span>
-                            </label>
-                        </div>
-                    </div>
+        .donor-home-schedule-actions a {
+            min-height: 38px;
+            padding: 0 14px;
+        }
 
-                    <div class="donor-form-actions">
-                        <button
-                            type="submit"
-                            class="donor-primary-button"
-                            wire:loading.attr="disabled"
-                        >
-                            <span wire:loading.remove>
-                                Simpan Perubahan
-                            </span>
+        .donor-home-history-card {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            background: #f8fafc;
+        }
 
-                            <span wire:loading>
-                                Menyimpan...
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </form>
-            @break
-    @endswitch
+        .donor-home-history-card span {
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .donor-home-history-card > strong {
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .donor-home-history-card > strong.is-success {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .donor-home-history-card > strong.is-warning {
+            color: #92400e;
+            background: #fef3c7;
+        }
+
+        .donor-home-history-card > strong.is-danger {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .donor-home-stock-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            padding: 18px;
+        }
+
+        .donor-home-stock-card {
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #f8fafc;
+        }
+
+        .donor-home-stock-card div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .donor-home-stock-card strong {
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            border-radius: 16px;
+            color: #dc2626;
+            background: #fee2e2;
+            font-size: 20px;
+            font-weight: 1000;
+        }
+
+        .donor-home-stock-card span {
+            min-height: 28px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .donor-home-stock-card span.is-success {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .donor-home-stock-card span.is-warning {
+            color: #92400e;
+            background: #fef3c7;
+        }
+
+        .donor-home-stock-card span.is-danger {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .donor-home-stock-card p {
+            margin: 14px 0 0;
+            color: #0f172a;
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .donor-home-stock-card small {
+            display: block;
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .donor-home-location-list article {
+            padding: 18px;
+            border: 1px solid #fee2e2;
+            border-radius: 20px;
+            background: #fff7f7;
+        }
+
+        .donor-home-location-list a {
+            min-height: 38px;
+            margin-top: 12px;
+            padding: 0 14px;
+        }
+
+        .donor-home-empty {
+            padding: 22px;
+            border: 1px dashed #fecaca;
+            border-radius: 18px;
+            background: #fff7f7;
+        }
+
+        .donor-home-empty h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 16px;
+        }
+
+        .donor-home-empty p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .donor-home-cta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 26px;
+            border: 1px solid #fee2e2;
+            border-radius: 28px;
+            background: #fff7f7;
+        }
+
+        .donor-home-cta h2 {
+            max-width: 720px;
+            margin: 0;
+            color: #0f172a;
+            font-size: 28px;
+            line-height: 1.2;
+            letter-spacing: -0.045em;
+        }
+
+        .donor-home-cta > div:last-child {
+            margin-top: 0;
+        }
+
+        @media (max-width: 1180px) {
+            .donor-home-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-home-side {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 980px) {
+            .donor-home-hero,
+            .donor-home-summary,
+            .donor-home-side {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-home-schedule-card {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-home-schedule-actions {
+                flex-wrap: wrap;
+            }
+
+            .donor-home-cta {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .donor-home-hero {
+                padding: 24px;
+            }
+
+            .donor-home-stock-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-home-history-card {
+                flex-direction: column;
+            }
+
+            .donor-home-hero-actions,
+            .donor-home-cta > div:last-child {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .donor-home-hero-actions a,
+            .donor-home-cta a,
+            .donor-home-schedule-actions a {
+                width: 100%;
+            }
+        }
+    </style>
 </div>

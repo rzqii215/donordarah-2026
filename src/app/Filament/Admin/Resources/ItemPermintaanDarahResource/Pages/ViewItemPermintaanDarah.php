@@ -7,6 +7,20 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewItemPermintaanDarah extends ViewRecord
 {
-    protected static string $resource =
-        ItemPermintaanDarahResource::class;
+    protected static string $resource = ItemPermintaanDarahResource::class;
+
+    public function getTitle(): string
+    {
+        return 'Detail Alokasi Kantong Darah';
+    }
+
+    public function getHeading(): string
+    {
+        return 'Detail Alokasi Kantong Darah';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Informasi lengkap alokasi kantong darah, pengajuan kebutuhan donor, status alokasi, dan riwayat pelepasan.';
+    }
 }

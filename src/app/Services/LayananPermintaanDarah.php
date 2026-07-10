@@ -24,14 +24,14 @@ class LayananPermintaanDarah
             $rumahSakit,
             $data
         ): PermintaanDarah {
-            $rumahSakitTerkunci =
+            $pemohonDonorTerkunci =
                 ProfilRumahSakit::query()
                     ->with('pengguna')
                     ->lockForUpdate()
                     ->findOrFail($rumahSakit->id);
 
-            $this->pastikanRumahSakitAktif(
-                $rumahSakitTerkunci
+            $this->pastikanPemohonDonorAktif(
+                $pemohonDonorTerkunci
             );
 
             $jumlahKantong =
@@ -49,7 +49,7 @@ class LayananPermintaanDarah
                     $this->buatNomorPermintaan(),
 
                 'profil_rumah_sakit_id' =>
-                    $rumahSakitTerkunci->id,
+                    $pemohonDonorTerkunci->id,
 
                 'referensi_pasien' =>
                     $data['referensi_pasien'],
@@ -128,7 +128,7 @@ class LayananPermintaanDarah
             if (! $record->dapatDiubah()) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan tidak dapat diubah dari status saat ini.',
+                        'Pengajuan tidak dapat diubah dari status saat ini.',
                 ]);
             }
 
@@ -193,7 +193,7 @@ class LayananPermintaanDarah
             if (! $record->dapatDitinjau()) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan ini tidak dapat ditinjau dari status saat ini.',
+                        'Pengajuan ini tidak dapat ditinjau dari status saat ini.',
                 ]);
             }
 
@@ -230,7 +230,7 @@ class LayananPermintaanDarah
             if (! $record->dapatDisetujui()) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan ini tidak dapat disetujui dari status saat ini.',
+                        'Pengajuan ini tidak dapat disetujui dari status saat ini.',
                 ]);
             }
 
@@ -280,7 +280,7 @@ class LayananPermintaanDarah
             ) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan tidak dapat dipindahkan ke status menunggu stok.',
+                        'Pengajuan tidak dapat dipindahkan ke status menunggu stok.',
                 ]);
             }
 
@@ -316,7 +316,7 @@ class LayananPermintaanDarah
             if (! $record->dapatDitolak()) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan ini tidak dapat ditolak dari status saat ini.',
+                        'Pengajuan ini tidak dapat ditolak dari status saat ini.',
                 ]);
             }
 
@@ -365,7 +365,7 @@ class LayananPermintaanDarah
             if (! $record->dapatDibatalkan()) {
                 throw ValidationException::withMessages([
                     'status' =>
-                        'Permintaan ini tidak dapat dibatalkan dari status saat ini.',
+                        'Pengajuan ini tidak dapat dibatalkan dari status saat ini.',
                 ]);
             }
 
@@ -393,27 +393,27 @@ class LayananPermintaanDarah
         });
     }
 
-    private function pastikanRumahSakitAktif(
-        ProfilRumahSakit $rumahSakit
+    private function pastikanPemohonDonorAktif(
+        ProfilRumahSakit $pemohonDonor
     ): void {
         if (
-            $rumahSakit->status_verifikasi !==
+            $pemohonDonor->status_verifikasi !==
             StatusVerifikasiRumahSakit::Disetujui
         ) {
             throw ValidationException::withMessages([
                 'profil_rumah_sakit_id' =>
-                    'Rumah Sakit belum disetujui.',
+                    'Pemohon Donor belum disetujui.',
             ]);
         }
 
         if (
-            $rumahSakit->pengguna === null
-            || $rumahSakit->pengguna->status !==
+            $pemohonDonor->pengguna === null
+            || $pemohonDonor->pengguna->status !==
                 StatusPengguna::Aktif
         ) {
             throw ValidationException::withMessages([
                 'profil_rumah_sakit_id' =>
-                    'Akun Rumah Sakit tidak aktif.',
+                    'Akun Pemohon Donor tidak aktif.',
             ]);
         }
     }

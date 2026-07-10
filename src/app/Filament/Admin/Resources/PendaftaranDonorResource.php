@@ -389,6 +389,11 @@ class PendaftaranDonorResource extends Resource
                             ->dateTime('d M Y H:i')
                             ->placeholder('-'),
 
+                        TextEntry::make('selesai_pada')
+                            ->label('Selesai Pada')
+                            ->dateTime('d M Y H:i')
+                            ->placeholder('-'),
+
                         TextEntry::make('dibatalkan_pada')
                             ->label('Dibatalkan Pada')
                             ->dateTime('d M Y H:i')
@@ -499,6 +504,14 @@ class PendaftaranDonorResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make(
+                    'selesai_pada'
+                )
+                    ->label('Selesai')
+                    ->dateTime('d M Y H:i')
+                    ->placeholder('-')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make(
                     'created_at'
                 )
                     ->label('Mendaftar')
@@ -545,8 +558,7 @@ class PendaftaranDonorResource extends Resource
                     ->visible(
                         fn (
                             PendaftaranDonor $record
-                        ): bool => $record->status ===
-                            StatusPendaftaranDonor::Menunggu
+                        ): bool => self::canEdit($record)
                     ),
 
                 Tables\Actions\Action::make(
@@ -708,6 +720,62 @@ class PendaftaranDonorResource extends Resource
                     ),
 
                 Tables\Actions\Action::make(
+                    'buat_pemeriksaan_kesehatan'
+                )
+                    ->label('Buat Pemeriksaan')
+                    ->icon(
+                        'heroicon-o-heart'
+                    )
+                    ->color('primary')
+                    ->visible(
+                        fn (
+                            PendaftaranDonor $record
+                        ): bool => $record->status ===
+                            StatusPendaftaranDonor::Hadir
+                            && ! $record
+                                ->pemeriksaanKesehatan()
+                                ->exists()
+                    )
+                    ->url(
+                        fn (
+                            PendaftaranDonor $record
+                        ): string => PemeriksaanKesehatanResource::getUrl(
+                            'create',
+                            [
+                                'pendaftaran_donor_id' => $record->id,
+                            ]
+                        )
+                    ),
+
+                Tables\Actions\Action::make(
+                    'buat_kantong_darah'
+                )
+                    ->label('Buat Kantong Darah')
+                    ->icon(
+                        'heroicon-o-beaker'
+                    )
+                    ->color('success')
+                    ->visible(
+                        fn (
+                            PendaftaranDonor $record
+                        ): bool => $record->status ===
+                            StatusPendaftaranDonor::Layak
+                            && ! $record
+                                ->kantongDarah()
+                                ->exists()
+                    )
+                    ->url(
+                        fn (
+                            PendaftaranDonor $record
+                        ): string => KantongDarahResource::getUrl(
+                            'create',
+                            [
+                                'pendaftaran_donor_id' => $record->id,
+                            ]
+                        )
+                    ),
+
+                Tables\Actions\Action::make(
                     'batalkan'
                 )
                     ->label('Batalkan')
@@ -718,7 +786,7 @@ class PendaftaranDonorResource extends Resource
                     ->visible(
                         fn (
                             PendaftaranDonor $record
-                        ): bool => $record->dapatDibatalkan()
+                        ): bool => self::dapatDibatalkanLewatResource($record)
                     )
                     ->form([
                         Forms\Components\Textarea::make(
@@ -770,6 +838,28 @@ class PendaftaranDonorResource extends Resource
         return $record instanceof PendaftaranDonor
             && $record->status ===
                 StatusPendaftaranDonor::Menunggu;
+    }
+
+    public static function canDelete(
+        Model $record
+    ): bool {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function canForceDelete(
+        Model $record
+    ): bool {
+        return false;
+    }
+
+    public static function canForceDeleteAny(): bool
+    {
+        return false;
     }
 
     public static function getRelations(): array
@@ -828,7 +918,33 @@ class PendaftaranDonorResource extends Resource
                 'jadwal.lokasi',
                 'pendonor.profilPendonor',
                 'peninjau',
+                'pemeriksaanKesehatan',
+                'kantongDarah',
             ]);
+    }
+
+    private static function dapatDibatalkanLewatResource(
+        PendaftaranDonor $record
+    ): bool {
+        if (
+            in_array(
+                $record->status,
+                [
+                    StatusPendaftaranDonor::Selesai,
+                    StatusPendaftaranDonor::Layak,
+                    StatusPendaftaranDonor::TidakLayak,
+                ],
+                true
+            )
+        ) {
+            return false;
+        }
+
+        if ($record->kantongDarah()->exists()) {
+            return false;
+        }
+
+        return $record->dapatDibatalkan();
     }
 
     private static function statusEnum(

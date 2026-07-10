@@ -11,6 +11,12 @@ use Illuminate\Validation\ValidationException;
 class LayananProfilRumahSakit
 {
     /**
+     * Memperbarui profil Pemohon Donor milik pengguna yang sedang login.
+     *
+     * Catatan:
+     * Nama class, model, relasi, dan tabel masih memakai struktur teknis lama
+     * agar database dan kode yang sudah berjalan tetap aman.
+     *
      * @param array<string, mixed> $data
      */
     public function perbaruiMilikPengguna(
@@ -36,7 +42,7 @@ class LayananProfilRumahSakit
             if ($profil === null) {
                 throw ValidationException::withMessages([
                     'profil' =>
-                        'Profil Rumah Sakit belum tersedia.',
+                        'Profil Pemohon Donor belum tersedia.',
                 ]);
             }
 

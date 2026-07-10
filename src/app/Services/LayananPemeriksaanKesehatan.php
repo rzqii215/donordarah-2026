@@ -29,6 +29,7 @@ class LayananPemeriksaanKesehatan
                     ->with([
                         'pendonor.profilPendonor',
                         'pemeriksaanKesehatan',
+                        'kantongDarah',
                     ])
                     ->lockForUpdate()
                     ->findOrFail($pendaftaran->id);
@@ -39,20 +40,17 @@ class LayananPemeriksaanKesehatan
 
             $statusKelayakan =
                 $this->normalisasiStatusKelayakan(
-                    $data['status_kelayakan']
+                    $data['status_kelayakan'] ?? null
                 );
 
-            $alasanTidakLayak = trim(
-                (string) (
-                    $data['alasan_tidak_layak']
-                    ?? ''
-                )
-            );
+            $alasanTidakLayak =
+                $this->normalisasiTeks(
+                    $data['alasan_tidak_layak'] ?? null
+                );
 
             if (
-                $statusKelayakan ===
-                    StatusKelayakanDonor::TidakLayak
-                && $alasanTidakLayak === ''
+                $statusKelayakan === StatusKelayakanDonor::TidakLayak
+                && $alasanTidakLayak === null
             ) {
                 throw ValidationException::withMessages([
                     'alasan_tidak_layak' =>
@@ -60,11 +58,8 @@ class LayananPemeriksaanKesehatan
                 ]);
             }
 
-            if (
-                $statusKelayakan ===
-                StatusKelayakanDonor::Layak
-            ) {
-                $alasanTidakLayak = '';
+            if ($statusKelayakan === StatusKelayakanDonor::Layak) {
+                $alasanTidakLayak = null;
             }
 
             $pemeriksaan =
@@ -75,8 +70,7 @@ class LayananPemeriksaanKesehatan
                                 $pendaftaranTerkunci->id,
                         ],
                         [
-                            'diperiksa_oleh' =>
-                                $petugasId,
+                            'diperiksa_oleh' => $petugasId,
 
                             'berat_badan_kg' =>
                                 $data['berat_badan_kg'],
@@ -88,51 +82,51 @@ class LayananPemeriksaanKesehatan
                                 $data['tekanan_diastolik'],
 
                             'kadar_hemoglobin' =>
-                                $data[
-                                    'kadar_hemoglobin'
-                                ] ?? null,
+                                $this->nilaiKosongMenjadiNull(
+                                    $data['kadar_hemoglobin'] ?? null
+                                ),
 
                             'suhu_tubuh' =>
-                                $data['suhu_tubuh']
-                                ?? null,
+                                $this->nilaiKosongMenjadiNull(
+                                    $data['suhu_tubuh'] ?? null
+                                ),
 
                             'denyut_nadi' =>
-                                $data['denyut_nadi']
-                                ?? null,
+                                $this->nilaiKosongMenjadiNull(
+                                    $data['denyut_nadi'] ?? null
+                                ),
 
                             'golongan_darah' =>
-                                $data['golongan_darah']
-                                ?? null,
+                                $this->nilaiKosongMenjadiNull(
+                                    $data['golongan_darah'] ?? null
+                                ),
 
                             'rhesus' =>
-                                $data['rhesus']
-                                ?? null,
+                                $this->nilaiKosongMenjadiNull(
+                                    $data['rhesus'] ?? null
+                                ),
 
                             'status_kelayakan' =>
                                 $statusKelayakan,
 
                             'alasan_tidak_layak' =>
-                                $alasanTidakLayak !== ''
-                                    ? $alasanTidakLayak
-                                    : null,
+                                $alasanTidakLayak,
 
                             'catatan_medis' =>
-                                $data['catatan_medis']
-                                ?? null,
+                                $this->normalisasiTeks(
+                                    $data['catatan_medis'] ?? null
+                                ),
 
                             'diperiksa_pada' =>
-                                $data['diperiksa_pada']
-                                ?? now(),
+                                $data['diperiksa_pada'] ?? now(),
                         ]
                     );
 
             $pendaftaranTerkunci->update([
                 'status' =>
-                    $statusKelayakan ===
-                    StatusKelayakanDonor::Layak
-                        ? StatusPendaftaranDonor::Layak
-                        : StatusPendaftaranDonor
-                            ::TidakLayak,
+                    $this->statusPendaftaranDariKelayakan(
+                        $statusKelayakan
+                    ),
             ]);
 
             $this->perbaruiProfilPendonor(
@@ -143,40 +137,91 @@ class LayananPemeriksaanKesehatan
                     $data['rhesus'] ?? null,
             );
 
-            return $pemeriksaan->refresh();
+            return $pemeriksaan
+                ->refresh()
+                ->load([
+                    'pendaftaran.pendonor.profilPendonor',
+                    'pendaftaran.jadwal',
+                    'pemeriksa',
+                ]);
         });
     }
 
     private function pastikanPendaftaranDapatDiperiksa(
         PendaftaranDonor $pendaftaran
     ): void {
-        $statusDiperbolehkan = [
-            StatusPendaftaranDonor::Hadir,
-            StatusPendaftaranDonor::Layak,
-            StatusPendaftaranDonor::TidakLayak,
-        ];
-
         if (
-            ! in_array(
-                $pendaftaran->status,
-                $statusDiperbolehkan,
-                true
-            )
+            $pendaftaran->status !== StatusPendaftaranDonor::Hadir
         ) {
             throw ValidationException::withMessages([
                 'pendaftaran_donor_id' =>
-                    'Pemeriksaan hanya dapat dilakukan untuk Pendonor yang sudah tercatat hadir.',
+                    'Pemeriksaan kesehatan hanya dapat dibuat untuk pendaftaran donor berstatus Hadir.',
+            ]);
+        }
+
+        if ($pendaftaran->kantongDarah !== null) {
+            throw ValidationException::withMessages([
+                'pendaftaran_donor_id' =>
+                    'Pendaftaran donor yang sudah memiliki kantong darah tidak dapat diperiksa ulang.',
             ]);
         }
     }
 
     private function normalisasiStatusKelayakan(
-        StatusKelayakanDonor|string $status
+        StatusKelayakanDonor|string|null $status
     ): StatusKelayakanDonor {
-        return $status instanceof
-            StatusKelayakanDonor
-                ? $status
-                : StatusKelayakanDonor::from($status);
+        if ($status instanceof StatusKelayakanDonor) {
+            return $status;
+        }
+
+        if (blank($status)) {
+            throw ValidationException::withMessages([
+                'status_kelayakan' =>
+                    'Status kelayakan wajib dipilih.',
+            ]);
+        }
+
+        $statusKelayakan =
+            StatusKelayakanDonor::tryFrom(
+                (string) $status
+            );
+
+        if ($statusKelayakan === null) {
+            throw ValidationException::withMessages([
+                'status_kelayakan' =>
+                    'Status kelayakan tidak valid.',
+            ]);
+        }
+
+        return $statusKelayakan;
+    }
+
+    private function statusPendaftaranDariKelayakan(
+        StatusKelayakanDonor $statusKelayakan
+    ): StatusPendaftaranDonor {
+        return match ($statusKelayakan) {
+            StatusKelayakanDonor::Layak =>
+                StatusPendaftaranDonor::Layak,
+
+            StatusKelayakanDonor::TidakLayak =>
+                StatusPendaftaranDonor::TidakLayak,
+        };
+    }
+
+    private function normalisasiTeks(
+        mixed $value
+    ): ?string {
+        if (blank($value)) {
+            return null;
+        }
+
+        return trim((string) $value);
+    }
+
+    private function nilaiKosongMenjadiNull(
+        mixed $value
+    ): mixed {
+        return blank($value) ? null : $value;
     }
 
     private function perbaruiProfilPendonor(
@@ -204,10 +249,10 @@ class LayananPemeriksaanKesehatan
             $dataPerubahan['rhesus'] = $rhesus;
         }
 
-        if ($dataPerubahan !== []) {
-            $profilPendonor->update(
-                $dataPerubahan
-            );
+        if ($dataPerubahan === []) {
+            return;
         }
+
+        $profilPendonor->update($dataPerubahan);
     }
 }
