@@ -2,62 +2,129 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\StatusPengguna;
+use App\Models\User;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class PastikanAksesPortalSesuaiRole
 {
-    public function handle(Request $request, Closure $next): mixed
-    {
+    public function handle(
+        Request $request,
+        Closure $next
+    ): Response {
         $user = Auth::guard('web')->user();
 
-        if ($this->halamanAdmin($request)) {
-            if ($user === null) {
-                return $next($request);
-            }
-
-            if (! $this->adalahAdmin($user)) {
+        if (! $user instanceof User) {
+            if (
+                $this->portalDiminta($request)
+                !== null
+            ) {
                 return redirect()
-                    ->to($this->halamanUtamaBerdasarkanRole($user))
-                    ->with('error', 'Anda tidak memiliki akses ke panel admin.');
+                    ->guest('/login');
             }
 
             return $next($request);
         }
 
-        $portalDiminta = $this->portalDiminta($request);
+        /*
+         * Link verifikasi bertanda tangan tetap boleh
+         * diproses meskipun status akun berubah.
+         */
+        if (
+            $request->routeIs(
+                'verification.verify'
+            )
+        ) {
+            return $next($request);
+        }
+
+        if (! $this->statusPenggunaAktif($user)) {
+            return $this->keluarkanDanRedirect(
+                $request,
+                $this->pesanStatusPengguna($user)
+            );
+        }
+
+        if (
+            ! $user->hasVerifiedEmail()
+            && ! $this->halamanDiizinkanSebelumVerifikasi(
+                $request
+            )
+        ) {
+            return redirect()
+                ->route('verification.notice');
+        }
+
+        $halamanUtama =
+            $this->halamanUtamaBerdasarkanRole(
+                $user
+            );
+
+        if ($halamanUtama === '/login') {
+            return $this->keluarkanDanRedirect(
+                $request,
+                'Akun tidak memiliki akses ke portal.'
+            );
+        }
+
+        if ($this->halamanAdmin($request)) {
+            if (! $this->adalahAdmin($user)) {
+                return redirect()
+                    ->to($halamanUtama)
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke panel admin.'
+                    );
+            }
+
+            return $next($request);
+        }
+
+        $portalDiminta = $this->portalDiminta(
+            $request
+        );
 
         if ($portalDiminta !== null) {
-            if ($user === null) {
-                return redirect()->guest('/login');
-            }
-
-            $halamanUtama = $this->halamanUtamaBerdasarkanRole($user);
-
-            if ($halamanUtama === '/admin') {
-                return redirect()
-                    ->to('/admin')
-                    ->with('error', 'Akun admin diarahkan ke panel admin.');
-            }
-
             if (
                 $portalDiminta === 'donor'
                 && ! $this->adalahPendonor($user)
             ) {
                 return redirect()
                     ->to($halamanUtama)
-                    ->with('error', 'Anda tidak memiliki akses ke portal pendonor.');
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke portal pendonor.'
+                    );
             }
 
             if (
                 $portalDiminta === 'pemohon-donor'
-                && ! $this->adalahPemohonDonor($user)
+                && ! $this->adalahPemohonDonor(
+                    $user
+                )
             ) {
                 return redirect()
                     ->to($halamanUtama)
-                    ->with('error', 'Anda tidak memiliki akses ke portal pemohon donor.');
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke portal pemohon donor.'
+                    );
+            }
+
+            if (
+                $this->adalahAdmin($user)
+            ) {
+                return redirect()
+                    ->to('/admin')
+                    ->with(
+                        'error',
+                        'Akun admin diarahkan ke panel admin.'
+                    );
             }
 
             return $next($request);
@@ -65,33 +132,45 @@ class PastikanAksesPortalSesuaiRole
 
         if (
             $this->halamanAuthPublik($request)
-            && $user !== null
         ) {
-            $halamanUtama = $this->halamanUtamaBerdasarkanRole($user);
-
-            if ($halamanUtama !== '/login') {
-                return redirect()->to($halamanUtama);
-            }
+            return redirect()
+                ->to($halamanUtama);
         }
 
         return $next($request);
     }
 
-    private function halamanAdmin(Request $request): bool
-    {
+    private function halamanAdmin(
+        Request $request
+    ): bool {
         return $request->is('admin')
             || $request->is('admin/*');
     }
 
-    private function halamanAuthPublik(Request $request): bool
-    {
+    private function halamanAuthPublik(
+        Request $request
+    ): bool {
         return $request->is('login')
             || $request->is('register')
             || $request->is('register/*');
     }
 
-    private function portalDiminta(Request $request): ?string
-    {
+    private function halamanDiizinkanSebelumVerifikasi(
+        Request $request
+    ): bool {
+        return $request->routeIs([
+            'verification.notice',
+            'verification.verify',
+            'verification.send',
+            'logout',
+            'donor.logout',
+            'pemohon-donor.logout',
+        ]);
+    }
+
+    private function portalDiminta(
+        Request $request
+    ): ?string {
         if (
             $request->is('donor')
             || $request->is('donor/*')
@@ -109,8 +188,9 @@ class PastikanAksesPortalSesuaiRole
         return null;
     }
 
-    private function halamanUtamaBerdasarkanRole(mixed $user): string
-    {
+    private function halamanUtamaBerdasarkanRole(
+        User $user
+    ): string {
         if ($this->adalahAdmin($user)) {
             return '/admin';
         }
@@ -126,66 +206,142 @@ class PastikanAksesPortalSesuaiRole
         return '/login';
     }
 
-    private function adalahAdmin(mixed $user): bool
-    {
-        $roles = $this->roles($user);
+    private function adalahAdmin(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'super_admin',
+                            'super-admin',
+                            'admin',
+                            'petugas',
+                        ],
+                        true
+                    )
+            );
+    }
 
-        return $roles->contains(
-            fn (string $role): bool => in_array(
-                $role,
-                [
-                    'super_admin',
-                    'super-admin',
-                    'admin',
-                    'petugas',
-                ],
-                true
+    private function adalahPendonor(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'donor',
+                            'pendonor',
+                        ],
+                        true
+                    )
+            );
+    }
+
+    private function adalahPemohonDonor(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'pemohon_donor',
+                            'pemohon-donor',
+                            'rumah_sakit',
+                            'rumah-sakit',
+                        ],
+                        true
+                    )
+            );
+    }
+
+    private function statusPenggunaAktif(
+        User $user
+    ): bool {
+        return $this->nilaiStatusPengguna($user)
+            === StatusPengguna::Aktif->value;
+    }
+
+    private function pesanStatusPengguna(
+        User $user
+    ): string {
+        return match (
+            $this->nilaiStatusPengguna($user)
+        ) {
+            StatusPengguna::Menunggu->value =>
+                'Akun masih menunggu aktivasi.',
+
+            StatusPengguna::TidakAktif->value =>
+                'Akun sedang tidak aktif. Hubungi administrator.',
+
+            StatusPengguna::Ditangguhkan->value =>
+                'Akun sedang ditangguhkan. Hubungi administrator.',
+
+            StatusPengguna::Ditolak->value =>
+                'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+
+            default =>
+                'Akun belum dapat digunakan. Hubungi administrator.',
+        };
+    }
+
+    private function nilaiStatusPengguna(
+        User $user
+    ): string {
+        $status = $user->status;
+
+        if ($status instanceof \BackedEnum) {
+            return strtolower(
+                trim(
+                    (string) $status->value
+                )
+            );
+        }
+
+        return strtolower(
+            trim(
+                (string) $status
             )
         );
     }
 
-    private function adalahPendonor(mixed $user): bool
-    {
-        $roles = $this->roles($user);
-
-        return $roles->contains(
-            fn (string $role): bool =>
-                $role === 'donor'
-                || $role === 'pendonor'
-                || str_contains($role, 'pendonor')
-        );
-    }
-
-    private function adalahPemohonDonor(mixed $user): bool
-    {
-        $roles = $this->roles($user);
-
-        return $roles->contains(
-            fn (string $role): bool =>
-                $role === 'rumah_sakit'
-                || $role === 'rumah-sakit'
-                || $role === 'pemohon_donor'
-                || $role === 'pemohon-donor'
-                || $role === 'pemohon'
-                || str_contains($role, 'pemohon')
-                || str_contains($role, 'rumah')
-                || str_contains($role, 'sakit')
-                || str_contains($role, 'hospital')
-        );
-    }
-
-    private function roles(mixed $user): Collection
-    {
-        if (
-            ! is_object($user)
-            || ! method_exists($user, 'getRoleNames')
-        ) {
-            return collect();
-        }
-
+    /**
+     * @return Collection<int, string>
+     */
+    private function roles(
+        User $user
+    ): Collection {
         return $user->getRoleNames()
-            ->map(fn (string $role): string => strtolower(trim($role)))
+            ->map(
+                fn (string $role): string =>
+                    strtolower(
+                        trim($role)
+                    )
+            )
             ->filter()
             ->values();
+    }
+
+    private function keluarkanDanRedirect(
+        Request $request,
+        string $message
+    ): RedirectResponse {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()
+            ->route('login')
+            ->with(
+                'error',
+                $message
+            );
     }
 }

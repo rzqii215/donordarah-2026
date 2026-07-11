@@ -10,6 +10,7 @@ use App\Enums\StatusPengguna;
 use App\Models\ProfilPendonor;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -22,6 +23,8 @@ use Spatie\Permission\Models\Role;
 #[Layout('components.layouts.auth')]
 class RegisterDonor extends Component
 {
+    private const GOOGLE_SESSION_LIFETIME_SECONDS = 600;
+
     public string $metodePendaftaran = '';
 
     public string $name = '';
@@ -61,6 +64,10 @@ class RegisterDonor extends Component
 
     public function pilihManual(): void
     {
+        session()->forget(
+            'google_register'
+        );
+
         $this->metodePendaftaran = 'manual';
     }
 
@@ -71,9 +78,9 @@ class RegisterDonor extends Component
 
     public function resetMetodePendaftaran(): void
     {
-        if ($this->menggunakanGoogle()) {
-            session()->forget('google_register');
-        }
+        session()->forget(
+            'google_register'
+        );
 
         $this->metodePendaftaran = '';
         $this->name = '';
@@ -90,7 +97,43 @@ class RegisterDonor extends Component
                 'Pilih metode pendaftaran terlebih dahulu.'
             );
 
-            return redirect()->back();
+            return null;
+        }
+
+        $googleRegister = [];
+        $menggunakanGoogle = false;
+
+        if (
+            $this->metodePendaftaran
+            === 'google'
+        ) {
+            $googleRegister =
+                $this->googleRegisterData();
+
+            if ($googleRegister === []) {
+                $this->addError(
+                    'metodePendaftaran',
+                    'Session registrasi Google sudah tidak valid atau kedaluwarsa. Silakan masuk dengan Google kembali.'
+                );
+
+                return null;
+            }
+
+            $menggunakanGoogle = true;
+
+            /*
+             * Nama dan email Google tidak boleh
+             * diganti melalui payload Livewire.
+             */
+            $this->name = (string) (
+                $googleRegister['name']
+                ?? ''
+            );
+
+            $this->email = (string) (
+                $googleRegister['email']
+                ?? ''
+            );
         }
 
         $data = $this->validate(
@@ -98,161 +141,305 @@ class RegisterDonor extends Component
             $this->messages()
         );
 
-        $googleRegister = $this->googleRegisterData();
+        if ($menggunakanGoogle) {
+            /*
+             * Gunakan kembali data dari session
+             * setelah proses validasi selesai.
+             */
+            $data['name'] = (string) (
+                $googleRegister['name']
+                ?? $data['name']
+            );
 
-        if ($this->menggunakanGoogle()) {
-            $data['name'] = (string) ($googleRegister['name'] ?? $data['name']);
-            $data['email'] = (string) ($googleRegister['email'] ?? $data['email']);
+            $data['email'] = mb_strtolower(
+                trim(
+                    (string) (
+                        $googleRegister['email']
+                        ?? $data['email']
+                    )
+                )
+            );
+
+            $googleId = trim(
+                (string) (
+                    $googleRegister['google_id']
+                    ?? ''
+                )
+            );
+
+            /*
+             * Cegah satu akun Google digunakan
+             * untuk membuat dua pengguna.
+             */
+            if (
+                User::query()
+                    ->where(
+                        'google_id',
+                        $googleId
+                    )
+                    ->exists()
+            ) {
+                session()->forget(
+                    'google_register'
+                );
+
+                $this->addError(
+                    'email',
+                    'Akun Google sudah terdaftar. Silakan masuk melalui halaman login.'
+                );
+
+                return null;
+            }
         }
 
-        DB::transaction(function () use ($data, $googleRegister): void {
-            $user = new User();
+        $user = DB::transaction(
+            function () use (
+                $data,
+                $googleRegister,
+                $menggunakanGoogle
+            ): User {
+                $user = new User();
 
-            $payloadUser = [
-                'name' => trim($data['name']),
-                'email' => mb_strtolower(trim($data['email'])),
-                'password' => Hash::make(
-                    $this->menggunakanGoogle()
-                        ? Str::password(40)
-                        : $data['password']
-                ),
-            ];
+                $payloadUser = [
+                    'name' => trim(
+                        $data['name']
+                    ),
 
-            if (Schema::hasColumn('users', 'nomor_telepon')) {
-                $payloadUser['nomor_telepon'] = trim($data['nomor_telepon']);
+                    'email' => mb_strtolower(
+                        trim(
+                            $data['email']
+                        )
+                    ),
+
+                    'password' => Hash::make(
+                        $menggunakanGoogle
+                            ? Str::password(40)
+                            : $data['password']
+                    ),
+                ];
+
+                if (
+                    Schema::hasColumn(
+                        'users',
+                        'nomor_telepon'
+                    )
+                ) {
+                    $payloadUser['nomor_telepon'] =
+                        trim(
+                            $data['nomor_telepon']
+                        );
+                }
+
+                if (
+                    Schema::hasColumn(
+                        'users',
+                        'status'
+                    )
+                ) {
+                    $payloadUser['status'] =
+                        $this->statusPenggunaAktif();
+                }
+
+                if (
+                    $menggunakanGoogle
+                    && Schema::hasColumn(
+                        'users',
+                        'google_id'
+                    )
+                ) {
+                    $payloadUser['google_id'] =
+                        trim(
+                            (string) (
+                                $googleRegister[
+                                    'google_id'
+                                ]
+                                ?? ''
+                            )
+                        );
+                }
+
+                if (
+                    $menggunakanGoogle
+                    && Schema::hasColumn(
+                        'users',
+                        'google_avatar'
+                    )
+                ) {
+                    $payloadUser['google_avatar'] =
+                        trim(
+                            (string) (
+                                $googleRegister[
+                                    'avatar'
+                                ]
+                                ?? ''
+                            )
+                        );
+                }
+
+                if (
+                    $menggunakanGoogle
+                    && Schema::hasColumn(
+                        'users',
+                        'email_verified_at'
+                    )
+                ) {
+                    $payloadUser['email_verified_at'] =
+                        now();
+                }
+
+                $user->forceFill(
+                    $payloadUser
+                );
+
+                $user->save();
+
+                $roleName =
+                    $this->rolePendonor();
+
+                Role::findOrCreate(
+                    $roleName,
+                    'web'
+                );
+
+                $user->assignRole(
+                    $roleName
+                );
+
+                $profil =
+                    new ProfilPendonor();
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'pengguna_id',
+                    $user->id
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kode_pendonor',
+                    $this->buatKodePendonor()
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'tanggal_lahir',
+                    $data['tanggal_lahir']
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'jenis_kelamin',
+                    $data['jenis_kelamin']
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'golongan_darah',
+                    $data['golongan_darah']
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'rhesus',
+                    $data['rhesus']
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'alamat',
+                    trim(
+                        $data['alamat']
+                    )
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'provinsi',
+                    trim(
+                        $data['provinsi']
+                    )
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kota',
+                    trim(
+                        $data['kota']
+                    )
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kecamatan',
+                    filled(
+                        $data['kecamatan']
+                    )
+                        ? trim(
+                            $data['kecamatan']
+                        )
+                        : null
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kode_pos',
+                    filled(
+                        $data['kode_pos']
+                    )
+                        ? trim(
+                            $data['kode_pos']
+                        )
+                        : null
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'bersedia_dihubungi',
+                    (bool) $data[
+                        'bersedia_dihubungi'
+                    ]
+                );
+
+                $profil->save();
+
+                return $user;
             }
+        );
 
-            if (Schema::hasColumn('users', 'status')) {
-                $payloadUser['status'] = $this->statusPenggunaAktif();
-            }
+        session()->forget(
+            'google_register'
+        );
 
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'google_id')
-            ) {
-                $payloadUser['google_id'] = (string) ($googleRegister['google_id'] ?? '');
-            }
+        Auth::login(
+            $user
+        );
 
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'google_avatar')
-            ) {
-                $payloadUser['google_avatar'] = (string) ($googleRegister['avatar'] ?? '');
-            }
+        request()->session()->regenerate();
 
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'email_verified_at')
-            ) {
-                $payloadUser['email_verified_at'] = now();
-            }
-
-            $user->forceFill($payloadUser);
-            $user->save();
-
-            $roleName = $this->rolePendonor();
-
-            Role::findOrCreate(
-                $roleName,
-                'web'
-            );
-
-            $user->assignRole($roleName);
-
-            $profil = new ProfilPendonor();
-
-            $this->isiKolomProfil(
-                $profil,
-                'pengguna_id',
-                $user->id
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kode_pendonor',
-                $this->buatKodePendonor()
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'tanggal_lahir',
-                $data['tanggal_lahir']
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'jenis_kelamin',
-                $data['jenis_kelamin']
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'golongan_darah',
-                $data['golongan_darah']
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'rhesus',
-                $data['rhesus']
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'alamat',
-                trim($data['alamat'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'provinsi',
-                trim($data['provinsi'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kota',
-                trim($data['kota'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kecamatan',
-                filled($data['kecamatan'])
-                    ? trim($data['kecamatan'])
-                    : null
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kode_pos',
-                filled($data['kode_pos'])
-                    ? trim($data['kode_pos'])
-                    : null
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'bersedia_dihubungi',
-                (bool) $data['bersedia_dihubungi']
-            );
-
-            $profil->save();
-        });
-
-        session()->forget('google_register');
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()
+                ->route(
+                    'verification.notice'
+                )
+                ->with(
+                    'success',
+                    'Pendaftaran pendonor berhasil. Link verifikasi telah dikirim ke email Anda.'
+                );
+        }
 
         return redirect()
-            ->to('/login')
+            ->to('/donor')
             ->with(
                 'success',
-                'Pendaftaran pendonor berhasil. Silakan masuk menggunakan akun yang sudah dibuat.'
+                'Pendaftaran pendonor dengan Google berhasil.'
             );
     }
 
     public function render(): View
     {
-        return view('livewire.auth.register-donor');
+        return view(
+            'livewire.auth.register-donor'
+        );
     }
 
     /**
@@ -260,16 +447,17 @@ class RegisterDonor extends Component
      */
     private function rules(): array
     {
-        $passwordRules = $this->menggunakanGoogle()
-            ? [
-                'nullable',
-            ]
-            : [
-                'required',
-                'string',
-                'min:8',
-                'confirmed',
-            ];
+        $passwordRules =
+            $this->menggunakanGoogle()
+                ? [
+                    'nullable',
+                ]
+                : [
+                    'required',
+                    'string',
+                    'min:8',
+                    'confirmed',
+                ];
 
         return [
             'name' => [
@@ -283,7 +471,10 @@ class RegisterDonor extends Component
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email'),
+                Rule::unique(
+                    'users',
+                    'email'
+                ),
             ],
 
             'nomor_telepon' => [
@@ -294,29 +485,43 @@ class RegisterDonor extends Component
                 'regex:/^[0-9+\-\s()]+$/',
             ],
 
-            'password' => $passwordRules,
+            'password' =>
+                $passwordRules,
 
             'tanggal_lahir' => [
                 'required',
                 'date',
-                'before_or_equal:' . now()
-                    ->subYears(17)
-                    ->format('Y-m-d'),
+                'before_or_equal:'
+                    . now()
+                        ->subYears(17)
+                        ->format('Y-m-d'),
             ],
 
             'jenis_kelamin' => [
                 'required',
-                Rule::in($this->nilaiEnumCases(JenisKelamin::cases())),
+                Rule::in(
+                    $this->nilaiEnumCases(
+                        JenisKelamin::cases()
+                    )
+                ),
             ],
 
             'golongan_darah' => [
                 'required',
-                Rule::in($this->nilaiEnumCases(GolonganDarah::cases())),
+                Rule::in(
+                    $this->nilaiEnumCases(
+                        GolonganDarah::cases()
+                    )
+                ),
             ],
 
             'rhesus' => [
                 'required',
-                Rule::in($this->nilaiEnumCases(RhesusDarah::cases())),
+                Rule::in(
+                    $this->nilaiEnumCases(
+                        RhesusDarah::cases()
+                    )
+                ),
             ],
 
             'alamat' => [
@@ -362,32 +567,62 @@ class RegisterDonor extends Component
     private function messages(): array
     {
         return [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'name.min' => 'Nama lengkap minimal 3 karakter.',
+            'name.required' =>
+                'Nama lengkap wajib diisi.',
 
-            'email.required' => 'Alamat email wajib diisi.',
-            'email.email' => 'Alamat email tidak valid.',
-            'email.unique' => 'Alamat email sudah terdaftar.',
+            'name.min' =>
+                'Nama lengkap minimal 3 karakter.',
 
-            'nomor_telepon.required' => 'Nomor HP wajib diisi.',
-            'nomor_telepon.regex' => 'Format nomor HP tidak valid.',
+            'email.required' =>
+                'Alamat email wajib diisi.',
 
-            'password.required' => 'Kata sandi wajib diisi.',
-            'password.min' => 'Kata sandi minimal 8 karakter.',
-            'password.confirmed' => 'Konfirmasi kata sandi tidak sesuai.',
+            'email.email' =>
+                'Alamat email tidak valid.',
 
-            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
-            'tanggal_lahir.before_or_equal' => 'Pendonor minimal berusia 17 tahun.',
+            'email.unique' =>
+                'Alamat email sudah terdaftar.',
 
-            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
-            'golongan_darah.required' => 'Golongan darah wajib dipilih.',
-            'rhesus.required' => 'Rhesus wajib dipilih.',
+            'nomor_telepon.required' =>
+                'Nomor HP wajib diisi.',
 
-            'alamat.required' => 'Alamat lengkap wajib diisi.',
-            'alamat.min' => 'Alamat minimal 10 karakter.',
+            'nomor_telepon.regex' =>
+                'Format nomor HP tidak valid.',
 
-            'provinsi.required' => 'Provinsi wajib diisi.',
-            'kota.required' => 'Kota/Kabupaten wajib diisi.',
+            'password.required' =>
+                'Kata sandi wajib diisi.',
+
+            'password.min' =>
+                'Kata sandi minimal 8 karakter.',
+
+            'password.confirmed' =>
+                'Konfirmasi kata sandi tidak sesuai.',
+
+            'tanggal_lahir.required' =>
+                'Tanggal lahir wajib diisi.',
+
+            'tanggal_lahir.before_or_equal' =>
+                'Pendonor minimal berusia 17 tahun.',
+
+            'jenis_kelamin.required' =>
+                'Jenis kelamin wajib dipilih.',
+
+            'golongan_darah.required' =>
+                'Golongan darah wajib dipilih.',
+
+            'rhesus.required' =>
+                'Rhesus wajib dipilih.',
+
+            'alamat.required' =>
+                'Alamat lengkap wajib diisi.',
+
+            'alamat.min' =>
+                'Alamat minimal 10 karakter.',
+
+            'provinsi.required' =>
+                'Provinsi wajib diisi.',
+
+            'kota.required' =>
+                'Kota/Kabupaten wajib diisi.',
         ];
     }
 
@@ -396,11 +631,22 @@ class RegisterDonor extends Component
      */
     public function opsiJenisKelamin(): array
     {
-        return collect(JenisKelamin::cases())
-            ->map(fn (\UnitEnum $case): array => [
-                'value' => $this->nilaiDariEnum($case),
-                'label' => $this->labelEnum($case),
-            ])
+        return collect(
+            JenisKelamin::cases()
+        )
+            ->map(
+                fn (\UnitEnum $case): array => [
+                    'value' =>
+                        $this->nilaiDariEnum(
+                            $case
+                        ),
+
+                    'label' =>
+                        $this->labelEnum(
+                            $case
+                        ),
+                ]
+            )
             ->values()
             ->all();
     }
@@ -410,11 +656,24 @@ class RegisterDonor extends Component
      */
     public function opsiGolonganDarah(): array
     {
-        return collect(GolonganDarah::cases())
-            ->map(fn (\UnitEnum $case): array => [
-                'value' => $this->nilaiDariEnum($case),
-                'label' => strtoupper($this->nilaiDariEnum($case)),
-            ])
+        return collect(
+            GolonganDarah::cases()
+        )
+            ->map(
+                fn (\UnitEnum $case): array => [
+                    'value' =>
+                        $this->nilaiDariEnum(
+                            $case
+                        ),
+
+                    'label' =>
+                        strtoupper(
+                            $this->nilaiDariEnum(
+                                $case
+                            )
+                        ),
+                ]
+            )
             ->values()
             ->all();
     }
@@ -424,19 +683,34 @@ class RegisterDonor extends Component
      */
     public function opsiRhesusDarah(): array
     {
-        return collect(RhesusDarah::cases())
-            ->map(fn (\UnitEnum $case): array => [
-                'value' => $this->nilaiDariEnum($case),
-                'label' => $this->labelRhesus($this->nilaiDariEnum($case)),
-            ])
+        return collect(
+            RhesusDarah::cases()
+        )
+            ->map(
+                fn (\UnitEnum $case): array => [
+                    'value' =>
+                        $this->nilaiDariEnum(
+                            $case
+                        ),
+
+                    'label' =>
+                        $this->labelRhesus(
+                            $this->nilaiDariEnum(
+                                $case
+                            )
+                        ),
+                ]
+            )
             ->values()
             ->all();
     }
 
     public function menggunakanGoogle(): bool
     {
-        return $this->metodePendaftaran === 'google'
-            && $this->googleRegisterData() !== [];
+        return $this->metodePendaftaran
+            === 'google'
+            && $this->googleRegisterData()
+                !== [];
     }
 
     /**
@@ -444,30 +718,122 @@ class RegisterDonor extends Component
      */
     private function googleRegisterData(): array
     {
-        $googleRegister = session('google_register');
+        $googleRegister = session(
+            'google_register'
+        );
 
         if (! is_array($googleRegister)) {
             return [];
         }
 
-        if (($googleRegister['tujuan'] ?? null) !== 'donor') {
+        $authenticatedAt = (int) (
+            $googleRegister[
+                'authenticated_at'
+            ]
+            ?? 0
+        );
+
+        $expiresAt = (int) (
+            $googleRegister[
+                'expires_at'
+            ]
+            ?? 0
+        );
+
+        $sekarang = now()->timestamp;
+
+        $googleId = trim(
+            (string) (
+                $googleRegister[
+                    'google_id'
+                ]
+                ?? ''
+            )
+        );
+
+        $email = mb_strtolower(
+            trim(
+                (string) (
+                    $googleRegister[
+                        'email'
+                    ]
+                    ?? ''
+                )
+            )
+        );
+
+        $valid = (
+            $googleRegister['tujuan']
+            ?? null
+        ) === 'donor'
+            && $googleId !== ''
+            && mb_strlen($googleId) <= 255
+            && $email !== ''
+            && mb_strlen($email) <= 255
+            && filter_var(
+                $email,
+                FILTER_VALIDATE_EMAIL
+            ) !== false
+            && (
+                $googleRegister[
+                    'email_verified'
+                ]
+                ?? false
+            ) === true
+            && $authenticatedAt > 0
+            && $authenticatedAt <= $sekarang
+            && $expiresAt >= $sekarang
+            && (
+                $expiresAt
+                - $authenticatedAt
+            ) <= self::GOOGLE_SESSION_LIFETIME_SECONDS
+            && Schema::hasColumn(
+                'users',
+                'google_id'
+            );
+
+        if (! $valid) {
+            session()->forget(
+                'google_register'
+            );
+
             return [];
         }
+
+        /*
+         * Kembalikan nilai yang sudah dinormalisasi.
+         */
+        $googleRegister['google_id'] =
+            $googleId;
+
+        $googleRegister['email'] =
+            $email;
 
         return $googleRegister;
     }
 
     private function isiDataGoogleRegisterKeForm(): void
     {
-        $googleRegister = $this->googleRegisterData();
+        $googleRegister =
+            $this->googleRegisterData();
 
         if ($googleRegister === []) {
             return;
         }
 
-        $this->metodePendaftaran = 'google';
-        $this->name = (string) ($googleRegister['name'] ?? '');
-        $this->email = (string) ($googleRegister['email'] ?? '');
+        $this->metodePendaftaran =
+            'google';
+
+        $this->name = (string) (
+            $googleRegister['name']
+            ?? ''
+        );
+
+        $this->email = (string) (
+            $googleRegister['email']
+            ?? ''
+        );
+
         $this->password = '';
         $this->password_confirmation = '';
     }
@@ -477,7 +843,12 @@ class RegisterDonor extends Component
         string $kolom,
         mixed $nilai
     ): void {
-        if (! Schema::hasColumn($this->tabelProfilPendonor(), $kolom)) {
+        if (
+            ! Schema::hasColumn(
+                $this->tabelProfilPendonor(),
+                $kolom
+            )
+        ) {
             return;
         }
 
@@ -489,59 +860,93 @@ class RegisterDonor extends Component
 
     private function tabelProfilPendonor(): string
     {
-        return (new ProfilPendonor())->getTable();
+        return (
+            new ProfilPendonor()
+        )->getTable();
     }
 
     private function buatKodePendonor(): string
     {
-        if (! Schema::hasColumn($this->tabelProfilPendonor(), 'kode_pendonor')) {
-            return 'DNR-' . now()->format('Ymd') . '-' . strtoupper(
-                Str::random(6)
-            );
+        if (
+            ! Schema::hasColumn(
+                $this->tabelProfilPendonor(),
+                'kode_pendonor'
+            )
+        ) {
+            return 'DNR-'
+                . now()->format('Ymd')
+                . '-'
+                . strtoupper(
+                    Str::random(6)
+                );
         }
 
-        $tanggal = now()->format('Ymd');
+        $tanggal = now()->format(
+            'Ymd'
+        );
 
         for ($i = 1; $i <= 30; $i++) {
             $nomorUrut = str_pad(
                 (string) (
                     ProfilPendonor::query()
-                        ->whereDate('created_at', today())
-                        ->count() + $i
+                        ->whereDate(
+                            'created_at',
+                            today()
+                        )
+                        ->count()
+                    + $i
                 ),
                 4,
                 '0',
                 STR_PAD_LEFT
             );
 
-            $kode = "DNR-{$tanggal}-{$nomorUrut}";
+            $kode =
+                "DNR-{$tanggal}-{$nomorUrut}";
 
             if (
                 ! ProfilPendonor::query()
-                    ->where('kode_pendonor', $kode)
+                    ->where(
+                        'kode_pendonor',
+                        $kode
+                    )
                     ->exists()
             ) {
                 return $kode;
             }
         }
 
-        return 'DNR-' . $tanggal . '-' . strtoupper(
-            Str::random(8)
-        );
+        return 'DNR-'
+            . $tanggal
+            . '-'
+            . strtoupper(
+                Str::random(8)
+            );
     }
 
     private function rolePendonor(): string
     {
-        if (class_exists(PeranPengguna::class)) {
-            foreach ([
-                'Pendonor',
-                'Donor',
-            ] as $caseName) {
-                $constant = PeranPengguna::class . '::' . $caseName;
+        if (
+            class_exists(
+                PeranPengguna::class
+            )
+        ) {
+            foreach (
+                [
+                    'Pendonor',
+                    'Donor',
+                ] as $caseName
+            ) {
+                $constant =
+                    PeranPengguna::class
+                    . '::'
+                    . $caseName;
 
                 if (defined($constant)) {
                     return $this->nilaiDariEnum(
-                        constant($constant)
+                        constant(
+                            $constant
+                        )
                     );
                 }
             }
@@ -552,16 +957,27 @@ class RegisterDonor extends Component
 
     private function statusPenggunaAktif(): string
     {
-        if (class_exists(StatusPengguna::class)) {
-            foreach ([
-                'Aktif',
-                'Active',
-            ] as $caseName) {
-                $constant = StatusPengguna::class . '::' . $caseName;
+        if (
+            class_exists(
+                StatusPengguna::class
+            )
+        ) {
+            foreach (
+                [
+                    'Aktif',
+                    'Active',
+                ] as $caseName
+            ) {
+                $constant =
+                    StatusPengguna::class
+                    . '::'
+                    . $caseName;
 
                 if (defined($constant)) {
                     return $this->nilaiDariEnum(
-                        constant($constant)
+                        constant(
+                            $constant
+                        )
                     );
                 }
             }
@@ -574,16 +990,23 @@ class RegisterDonor extends Component
      * @param array<int, \UnitEnum> $cases
      * @return array<int, string>
      */
-    private function nilaiEnumCases(array $cases): array
-    {
+    private function nilaiEnumCases(
+        array $cases
+    ): array {
         return collect($cases)
-            ->map(fn (\UnitEnum $case): string => $this->nilaiDariEnum($case))
+            ->map(
+                fn (\UnitEnum $case): string =>
+                    $this->nilaiDariEnum(
+                        $case
+                    )
+            )
             ->values()
             ->all();
     }
 
-    private function nilaiDariEnum(mixed $value): string
-    {
+    private function nilaiDariEnum(
+        mixed $value
+    ): string {
         if ($value instanceof \BackedEnum) {
             return (string) $value->value;
         }
@@ -599,9 +1022,15 @@ class RegisterDonor extends Component
         return (string) $value;
     }
 
-    private function labelEnum(\UnitEnum $case): string
-    {
-        if (method_exists($case, 'label')) {
+    private function labelEnum(
+        \UnitEnum $case
+    ): string {
+        if (
+            method_exists(
+                $case,
+                'label'
+            )
+        ) {
             return (string) $case->label();
         }
 
@@ -612,34 +1041,42 @@ class RegisterDonor extends Component
                     '-',
                 ],
                 ' ',
-                $this->nilaiDariEnum($case)
+                $this->nilaiDariEnum(
+                    $case
+                )
             )
         );
     }
 
-    private function labelRhesus(string $value): string
-    {
-        return match (strtolower($value)) {
+    private function labelRhesus(
+        string $value
+    ): string {
+        return match (
+            strtolower($value)
+        ) {
             'positive',
             'positif',
             '+',
-            'rh+' => 'Positif (+)',
+            'rh+' =>
+                'Positif (+)',
 
             'negative',
             'negatif',
             '-',
-            'rh-' => 'Negatif (-)',
+            'rh-' =>
+                'Negatif (-)',
 
-            default => Str::headline(
-                str_replace(
-                    [
-                        '_',
-                        '-',
-                    ],
-                    ' ',
-                    $value
-                )
-            ),
+            default =>
+                Str::headline(
+                    str_replace(
+                        [
+                            '_',
+                            '-',
+                        ],
+                        ' ',
+                        $value
+                    )
+                ),
         };
     }
 }

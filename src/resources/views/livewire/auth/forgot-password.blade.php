@@ -27,7 +27,7 @@
             </h1>
 
             <span>
-                Masukkan email yang terdaftar. Kami akan mengirimkan link reset password melalui email.
+                Masukkan alamat email Anda. Jika email tersebut terdaftar, kami akan mengirimkan link reset password.
             </span>
         </div>
 

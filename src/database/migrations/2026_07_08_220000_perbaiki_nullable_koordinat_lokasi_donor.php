@@ -1,11 +1,130 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    public function up(): void
+    {
+        $tableName = $this->tableName();
+
+        if ($tableName === null) {
+            return;
+        }
+
+        $latitudeAda = Schema::hasColumn(
+            $tableName,
+            'latitude'
+        );
+
+        $longitudeAda = Schema::hasColumn(
+            $tableName,
+            'longitude'
+        );
+
+        if (! $latitudeAda && ! $longitudeAda) {
+            return;
+        }
+
+        Schema::table(
+            $tableName,
+            function (Blueprint $table) use (
+                $latitudeAda,
+                $longitudeAda
+            ): void {
+                if ($latitudeAda) {
+                    $table->decimal(
+                        'latitude',
+                        10,
+                        7
+                    )
+                        ->nullable()
+                        ->change();
+                }
+
+                if ($longitudeAda) {
+                    $table->decimal(
+                        'longitude',
+                        10,
+                        7
+                    )
+                        ->nullable()
+                        ->change();
+                }
+            }
+        );
+    }
+
+    public function down(): void
+    {
+        $tableName = $this->tableName();
+
+        if ($tableName === null) {
+            return;
+        }
+
+        $latitudeAda = Schema::hasColumn(
+            $tableName,
+            'latitude'
+        );
+
+        $longitudeAda = Schema::hasColumn(
+            $tableName,
+            'longitude'
+        );
+
+        if (! $latitudeAda && ! $longitudeAda) {
+            return;
+        }
+
+        if ($latitudeAda) {
+            DB::table($tableName)
+                ->whereNull('latitude')
+                ->update([
+                    'latitude' => 0,
+                ]);
+        }
+
+        if ($longitudeAda) {
+            DB::table($tableName)
+                ->whereNull('longitude')
+                ->update([
+                    'longitude' => 0,
+                ]);
+        }
+
+        Schema::table(
+            $tableName,
+            function (Blueprint $table) use (
+                $latitudeAda,
+                $longitudeAda
+            ): void {
+                if ($latitudeAda) {
+                    $table->decimal(
+                        'latitude',
+                        10,
+                        7
+                    )
+                        ->nullable(false)
+                        ->change();
+                }
+
+                if ($longitudeAda) {
+                    $table->decimal(
+                        'longitude',
+                        10,
+                        7
+                    )
+                        ->nullable(false)
+                        ->change();
+                }
+            }
+        );
+    }
+
     private function tableName(): ?string
     {
         if (Schema::hasTable('lokasi_donor')) {
@@ -17,59 +136,5 @@ return new class extends Migration
         }
 
         return null;
-    }
-
-    public function up(): void
-    {
-        $tableName = $this->tableName();
-
-        if ($tableName === null) {
-            return;
-        }
-
-        if (Schema::hasColumn($tableName, 'latitude')) {
-            DB::statement(
-                "ALTER TABLE `{$tableName}` MODIFY `latitude` DECIMAL(10,7) NULL"
-            );
-        }
-
-        if (Schema::hasColumn($tableName, 'longitude')) {
-            DB::statement(
-                "ALTER TABLE `{$tableName}` MODIFY `longitude` DECIMAL(10,7) NULL"
-            );
-        }
-    }
-
-    public function down(): void
-    {
-        $tableName = $this->tableName();
-
-        if ($tableName === null) {
-            return;
-        }
-
-        if (Schema::hasColumn($tableName, 'latitude')) {
-            DB::table($tableName)
-                ->whereNull('latitude')
-                ->update([
-                    'latitude' => 0,
-                ]);
-
-            DB::statement(
-                "ALTER TABLE `{$tableName}` MODIFY `latitude` DECIMAL(10,7) NOT NULL"
-            );
-        }
-
-        if (Schema::hasColumn($tableName, 'longitude')) {
-            DB::table($tableName)
-                ->whereNull('longitude')
-                ->update([
-                    'longitude' => 0,
-                ]);
-
-            DB::statement(
-                "ALTER TABLE `{$tableName}` MODIFY `longitude` DECIMAL(10,7) NOT NULL"
-            );
-        }
     }
 };

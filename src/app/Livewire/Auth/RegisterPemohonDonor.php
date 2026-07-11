@@ -7,6 +7,7 @@ use App\Enums\StatusPengguna;
 use App\Models\ProfilRumahSakit;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -19,6 +20,8 @@ use Spatie\Permission\Models\Role;
 #[Layout('components.layouts.auth')]
 class RegisterPemohonDonor extends Component
 {
+    private const GOOGLE_SESSION_LIFETIME_SECONDS = 600;
+
     public string $metodePendaftaran = '';
 
     public string $nama_rumah_sakit = '';
@@ -56,6 +59,8 @@ class RegisterPemohonDonor extends Component
 
     public function pilihManual(): void
     {
+        session()->forget('google_register');
+
         $this->metodePendaftaran = 'manual';
     }
 
@@ -66,9 +71,7 @@ class RegisterPemohonDonor extends Component
 
     public function resetMetodePendaftaran(): void
     {
-        if ($this->menggunakanGoogle()) {
-            session()->forget('google_register');
-        }
+        session()->forget('google_register');
 
         $this->metodePendaftaran = '';
         $this->email = '';
@@ -88,189 +91,251 @@ class RegisterPemohonDonor extends Component
             return null;
         }
 
-        $data = $this->validate(
-            $this->rules(),
-            $this->messages()
-        );
+        $menggunakanGoogle = $this->metodePendaftaran === 'google';
+        $googleRegister = [];
 
-        $googleRegister = $this->googleRegisterData();
+        if ($menggunakanGoogle) {
+            $googleRegister = $this->googleRegisterData();
 
-        if ($this->menggunakanGoogle()) {
-            $data['email'] = (string) (
-                $googleRegister['email']
-                ?? $data['email']
-            );
+            if ($googleRegister === []) {
+                $this->batalkanPendaftaranGoogle();
+
+                $this->addError(
+                    'metodePendaftaran',
+                    'Sesi pendaftaran Google tidak valid atau sudah kedaluwarsa. Silakan hubungkan ulang akun Google.'
+                );
+
+                return null;
+            }
+
+            if (! Schema::hasColumn('users', 'google_id')) {
+                $this->addError(
+                    'metodePendaftaran',
+                    'Pendaftaran Google belum siap digunakan. Hubungi administrator.'
+                );
+
+                return null;
+            }
+
+            $this->email = (string) $googleRegister['email'];
 
             if (
-                blank($data['nama_penanggung_jawab'])
+                blank($this->nama_penanggung_jawab)
                 && filled($googleRegister['name'] ?? null)
             ) {
-                $data['nama_penanggung_jawab'] = (string) $googleRegister['name'];
+                $this->nama_penanggung_jawab = (string) $googleRegister['name'];
+            }
+
+            $googleIdSudahDigunakan = User::query()
+                ->where(
+                    'google_id',
+                    (string) $googleRegister['google_id']
+                )
+                ->exists();
+
+            if ($googleIdSudahDigunakan) {
+                $this->batalkanPendaftaranGoogle();
+
+                $this->addError(
+                    'email',
+                    'Akun Google ini sudah terdaftar. Silakan masuk menggunakan Google.'
+                );
+
+                return null;
             }
         }
 
-        DB::transaction(function () use ($data, $googleRegister): void {
-            $user = new User();
+        $data = $this->validate(
+            $this->rules($menggunakanGoogle),
+            $this->messages()
+        );
 
-            $payloadUser = [
-                'name' => trim($data['nama_rumah_sakit']),
-                'email' => mb_strtolower(trim($data['email'])),
-                'password' => Hash::make(
-                    $this->menggunakanGoogle()
-                        ? Str::password(40)
-                        : $data['password']
-                ),
-            ];
+        if ($menggunakanGoogle) {
+            /*
+             * Email wajib berasal dari callback Google yang tersimpan
+             * di session server, bukan dari nilai Livewire di browser.
+             */
+            $data['email'] = (string) $googleRegister['email'];
+        }
 
-            if (Schema::hasColumn('users', 'nomor_telepon')) {
-                $payloadUser['nomor_telepon'] = trim($data['nomor_telepon']);
-            }
+        $user = DB::transaction(
+            function () use (
+                $data,
+                $googleRegister,
+                $menggunakanGoogle
+            ): User {
+                $user = new User();
 
-            if (Schema::hasColumn('users', 'status')) {
-                $payloadUser['status'] = $this->statusPenggunaAktif();
-            }
+                $payloadUser = [
+                    'name' => trim($data['nama_rumah_sakit']),
+                    'email' => mb_strtolower(
+                        trim($data['email'])
+                    ),
+                    'password' => Hash::make(
+                        $menggunakanGoogle
+                            ? Str::password(40)
+                            : $data['password']
+                    ),
+                ];
 
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'google_id')
-            ) {
-                $payloadUser['google_id'] = (string) (
-                    $googleRegister['google_id']
-                    ?? ''
+                if (Schema::hasColumn('users', 'nomor_telepon')) {
+                    $payloadUser['nomor_telepon'] = trim(
+                        $data['nomor_telepon']
+                    );
+                }
+
+                if (Schema::hasColumn('users', 'status')) {
+                    $payloadUser['status'] = $this->statusPenggunaAktif();
+                }
+
+                if ($menggunakanGoogle) {
+                    $payloadUser['google_id'] = (string) $googleRegister['google_id'];
+
+                    if (Schema::hasColumn('users', 'google_avatar')) {
+                        $googleAvatar = trim(
+                            (string) ($googleRegister['avatar'] ?? '')
+                        );
+
+                        $payloadUser['google_avatar'] = $googleAvatar !== ''
+                            ? $googleAvatar
+                            : null;
+                    }
+
+                    if (Schema::hasColumn('users', 'email_verified_at')) {
+                        $payloadUser['email_verified_at'] = now();
+                    }
+                }
+
+                $user->forceFill($payloadUser);
+                $user->save();
+
+                $roleName = $this->rolePemohonDonor();
+
+                Role::findOrCreate(
+                    $roleName,
+                    'web'
                 );
-            }
 
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'google_avatar')
-            ) {
-                $payloadUser['google_avatar'] = (string) (
-                    $googleRegister['avatar']
-                    ?? ''
+                $user->assignRole($roleName);
+
+                $profil = new ProfilRumahSakit();
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'pengguna_id',
+                    $user->id
                 );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kode_rumah_sakit',
+                    $this->buatKodeRumahSakit()
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'nama_rumah_sakit',
+                    trim($data['nama_rumah_sakit'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'nama_institusi',
+                    trim($data['nama_rumah_sakit'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'nomor_izin',
+                    trim($data['nomor_izin'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'path_dokumen_izin',
+                    null
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'nama_penanggung_jawab',
+                    trim($data['nama_penanggung_jawab'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'jabatan_penanggung_jawab',
+                    filled($data['jabatan_penanggung_jawab'])
+                        ? trim($data['jabatan_penanggung_jawab'])
+                        : null
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'nomor_telepon',
+                    trim($data['nomor_telepon'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'alamat',
+                    trim($data['alamat'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'provinsi',
+                    trim($data['provinsi'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kota',
+                    trim($data['kota'])
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kecamatan',
+                    filled($data['kecamatan'])
+                        ? trim($data['kecamatan'])
+                        : null
+                );
+
+                $this->isiKolomProfil(
+                    $profil,
+                    'kode_pos',
+                    filled($data['kode_pos'])
+                        ? trim($data['kode_pos'])
+                        : null
+                );
+
+                $profil->save();
+
+                return $user;
             }
-
-            if (
-                $this->menggunakanGoogle()
-                && Schema::hasColumn('users', 'email_verified_at')
-            ) {
-                $payloadUser['email_verified_at'] = now();
-            }
-
-            $user->forceFill($payloadUser);
-            $user->save();
-
-            $roleName = $this->rolePemohonDonor();
-
-            Role::findOrCreate(
-                $roleName,
-                'web'
-            );
-
-            $user->assignRole($roleName);
-
-            $profil = new ProfilRumahSakit();
-
-            $this->isiKolomProfil(
-                $profil,
-                'pengguna_id',
-                $user->id
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kode_rumah_sakit',
-                $this->buatKodeRumahSakit()
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'nama_rumah_sakit',
-                trim($data['nama_rumah_sakit'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'nama_institusi',
-                trim($data['nama_rumah_sakit'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'nomor_izin',
-                trim($data['nomor_izin'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'path_dokumen_izin',
-                null
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'nama_penanggung_jawab',
-                trim($data['nama_penanggung_jawab'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'jabatan_penanggung_jawab',
-                filled($data['jabatan_penanggung_jawab'])
-                    ? trim($data['jabatan_penanggung_jawab'])
-                    : null
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'nomor_telepon',
-                trim($data['nomor_telepon'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'alamat',
-                trim($data['alamat'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'provinsi',
-                trim($data['provinsi'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kota',
-                trim($data['kota'])
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kecamatan',
-                filled($data['kecamatan'])
-                    ? trim($data['kecamatan'])
-                    : null
-            );
-
-            $this->isiKolomProfil(
-                $profil,
-                'kode_pos',
-                filled($data['kode_pos'])
-                    ? trim($data['kode_pos'])
-                    : null
-            );
-
-            $profil->save();
-        });
+        );
 
         session()->forget('google_register');
 
+        Auth::login($user);
+
+        request()->session()->regenerate();
+
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()
+                ->route('verification.notice')
+                ->with(
+                    'success',
+                    'Pendaftaran pemohon donor berhasil. Link verifikasi telah dikirim ke email Anda.'
+                );
+        }
+
         return redirect()
-            ->to('/login')
+            ->to('/pemohon-donor')
             ->with(
                 'success',
-                'Pendaftaran pemohon donor berhasil. Silakan masuk menggunakan akun yang sudah dibuat.'
+                'Pendaftaran pemohon donor dengan Google berhasil.'
             );
     }
 
@@ -282,9 +347,9 @@ class RegisterPemohonDonor extends Component
     /**
      * @return array<string, array<int, mixed>>
      */
-    private function rules(): array
+    private function rules(bool $menggunakanGoogle): array
     {
-        $passwordRules = $this->menggunakanGoogle()
+        $passwordRules = $menggunakanGoogle
             ? [
                 'nullable',
             ]
@@ -430,11 +495,105 @@ class RegisterPemohonDonor extends Component
             return [];
         }
 
-        if (($googleRegister['tujuan'] ?? null) !== 'pemohon-donor') {
+        $googleId = trim(
+            (string) ($googleRegister['google_id'] ?? '')
+        );
+
+        $email = mb_strtolower(
+            trim((string) ($googleRegister['email'] ?? ''))
+        );
+
+        $authenticatedAt = filter_var(
+            $googleRegister['authenticated_at'] ?? null,
+            FILTER_VALIDATE_INT
+        );
+
+        $expiresAt = filter_var(
+            $googleRegister['expires_at'] ?? null,
+            FILTER_VALIDATE_INT
+        );
+
+        $emailTerverifikasi = filter_var(
+            $googleRegister['email_verified'] ?? null,
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE
+        );
+
+        $tujuanSesuai = ($googleRegister['tujuan'] ?? null)
+            === 'pemohon-donor';
+
+        $identitasValid = $googleId !== ''
+            && filter_var(
+                $email,
+                FILTER_VALIDATE_EMAIL
+            ) !== false
+            && $emailTerverifikasi === true;
+
+        $waktuValid = $this->waktuGoogleRegisterValid(
+            $authenticatedAt,
+            $expiresAt
+        );
+
+        if (
+            ! $tujuanSesuai
+            || ! $identitasValid
+            || ! $waktuValid
+        ) {
+            session()->forget('google_register');
+
             return [];
         }
 
+        $googleRegister['google_id'] = $googleId;
+        $googleRegister['email'] = $email;
+        $googleRegister['name'] = trim(
+            (string) ($googleRegister['name'] ?? '')
+        );
+        $googleRegister['avatar'] = trim(
+            (string) ($googleRegister['avatar'] ?? '')
+        );
+        $googleRegister['email_verified'] = true;
+        $googleRegister['authenticated_at'] = (int) $authenticatedAt;
+        $googleRegister['expires_at'] = (int) $expiresAt;
+
         return $googleRegister;
+    }
+
+    private function waktuGoogleRegisterValid(
+        int|false $authenticatedAt,
+        int|false $expiresAt
+    ): bool {
+        if (
+            $authenticatedAt === false
+            || $expiresAt === false
+        ) {
+            return false;
+        }
+
+        $sekarang = now()->timestamp;
+
+        if (
+            $authenticatedAt > $sekarang
+            || $expiresAt < $sekarang
+            || $expiresAt < $authenticatedAt
+        ) {
+            return false;
+        }
+
+        return ($sekarang - $authenticatedAt)
+                <= self::GOOGLE_SESSION_LIFETIME_SECONDS
+            && ($expiresAt - $authenticatedAt)
+                <= self::GOOGLE_SESSION_LIFETIME_SECONDS;
+    }
+
+    private function batalkanPendaftaranGoogle(): void
+    {
+        session()->forget('google_register');
+
+        $this->metodePendaftaran = '';
+        $this->email = '';
+        $this->password = '';
+        $this->password_confirmation = '';
     }
 
     private function isiDataGoogleRegisterKeForm(): void
@@ -446,8 +605,11 @@ class RegisterPemohonDonor extends Component
         }
 
         $this->metodePendaftaran = 'google';
-        $this->email = (string) ($googleRegister['email'] ?? '');
-        $this->nama_penanggung_jawab = (string) ($googleRegister['name'] ?? '');
+        $this->email = (string) $googleRegister['email'];
+        $this->nama_penanggung_jawab = (string) (
+            $googleRegister['name']
+            ?? ''
+        );
         $this->password = '';
         $this->password_confirmation = '';
     }
@@ -474,10 +636,16 @@ class RegisterPemohonDonor extends Component
 
     private function buatKodeRumahSakit(): string
     {
-        if (! Schema::hasColumn($this->tabelProfilRumahSakit(), 'kode_rumah_sakit')) {
-            return 'PMH-' . now()->format('Ymd') . '-' . strtoupper(
-                Str::random(6)
-            );
+        if (
+            ! Schema::hasColumn(
+                $this->tabelProfilRumahSakit(),
+                'kode_rumah_sakit'
+            )
+        ) {
+            return 'PMH-'
+                . now()->format('Ymd')
+                . '-'
+                . strtoupper(Str::random(6));
         }
 
         $tanggal = now()->format('Ymd');
@@ -505,9 +673,10 @@ class RegisterPemohonDonor extends Component
             }
         }
 
-        return 'PMH-' . $tanggal . '-' . strtoupper(
-            Str::random(8)
-        );
+        return 'PMH-'
+            . $tanggal
+            . '-'
+            . strtoupper(Str::random(8));
     }
 
     private function rolePemohonDonor(): string

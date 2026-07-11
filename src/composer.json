@@ -19,8 +19,10 @@
         "joshembling/image-optimizer": "^1.6",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.28",
         "laravel/tinker": "^2.10.1",
         "njxqlus/filament-progressbar": "*",
+        "resend/resend-php": "^1.5",
         "rupadana/filament-api-service": "^3.4",
         "z3d0x/filament-logger": "^0.8.0"
     },

@@ -2,145 +2,401 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\StatusPengguna;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteTwoUser;
 use Throwable;
 
 class GoogleAuthController extends Controller
 {
-    public function redirect(Request $request, ?string $tujuan = null): mixed
-    {
-        $tujuan = $this->tujuanValid($tujuan);
+    private const SESSION_TUJUAN =
+        'google_oauth_tujuan';
 
-        $request->session()->put(
-            'google_oauth_tujuan',
+    private const SESSION_REGISTER =
+        'google_register';
+
+    private const REGISTER_EXPIRES_SECONDS = 600;
+
+    /**
+     * @var list<string>
+     */
+    private const ADMIN_ROLES = [
+        'super_admin',
+        'super-admin',
+        'admin',
+        'petugas',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const DONOR_ROLES = [
+        'donor',
+        'pendonor',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const PEMOHON_ROLES = [
+        'pemohon_donor',
+        'pemohon-donor',
+        'rumah_sakit',
+        'rumah-sakit',
+    ];
+
+    public function redirect(
+        Request $request,
+        ?string $tujuan = null
+    ): mixed {
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            $redirectPath = $user instanceof User
+                ? $this->redirectPathByRole($user)
+                : '/';
+
+            return redirect()
+                ->to($redirectPath)
+                ->with(
+                    'error',
+                    'Anda sudah masuk ke dalam akun.'
+                );
+        }
+
+        if (! $this->konfigurasiGoogleSiap()) {
+            return $this->gagal(
+                'Login Google belum dikonfigurasi dengan benar.'
+            );
+        }
+
+        $tujuan = $this->tujuanValid(
             $tujuan
         );
 
+        /*
+         * Data registrasi Google lama tidak boleh
+         * digunakan untuk proses OAuth baru.
+         */
+        $request->session()->forget(
+            self::SESSION_REGISTER
+        );
+
+        $request->session()->put(
+            self::SESSION_TUJUAN,
+            $tujuan
+        );
+
+        /*
+         * Socialite tetap menggunakan mode stateful.
+         * Jangan menambahkan stateless().
+         */
         return Socialite::driver('google')
             ->redirect();
     }
 
-    public function callback(Request $request): RedirectResponse
-    {
+    public function callback(
+        Request $request
+    ): RedirectResponse {
+        /*
+         * Callback tidak boleh digunakan untuk
+         * berpindah akun ketika masih login.
+         */
+        if (Auth::check()) {
+            $request->session()->forget([
+                self::SESSION_TUJUAN,
+                self::SESSION_REGISTER,
+            ]);
+
+            $user = Auth::user();
+
+            $redirectPath = $user instanceof User
+                ? $this->redirectPathByRole($user)
+                : '/';
+
+            return redirect()
+                ->to($redirectPath)
+                ->with(
+                    'error',
+                    'Anda sudah masuk ke dalam akun.'
+                );
+        }
+
+        if (! $this->konfigurasiGoogleSiap()) {
+            return $this->gagal(
+                'Login Google belum dikonfigurasi dengan benar.'
+            );
+        }
+
         try {
-            $googleUser = Socialite::driver('google')
-                ->user();
-        } catch (Throwable) {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => 'Login Google gagal diproses. Silakan coba lagi.',
-                ]);
-        }
+            /*
+             * Method user() memvalidasi state OAuth
+             * yang sebelumnya disimpan dalam session.
+             */
+            $googleUser = Socialite::driver(
+                'google'
+            )->user();
+        } catch (Throwable $exception) {
+            report($exception);
 
-        $googleId = trim((string) $googleUser->getId());
+            $request->session()->forget([
+                self::SESSION_TUJUAN,
+                self::SESSION_REGISTER,
+            ]);
 
-        $email = mb_strtolower(
-            trim((string) $googleUser->getEmail())
-        );
-
-        if ($email === '') {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => 'Akun Google tidak mengembalikan alamat email.',
-                ]);
-        }
-
-        if ($googleId === '') {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => 'Akun Google tidak mengembalikan ID pengguna.',
-                ]);
+            return $this->gagal(
+                'Login Google gagal diproses. Silakan coba lagi.'
+            );
         }
 
         $tujuan = $this->tujuanValid(
             (string) $request->session()->pull(
-                'google_oauth_tujuan',
+                self::SESSION_TUJUAN,
                 'login'
             )
         );
 
-        [$user, $pesanKonflik] = $this->userDariGoogleAtauEmail(
-            googleId: $googleId,
-            email: $email
+        $googleId = trim(
+            (string) $googleUser->getId()
         );
 
-        if ($pesanKonflik !== null) {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => $pesanKonflik,
-                ]);
+        $email = mb_strtolower(
+            trim(
+                (string) $googleUser->getEmail()
+            )
+        );
+
+        if ($googleId === '') {
+            return $this->gagal(
+                'Akun Google tidak mengembalikan ID pengguna.'
+            );
+        }
+
+        if ($email === '') {
+            return $this->gagal(
+                'Akun Google tidak mengembalikan alamat email.'
+            );
         }
 
         if (
-            $user !== null
-            && $tujuan !== 'login'
+            ! $this->emailGoogleTerverifikasi(
+                $googleUser
+            )
         ) {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => 'Alamat email Google ini sudah terdaftar. Silakan masuk menggunakan Google atau email dan kata sandi.',
-                ]);
+            return $this->gagal(
+                'Alamat email pada akun Google belum terverifikasi.'
+            );
         }
 
-        if ($user !== null) {
-            if (! $this->bolehHubungkanGoogle($user, $googleId)) {
-                return redirect()
-                    ->to('/login')
-                    ->withErrors([
-                        'email' => 'Akun ini sudah terhubung dengan akun Google lain.',
-                    ]);
-            }
+        $userGoogle = User::query()
+            ->where(
+                'google_id',
+                $googleId
+            )
+            ->first();
 
-            $this->simpanDataGoogleKeUser(
-                user: $user,
+        $userEmail = User::query()
+            ->where(
+                'email',
+                $email
+            )
+            ->first();
+
+        /*
+         * Google ID dan email tidak boleh menunjuk
+         * ke dua pengguna berbeda.
+         */
+        if (
+            $userGoogle instanceof User
+            && $userEmail instanceof User
+            && $userGoogle->getKey()
+                !== $userEmail->getKey()
+        ) {
+            return $this->gagal(
+                'Identitas Google bertentangan dengan akun pengguna lain.'
+            );
+        }
+
+        if ($userGoogle instanceof User) {
+            return $this->loginPenggunaGoogle(
+                request: $request,
                 googleUser: $googleUser,
-                googleId: $googleId,
-                email: $email
+                user: $userGoogle,
+                email: $email,
+                tujuan: $tujuan
+            );
+        }
+
+        /*
+         * Akun lokal tidak boleh otomatis ditautkan
+         * hanya berdasarkan email Google yang sama.
+         */
+        if ($userEmail instanceof User) {
+            $googleIdLama = trim(
+                (string) (
+                    $userEmail->getAttribute(
+                        'google_id'
+                    )
+                    ?? ''
+                )
             );
 
-            Auth::login($user, true);
-
-            $request->session()->regenerate();
-
-            return redirect()
-                ->intended(
-                    $this->redirectPathByRole($user)
+            if ($googleIdLama !== '') {
+                return $this->gagal(
+                    'Alamat email ini sudah terhubung dengan akun Google lain.'
                 );
+            }
+
+            return $this->gagal(
+                'Alamat email sudah terdaftar sebagai akun lokal. Masuk menggunakan email dan kata sandi. Penautan Google harus dilakukan dari akun yang sudah masuk.'
+            );
         }
 
         if ($tujuan === 'login') {
-            return redirect()
-                ->to('/login')
-                ->withErrors([
-                    'email' => 'Akun Google belum terdaftar. Silakan daftar sebagai pendonor atau pemohon donor terlebih dahulu.',
-                ]);
+            return $this->gagal(
+                'Akun Google belum terdaftar. Silakan daftar sebagai pendonor atau pemohon donor terlebih dahulu.'
+            );
         }
 
-        $request->session()->put('google_register', [
-            'google_id' => $googleId,
-            'name' => (string) (
-                $googleUser->getName()
-                ?: $googleUser->getNickname()
-                ?: ''
-            ),
-            'email' => $email,
-            'avatar' => (string) (
-                $googleUser->getAvatar()
-                ?: ''
-            ),
-            'tujuan' => $tujuan,
-        ]);
+        return $this->siapkanRegistrasiGoogle(
+            request: $request,
+            googleUser: $googleUser,
+            googleId: $googleId,
+            email: $email,
+            tujuan: $tujuan
+        );
+    }
+
+    private function loginPenggunaGoogle(
+        Request $request,
+        SocialiteUser $googleUser,
+        User $user,
+        string $email,
+        string $tujuan
+    ): RedirectResponse {
+        if ($tujuan !== 'login') {
+            return $this->gagal(
+                'Akun Google sudah terdaftar. Gunakan tombol Login dengan Google.'
+            );
+        }
+
+        $emailTersimpan = mb_strtolower(
+            trim(
+                (string) $user->email
+            )
+        );
+
+        /*
+         * Perubahan email Google tidak boleh langsung
+         * mengubah email akun aplikasi.
+         */
+        if ($emailTersimpan !== $email) {
+            return $this->gagal(
+                'Alamat email Google tidak sama dengan email yang tersimpan. Hubungi administrator.'
+            );
+        }
+
+        $pesanPenolakan = $this->pesanPenolakanAkses(
+            $user
+        );
+
+        if ($pesanPenolakan !== null) {
+            return $this->gagal(
+                $pesanPenolakan
+            );
+        }
+
+        $this->perbaruiDataGoogle(
+            user: $user,
+            googleUser: $googleUser
+        );
+
+        Auth::login(
+            $user,
+            true
+        );
+
+        $request->session()->regenerate();
+
+        return redirect()
+            ->intended(
+                $this->redirectPathByRole(
+                    $user
+                )
+            );
+    }
+
+    private function siapkanRegistrasiGoogle(
+        Request $request,
+        SocialiteUser $googleUser,
+        string $googleId,
+        string $email,
+        string $tujuan
+    ): RedirectResponse {
+        if (
+            ! in_array(
+                $tujuan,
+                [
+                    'donor',
+                    'pemohon-donor',
+                ],
+                true
+            )
+        ) {
+            return $this->gagal(
+                'Tujuan registrasi Google tidak valid.'
+            );
+        }
+
+        /*
+         * Regenerasi ID session setelah OAuth sukses.
+         */
+        $request->session()->regenerate();
+
+        $authenticatedAt = now()->timestamp;
+
+        $request->session()->put(
+            self::SESSION_REGISTER,
+            [
+                'google_id' => $googleId,
+
+                'name' => trim(
+                    (string) (
+                        $googleUser->getName()
+                        ?: $googleUser->getNickname()
+                        ?: ''
+                    )
+                ),
+
+                'email' => $email,
+
+                'avatar' => trim(
+                    (string) (
+                        $googleUser->getAvatar()
+                        ?: ''
+                    )
+                ),
+
+                'email_verified' => true,
+
+                'authenticated_at' =>
+                    $authenticatedAt,
+
+                'expires_at' =>
+                    $authenticatedAt
+                    + self::REGISTER_EXPIRES_SECONDS,
+
+                'tujuan' => $tujuan,
+            ]
+        );
 
         if ($tujuan === 'donor') {
             return redirect()
@@ -151,24 +407,251 @@ class GoogleAuthController extends Controller
                 );
         }
 
-        if ($tujuan === 'pemohon-donor') {
-            return redirect()
-                ->to('/register/pemohon-donor')
-                ->with(
-                    'success',
-                    'Akun Google berhasil diverifikasi. Silakan lengkapi data pemohon donor.'
-                );
-        }
-
         return redirect()
-            ->to('/login')
-            ->withErrors([
-                'email' => 'Tujuan autentikasi Google tidak valid.',
-            ]);
+            ->to('/register/pemohon-donor')
+            ->with(
+                'success',
+                'Akun Google berhasil diverifikasi. Silakan lengkapi data pemohon donor.'
+            );
     }
 
-    private function tujuanValid(?string $tujuan): string
+    private function perbaruiDataGoogle(
+        User $user,
+        SocialiteUser $googleUser
+    ): void {
+        $payload = [];
+
+        $avatar = trim(
+            (string) (
+                $googleUser->getAvatar()
+                ?: ''
+            )
+        );
+
+        if (
+            $avatar !== ''
+            && Schema::hasColumn(
+                'users',
+                'google_avatar'
+            )
+        ) {
+            $payload['google_avatar'] =
+                $avatar;
+        }
+
+        if (
+            blank(
+                $user->getAttribute(
+                    'email_verified_at'
+                )
+            )
+        ) {
+            /*
+             * Aman karena Google ID dan email telah
+             * cocok serta email Google terverifikasi.
+             */
+            $payload['email_verified_at'] =
+                now();
+        }
+
+        if ($payload === []) {
+            return;
+        }
+
+        $user->forceFill(
+            $payload
+        )->saveQuietly();
+    }
+
+    private function emailGoogleTerverifikasi(
+        SocialiteUser $googleUser
+    ): bool {
+        /*
+         * GoogleProvider menghasilkan instance
+         * Laravel\Socialite\Two\User.
+         */
+        if (
+            ! $googleUser instanceof
+                SocialiteTwoUser
+        ) {
+            return false;
+        }
+
+        $raw = $googleUser->getRaw();
+
+        $verified = $raw['email_verified']
+            ?? $raw['verified_email']
+            ?? false;
+
+        return filter_var(
+            $verified,
+            FILTER_VALIDATE_BOOLEAN
+        );
+    }
+
+    private function pesanPenolakanAkses(
+        User $user
+    ): ?string {
+        if (! $this->statusPenggunaAktif($user)) {
+            return $this->pesanStatusPengguna(
+                $user
+            );
+        }
+
+        $redirectPath = $this->redirectPathByRole(
+            $user
+        );
+
+        if ($redirectPath === '/login') {
+            return 'Akun tidak memiliki role yang dapat mengakses portal.';
+        }
+
+        if (
+            $redirectPath === '/donor'
+            && ! $user->profilPendonor()
+                ->exists()
+        ) {
+            return 'Profil pendonor belum lengkap. Hubungi administrator.';
+        }
+
+        if (
+            $redirectPath === '/pemohon-donor'
+            && ! $user->profilRumahSakit()
+                ->exists()
+        ) {
+            return 'Profil pemohon donor belum lengkap. Hubungi administrator.';
+        }
+
+        return null;
+    }
+
+    private function statusPenggunaAktif(
+        User $user
+    ): bool {
+        return $this->nilaiStatusPengguna($user)
+            === StatusPengguna::Aktif->value;
+    }
+
+    private function pesanStatusPengguna(
+        User $user
+    ): string {
+        return match (
+            $this->nilaiStatusPengguna($user)
+        ) {
+            StatusPengguna::Menunggu->value =>
+                'Akun masih menunggu aktivasi.',
+
+            StatusPengguna::TidakAktif->value =>
+                'Akun sedang tidak aktif. Hubungi administrator.',
+
+            StatusPengguna::Ditangguhkan->value =>
+                'Akun sedang ditangguhkan. Hubungi administrator.',
+
+            StatusPengguna::Ditolak->value =>
+                'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+
+            default =>
+                'Akun belum dapat digunakan. Hubungi administrator.',
+        };
+    }
+
+    private function nilaiStatusPengguna(
+        User $user
+    ): string {
+        $status = $user->status;
+
+        if ($status instanceof \BackedEnum) {
+            return strtolower(
+                trim(
+                    (string) $status->value
+                )
+            );
+        }
+
+        return strtolower(
+            trim(
+                (string) $status
+            )
+        );
+    }
+
+    private function redirectPathByRole(
+        User $user
+    ): string {
+        $roles = $this->rolesPengguna(
+            $user
+        );
+
+        if (
+            $roles->intersect(
+                self::ADMIN_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/admin';
+        }
+
+        if (
+            $roles->intersect(
+                self::PEMOHON_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/pemohon-donor';
+        }
+
+        if (
+            $roles->intersect(
+                self::DONOR_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/donor';
+        }
+
+        return '/login';
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function rolesPengguna(
+        User $user
+    ): Collection {
+        return $user->getRoleNames()
+            ->map(
+                fn (string $role): string =>
+                    strtolower(
+                        trim($role)
+                    )
+            )
+            ->filter()
+            ->values();
+    }
+
+    private function konfigurasiGoogleSiap(): bool
     {
+        return filled(
+            config(
+                'services.google.client_id'
+            )
+        )
+            && filled(
+                config(
+                    'services.google.client_secret'
+                )
+            )
+            && filled(
+                config(
+                    'services.google.redirect'
+                )
+            )
+            && Schema::hasColumn(
+                'users',
+                'google_id'
+            );
+    }
+
+    private function tujuanValid(
+        ?string $tujuan
+    ): string {
         return match ($tujuan) {
             'donor',
             'pemohon-donor',
@@ -178,159 +661,13 @@ class GoogleAuthController extends Controller
         };
     }
 
-    /**
-     * @return array{0: ?User, 1: ?string}
-     */
-    private function userDariGoogleAtauEmail(
-        string $googleId,
-        string $email
-    ): array {
-        $userGoogle = $this->cariUserDenganGoogleId($googleId);
-        $userEmail = $this->cariUserDenganEmail($email);
-
-        if (
-            $userGoogle instanceof User
-            && $userEmail instanceof User
-            && $userGoogle->getKey() !== $userEmail->getKey()
-        ) {
-            return [
-                null,
-                'Akun Google ini sudah terhubung dengan pengguna lain. Gunakan akun Google atau email yang sesuai.',
-            ];
-        }
-
-        return [
-            $userGoogle ?: $userEmail,
-            null,
-        ];
-    }
-
-    private function cariUserDenganGoogleId(string $googleId): ?User
-    {
-        if (
-            $googleId === ''
-            || ! Schema::hasColumn('users', 'google_id')
-        ) {
-            return null;
-        }
-
-        return User::query()
-            ->where('google_id', $googleId)
-            ->first();
-    }
-
-    private function cariUserDenganEmail(string $email): ?User
-    {
-        return User::query()
-            ->where('email', $email)
-            ->first();
-    }
-
-    private function bolehHubungkanGoogle(
-        User $user,
-        string $googleId
-    ): bool {
-        if (! Schema::hasColumn('users', 'google_id')) {
-            return true;
-        }
-
-        $googleIdLama = trim(
-            (string) (
-                $user->getAttribute('google_id')
-                ?? ''
-            )
-        );
-
-        if ($googleIdLama === '') {
-            return true;
-        }
-
-        return $googleIdLama === $googleId;
-    }
-
-    private function simpanDataGoogleKeUser(
-        User $user,
-        SocialiteUser $googleUser,
-        string $googleId,
-        string $email
-    ): void {
-        $payload = [];
-
-        if (Schema::hasColumn('users', 'google_id')) {
-            $payload['google_id'] = $googleId;
-        }
-
-        if (Schema::hasColumn('users', 'google_avatar')) {
-            $payload['google_avatar'] = (string) (
-                $googleUser->getAvatar()
-                ?: ''
-            );
-        }
-
-        if (
-            Schema::hasColumn('users', 'email_verified_at')
-            && blank($user->getAttribute('email_verified_at'))
-        ) {
-            $payload['email_verified_at'] = now();
-        }
-
-        if (
-            Schema::hasColumn('users', 'email')
-            && blank($user->getAttribute('email'))
-        ) {
-            $payload['email'] = $email;
-        }
-
-        if ($payload === []) {
-            return;
-        }
-
-        $user->forceFill($payload);
-        $user->save();
-    }
-
-    private function redirectPathByRole(User $user): string
-    {
-        $roles = method_exists($user, 'getRoleNames')
-            ? $user->getRoleNames()
-                ->map(fn (string $role): string => strtolower($role))
-            : collect();
-
-        if (
-            $roles->contains('super_admin')
-            || $roles->contains('super-admin')
-            || $roles->contains('admin')
-            || $roles->contains('petugas')
-        ) {
-            return '/admin';
-        }
-
-        $punyaRolePemohon = $roles->contains(
-            fn (string $role): bool =>
-                $role === 'rumah_sakit'
-                || $role === 'pemohon_donor'
-                || $role === 'pemohon-donor'
-                || str_contains($role, 'pemohon')
-                || str_contains($role, 'rumah')
-                || str_contains($role, 'sakit')
-                || str_contains($role, 'hospital')
-        );
-
-        if ($punyaRolePemohon) {
-            return '/pemohon-donor';
-        }
-
-        $punyaRolePendonor = $roles->contains(
-            fn (string $role): bool =>
-                $role === 'donor'
-                || $role === 'pendonor'
-                || str_contains($role, 'pendonor')
-        );
-
-        if ($punyaRolePendonor) {
-            return '/donor';
-        }
-
-        return '/login';
+    private function gagal(
+        string $message
+    ): RedirectResponse {
+        return redirect()
+            ->to('/login')
+            ->withErrors([
+                'email' => $message,
+            ]);
     }
 }

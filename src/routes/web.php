@@ -58,16 +58,21 @@ Route::get('/', function () {
 })->name('home');
 
 require __DIR__ . '/auth.php';
-require __DIR__ . '/donor.php';
+require __DIR__ . '/email-verification.php';
 
-if (file_exists(__DIR__ . '/pemohon-donor.php')) {
-    require __DIR__ . '/pemohon-donor.php';
-require __DIR__ . '/pemohon-donor-riwayat-bukti.php';
-}
+Route::middleware([
+    'auth',
+    'verified',
+])->group(function (): void {
+    require __DIR__ . '/donor.php';
+
+    if (file_exists(__DIR__ . '/pemohon-donor.php')) {
+        require __DIR__ . '/pemohon-donor.php';
+        require __DIR__ . '/pemohon-donor-riwayat-bukti.php';
+    }
+});
+
 require __DIR__ . '/auth-public.php';
-
 require __DIR__ . '/google-auth.php';
-
 require __DIR__ . '/logout-public.php';
-
 require __DIR__ . '/password-reset.php';

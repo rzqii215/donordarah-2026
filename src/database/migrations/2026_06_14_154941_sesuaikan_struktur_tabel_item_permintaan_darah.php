@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -41,8 +40,9 @@ return new class extends Migration
                      * Nilai true berarti alokasi masih aktif.
                      *
                      * Ketika dilepas atau didistribusikan, nilainya menjadi null.
-                     * MariaDB mengizinkan beberapa nilai null pada unique index,
-                     * tetapi hanya mengizinkan satu nilai true untuk kantong sama.
+                     * MariaDB dan SQLite mengizinkan beberapa nilai null pada
+                     * unique index, tetapi hanya mengizinkan satu nilai true
+                     * untuk kantong darah yang sama.
                      */
                     $table->boolean('aktif')
                         ->nullable()
@@ -320,20 +320,9 @@ return new class extends Migration
         string $table,
         string $index
     ): bool {
-        $result = DB::selectOne(
-            '
-                SELECT COUNT(*) AS total
-                FROM information_schema.statistics
-                WHERE table_schema = DATABASE()
-                  AND table_name = ?
-                  AND index_name = ?
-            ',
-            [
-                $table,
-                $index,
-            ]
+        return Schema::hasIndex(
+            $table,
+            $index
         );
-
-        return (int) ($result->total ?? 0) > 0;
     }
 };

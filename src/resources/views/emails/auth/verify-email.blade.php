@@ -2,12 +2,13 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Atur Ulang Password</title>
+    <title>Verifikasi Email</title>
 
     <style>
         @media only screen and (max-width: 640px) {
@@ -15,15 +16,14 @@
                 width: 100% !important;
             }
 
-            .email-content {
-                padding: 30px 22px !important;
+            .email-header,
+            .email-content,
+            .email-footer {
+                padding-left: 22px !important;
+                padding-right: 22px !important;
             }
 
-            .email-header {
-                padding: 26px 22px !important;
-            }
-
-            .reset-button {
+            .verification-button {
                 display: block !important;
                 width: auto !important;
             }
@@ -44,7 +44,7 @@
         overflow: hidden;
         opacity: 0;
     ">
-        Permintaan untuk mengatur ulang password akun {{ $appName }}.
+        Verifikasi alamat email akun {{ $appName }} Anda.
     </div>
 
     <table
@@ -107,7 +107,7 @@
                                 font-size: 25px;
                                 line-height: 1.3;
                             ">
-                                Atur Ulang Password
+                                Verifikasi Email
                             </h1>
 
                             <p style="
@@ -116,7 +116,7 @@
                                 font-size: 14px;
                                 line-height: 1.6;
                             ">
-                                Perlindungan akses akun {{ $appName }}
+                                Aktifkan akun Anda untuk melanjutkan
                             </p>
                         </td>
                     </tr>
@@ -141,9 +141,9 @@
                                 font-size: 15px;
                                 line-height: 1.75;
                             ">
-                                Kami menerima permintaan untuk mengatur ulang
-                                password akun Anda. Tekan tombol berikut untuk
-                                membuat password baru.
+                                Terima kasih telah mendaftar di {{ $appName }}.
+                                Tekan tombol berikut untuk memastikan bahwa
+                                alamat email ini benar dan menjadi milik Anda.
                             </p>
 
                             <table
@@ -156,11 +156,11 @@
                                 <tr>
                                     <td align="center">
                                         <a
-                                            href="{{ $resetUrl }}"
-                                            class="reset-button"
+                                            href="{{ $verificationUrl }}"
+                                            class="verification-button"
                                             style="
                                                 display: inline-block;
-                                                padding: 14px 28px;
+                                                padding: 14px 30px;
                                                 background-color: #dc2626;
                                                 border-radius: 9px;
                                                 color: #ffffff;
@@ -171,7 +171,7 @@
                                                 text-decoration: none;
                                             "
                                         >
-                                            Buat Password Baru
+                                            Verifikasi Email
                                         </a>
                                     </td>
                                 </tr>
@@ -197,10 +197,12 @@
                                             font-size: 13px;
                                             line-height: 1.65;
                                         ">
-                                            Link ini hanya berlaku selama
-                                            <strong>{{ $expiresInMinutes }} menit</strong>.
-                                            Setelah melewati batas waktu tersebut,
-                                            silakan ajukan reset password kembali.
+                                            Link verifikasi berlaku selama
+                                            <strong>
+                                                {{ $expiresInMinutes }} menit
+                                            </strong>.
+                                            Jika kedaluwarsa, Anda dapat meminta
+                                            link baru melalui halaman verifikasi.
                                         </p>
                                     </td>
                                 </tr>
@@ -212,7 +214,7 @@
                                 font-size: 14px;
                                 line-height: 1.7;
                             ">
-                                Jika tombol tidak dapat digunakan, salin dan
+                                Jika tombol tidak bisa digunakan, salin dan
                                 buka alamat berikut melalui browser:
                             </p>
 
@@ -227,7 +229,7 @@
                                 line-height: 1.6;
                                 word-break: break-all;
                             ">
-                                {{ $resetUrl }}
+                                {{ $verificationUrl }}
                             </p>
 
                             <p style="
@@ -236,20 +238,23 @@
                                 font-size: 13px;
                                 line-height: 1.7;
                             ">
-                                Jika Anda tidak merasa meminta perubahan
-                                password, abaikan email ini. Password akun Anda
-                                tetap aman dan tidak akan berubah.
+                                Jika Anda tidak merasa membuat akun ini,
+                                abaikan email tersebut. Tidak ada tindakan
+                                lain yang diperlukan.
                             </p>
                         </td>
                     </tr>
 
                     <tr>
-                        <td style="
-                            padding: 24px 40px;
-                            background-color: #f8fafc;
-                            border-top: 1px solid #e5e7eb;
-                            text-align: center;
-                        ">
+                        <td
+                            class="email-footer"
+                            style="
+                                padding: 24px 40px;
+                                background-color: #f8fafc;
+                                border-top: 1px solid #e5e7eb;
+                                text-align: center;
+                            "
+                        >
                             <p style="
                                 margin: 0 0 6px;
                                 color: #374151;

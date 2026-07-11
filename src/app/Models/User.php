@@ -2,20 +2,26 @@
 
 namespace App\Models;
 
-use App\Notifications\Auth\ResetPasswordNotification;
 use App\Enums\StatusPengguna;
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\VerifyEmailNotification;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser, HasAvatar
+class User extends Authenticatable implements
+    FilamentUser,
+    HasAvatar,
+    MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens;
@@ -53,6 +59,19 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'status' => StatusPengguna::class,
             'terakhir_login_pada' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(
+            function (User $user): void {
+                if ($user->hasVerifiedEmail()) {
+                    return;
+                }
+
+                $user->sendEmailVerificationNotification();
+            }
+        );
     }
 
     public function profilPendonor(): HasOne
@@ -184,13 +203,59 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        if ($panel->getId() !== 'admin') {
+            return false;
+        }
+
+        return $this->hasAnyRole([
+            'super_admin',
+            'super-admin',
+            'admin',
+            'petugas',
+        ]);
     }
 
-    public function sendPasswordResetNotification($token): void
-    {
+    public function routeNotificationForMail(
+        ?Notification $notification = null
+    ): array|string {
+        if (
+            app()->environment('local')
+            && (bool) config(
+                'mail.testing_recipient.enabled',
+                false
+            )
+        ) {
+            $testingAddress = trim(
+                (string) config(
+                    'mail.testing_recipient.address',
+                    ''
+                )
+            );
+
+            if ($testingAddress !== '') {
+                /*
+                 * Resend testing membutuhkan alamat penerima
+                 * polos tanpa display name.
+                 */
+                return $testingAddress;
+            }
+        }
+
+        return (string) $this->email;
+    }
+
+    public function sendPasswordResetNotification(
+        $token
+    ): void {
         $this->notify(
             new ResetPasswordNotification($token)
+        );
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(
+            new VerifyEmailNotification()
         );
     }
 }

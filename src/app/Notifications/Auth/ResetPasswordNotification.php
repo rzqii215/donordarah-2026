@@ -11,37 +11,55 @@ class ResetPasswordNotification extends Notification
     use Queueable;
 
     public function __construct(
-        public string $token
-    ) {
-    }
+        private readonly string $token,
+    ) {}
 
     /**
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return [
-            'mail',
-        ];
+        return ['mail'];
     }
 
     public function toMail(object $notifiable): MailMessage
     {
-        $email = method_exists($notifiable, 'getEmailForPasswordReset')
-            ? $notifiable->getEmailForPasswordReset()
-            : (string) $notifiable->email;
+        $email = (string) $notifiable->getEmailForPasswordReset();
+
+        $passwordBroker = (string) config(
+            'auth.defaults.passwords',
+            'users'
+        );
+
+        $expiresInMinutes = (int) config(
+            "auth.passwords.{$passwordBroker}.expire",
+            60
+        );
 
         $resetUrl = route('password.reset', [
             'token' => $this->token,
             'email' => $email,
         ]);
 
-        return (new MailMessage())
-            ->subject('Reset Password Akun Donor Darah')
-            ->markdown('emails.auth.reset-password', [
-                'user' => $notifiable,
+        $userName = filled($notifiable->name ?? null)
+            ? (string) $notifiable->name
+            : 'Pengguna';
+
+        return (new MailMessage)
+            ->subject('Atur Ulang Password Akun Donor Darah')
+            ->view('emails.auth.reset-password', [
+                'appName' => (string) config('app.name', 'Donor Darah'),
+                'userName' => $userName,
                 'resetUrl' => $resetUrl,
-                'expireMinutes' => (int) config('auth.passwords.users.expire', 60),
+                'expiresInMinutes' => $expiresInMinutes,
             ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        return [];
     }
 }
