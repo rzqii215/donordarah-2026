@@ -1,39 +1,142 @@
-<div class="donor-stock-page">
-    
-<section class="donor-stock-hero">
-        <div>
-            <p class="donor-stock-eyebrow">
-                Informasi Stok Darah
-            </p>
+<div
+    wire:poll.60s
+    class="space-y-6"
+>
+    <section
+        class="relative overflow-hidden rounded-[28px] bg-[#76001c] px-6 py-8 text-white shadow-[0_24px_60px_rgba(118,0,28,0.22)] sm:px-8 lg:px-10"
+    >
+        <div
+            class="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10"
+        ></div>
 
-            <h1>
-                Stok Darah
-            </h1>
+        <div
+            class="pointer-events-none absolute -bottom-24 right-36 h-56 w-56 rounded-full bg-[#fdb7c5]/10"
+        ></div>
 
-            <p>
-                Pantau ketersediaan darah berdasarkan golongan darah dan rhesus.
-                Stok tersedia hanya menghitung kantong darah yang sudah lulus mutu
-                dan belum dialokasikan.
-            </p>
-        </div>
+        <div
+            class="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end"
+        >
+            <div>
+                <div
+                    class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em]"
+                >
+                    <span
+                        class="h-2 w-2 rounded-full bg-[#ffb1c0]"
+                    ></span>
 
-        <div class="donor-stock-hero-card">
-            <span>Total Tersedia</span>
+                    Informasi stok real-time
+                </div>
 
-            <strong>
-                {{ $ringkasan['tersedia'] }}
-            </strong>
+                <h1
+                    class="max-w-3xl text-3xl font-bold tracking-[-0.05em] sm:text-4xl lg:text-5xl"
+                >
+                    Ketersediaan Stok Darah
+                </h1>
 
-            <p>
-                Kantong darah siap digunakan
-            </p>
+                <p
+                    class="mt-4 max-w-2xl text-sm leading-7 text-white/75 sm:text-base"
+                >
+                    Pantau ketersediaan darah berdasarkan golongan darah dan rhesus.
+                    Stok tersedia hanya menghitung kantong yang sudah lulus pemeriksaan
+                    mutu, belum kedaluwarsa, dan belum dialokasikan.
+                </p>
+
+                <div
+                    class="mt-6 flex flex-wrap items-center gap-3 text-xs font-semibold text-white/70"
+                >
+                    <span
+                        class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2"
+                    >
+                        <svg
+                            class="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M12 8v4l3 2"
+                            />
+
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="9"
+                            />
+                        </svg>
+
+                        Diperbarui {{ $diperbaruiPada }}
+                    </span>
+
+                    <span
+                        wire:loading
+                        class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2"
+                    >
+                        <span
+                            class="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                        ></span>
+
+                        Memperbarui data
+                    </span>
+                </div>
+            </div>
+
+            <article
+                class="rounded-[24px] border border-white/15 bg-white/10 p-6 backdrop-blur-sm"
+            >
+                <p
+                    class="text-xs font-bold uppercase tracking-[0.12em] text-white/65"
+                >
+                    Total siap digunakan
+                </p>
+
+                <div
+                    class="mt-3 flex items-end gap-3"
+                >
+                    <strong
+                        class="text-6xl font-bold leading-none tracking-[-0.06em]"
+                    >
+                        {{ number_format($ringkasan['tersedia']) }}
+                    </strong>
+
+                    <span
+                        class="pb-1 text-sm font-semibold text-white/70"
+                    >
+                        kantong
+                    </span>
+                </div>
+
+                <div
+                    class="mt-5 border-t border-white/15 pt-4"
+                >
+                    <p
+                        class="text-xs leading-5 text-white/65"
+                    >
+                        Total volume tersedia
+                    </p>
+
+                    <strong
+                        class="mt-1 block text-lg"
+                    >
+                        {{ number_format($ringkasan['volume_tersedia_ml']) }} ml
+                    </strong>
+                </div>
+            </article>
         </div>
     </section>
 
-    <section class="donor-stock-summary">
-        <article>
-            <div class="donor-stock-summary-icon is-success">
+    <section
+        class="grid grid-cols-2 gap-3 lg:grid-cols-5"
+    >
+        <article
+            class="rounded-2xl border border-[#d9eadf] bg-white p-4 shadow-[0_12px_35px_rgba(25,28,32,0.05)]"
+        >
+            <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#dff7e7] text-[#176b3a]"
+            >
                 <svg
+                    class="h-5 w-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -43,37 +146,75 @@
                 </svg>
             </div>
 
-            <div>
-                <span>Tersedia</span>
-                <strong>{{ $ringkasan['tersedia'] }}</strong>
-                <p>Siap dialokasikan</p>
-            </div>
+            <p
+                class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+            >
+                Tersedia
+            </p>
+
+            <strong
+                class="mt-1 block text-3xl tracking-[-0.04em] text-[#191c20]"
+            >
+                {{ number_format($ringkasan['tersedia']) }}
+            </strong>
+
+            <p
+                class="mt-1 text-xs text-[#6f5b5c]"
+            >
+                Siap dialokasikan
+            </p>
         </article>
 
-        <article>
-            <div class="donor-stock-summary-icon is-warning">
+        <article
+            class="rounded-2xl border border-[#eee0bd] bg-white p-4 shadow-[0_12px_35px_rgba(25,28,32,0.05)]"
+        >
+            <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff1c9] text-[#8a5a00]"
+            >
                 <svg
+                    class="h-5 w-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                 >
-                    <path d="M12 8v5" />
-                    <path d="M12 17h.01" />
-                    <circle cx="12" cy="12" r="10" />
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                    />
+
+                    <path d="M12 7v5l3 2" />
                 </svg>
             </div>
 
-            <div>
-                <span>Dipesan</span>
-                <strong>{{ $ringkasan['dipesan'] }}</strong>
-                <p>Sudah dialokasikan</p>
-            </div>
+            <p
+                class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+            >
+                Dialokasikan
+            </p>
+
+            <strong
+                class="mt-1 block text-3xl tracking-[-0.04em] text-[#191c20]"
+            >
+                {{ number_format($ringkasan['dipesan']) }}
+            </strong>
+
+            <p
+                class="mt-1 text-xs text-[#6f5b5c]"
+            >
+                Untuk permintaan
+            </p>
         </article>
 
-        <article>
-            <div class="donor-stock-summary-icon is-info">
+        <article
+            class="rounded-2xl border border-[#dce5f4] bg-white p-4 shadow-[0_12px_35px_rgba(25,28,32,0.05)]"
+        >
+            <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e7effc] text-[#315b9b]"
+            >
                 <svg
+                    class="h-5 w-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -81,21 +222,36 @@
                 >
                     <path d="M3 7h11v10H3z" />
                     <path d="M14 10h4l3 3v4h-7z" />
-                    <circle cx="7" cy="19" r="2" />
-                    <circle cx="17" cy="19" r="2" />
                 </svg>
             </div>
 
-            <div>
-                <span>Didistribusikan</span>
-                <strong>{{ $ringkasan['didistribusikan'] }}</strong>
-                <p>Sudah diserahkan</p>
-            </div>
+            <p
+                class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+            >
+                Didistribusikan
+            </p>
+
+            <strong
+                class="mt-1 block text-3xl tracking-[-0.04em] text-[#191c20]"
+            >
+                {{ number_format($ringkasan['didistribusikan']) }}
+            </strong>
+
+            <p
+                class="mt-1 text-xs text-[#6f5b5c]"
+            >
+                Sudah diserahkan
+            </p>
         </article>
 
-        <article>
-            <div class="donor-stock-summary-icon is-muted">
+        <article
+            class="rounded-2xl border border-[#f1dce1] bg-white p-4 shadow-[0_12px_35px_rgba(25,28,32,0.05)]"
+        >
+            <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe8ed] text-[#991b2f]"
+            >
                 <svg
+                    class="h-5 w-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -107,497 +263,518 @@
                 </svg>
             </div>
 
-            <div>
-                <span>Lulus Mutu</span>
-                <strong>{{ $ringkasan['lulus_mutu'] }}</strong>
-                <p>Total kantong valid</p>
+            <p
+                class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+            >
+                Lulus mutu
+            </p>
+
+            <strong
+                class="mt-1 block text-3xl tracking-[-0.04em] text-[#191c20]"
+            >
+                {{ number_format($ringkasan['lulus_mutu']) }}
+            </strong>
+
+            <p
+                class="mt-1 text-xs text-[#6f5b5c]"
+            >
+                Kantong valid
+            </p>
+        </article>
+
+        <article
+            class="col-span-2 rounded-2xl border border-[#f1d9d9] bg-white p-4 shadow-[0_12px_35px_rgba(25,28,32,0.05)] lg:col-span-1"
+        >
+            <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff0f0] text-[#b42318]"
+            >
+                <svg
+                    class="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path d="M12 8v5" />
+                    <path d="M12 17h.01" />
+                    <path
+                        d="m10.3 3.9-7.8 13.5A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.6L13.7 3.9a2 2 0 0 0-3.4 0Z"
+                    />
+                </svg>
             </div>
+
+            <p
+                class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+            >
+                Segera kedaluwarsa
+            </p>
+
+            <strong
+                class="mt-1 block text-3xl tracking-[-0.04em] text-[#191c20]"
+            >
+                {{ number_format($ringkasan['hampir_kedaluwarsa']) }}
+            </strong>
+
+            <p
+                class="mt-1 text-xs text-[#6f5b5c]"
+            >
+                Dalam tujuh hari
+            </p>
         </article>
     </section>
 
-    <section class="donor-stock-grid">
-        @foreach ($stokDarah as $stok)
-            <article class="donor-stock-card">
-                <div class="donor-stock-card-header">
-                    <div class="donor-stock-blood-type">
-                        {{ $stok['kode'] }}
-                    </div>
+    @if ($peringatanStok->isNotEmpty())
+        <section
+            class="rounded-[22px] border border-[#f2d1d7] bg-[#fff5f6] p-5"
+        >
+            <div
+                class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+            >
+                <div>
+                    <p
+                        class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                    >
+                        Perhatian stok
+                    </p>
 
-                    <span class="donor-stock-status {{ $stok['status_class'] }}">
-                        {{ $stok['status_label'] }}
-                    </span>
+                    <h2
+                        class="mt-1 text-lg font-bold tracking-[-0.03em] text-[#3f0716]"
+                    >
+                        Beberapa golongan darah memiliki stok rendah
+                    </h2>
+
+                    <p
+                        class="mt-1 text-sm leading-6 text-[#755b61]"
+                    >
+                        Golongan darah berikut memiliki maksimal dua kantong siap digunakan.
+                    </p>
                 </div>
 
-                <div class="donor-stock-main-number">
-                    <strong>
-                        {{ $stok['tersedia'] }}
+                <div
+                    class="flex flex-wrap gap-2"
+                >
+                    @foreach ($peringatanStok as $stok)
+                        <span
+                            class="inline-flex min-h-10 items-center rounded-full border border-[#e8bcc6] bg-white px-4 text-sm font-bold text-[#76001c]"
+                        >
+                            {{ $stok['kode'] }}:
+                            {{ $stok['tersedia'] }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    <section
+        class="rounded-[24px] border border-[#e6e3df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)]"
+    >
+        <div
+            class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px_220px]"
+        >
+            <div>
+                <label
+                    for="pencarian-stok"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Cari golongan darah
+                </label>
+
+                <div class="relative">
+                    <svg
+                        class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8c7071]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle
+                            cx="11"
+                            cy="11"
+                            r="7"
+                        />
+
+                        <path d="m20 20-3.5-3.5" />
+                    </svg>
+
+                    <input
+                        id="pencarian-stok"
+                        type="search"
+                        wire:model.live.debounce.300ms="pencarian"
+                        placeholder="Contoh: A+, O-, positif..."
+                        class="min-h-12 w-full rounded-xl border border-[#ded8d5] bg-[#fbf9f8] pl-12 pr-4 text-sm text-[#191c20] outline-none transition focus:border-[#991b2f] focus:ring-4 focus:ring-[#991b2f]/10"
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label
+                    for="filter-rhesus"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Rhesus
+                </label>
+
+                <select
+                    id="filter-rhesus"
+                    wire:model.live="filterRhesus"
+                    class="min-h-12 w-full rounded-xl border border-[#ded8d5] bg-[#fbf9f8] px-4 text-sm text-[#191c20] outline-none transition focus:border-[#991b2f] focus:ring-4 focus:ring-[#991b2f]/10"
+                >
+                    <option value="semua">
+                        Semua Rhesus
+                    </option>
+
+                    <option value="positive">
+                        Positif (+)
+                    </option>
+
+                    <option value="negative">
+                        Negatif (-)
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label
+                    for="urutan-stok"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Urutkan
+                </label>
+
+                <select
+                    id="urutan-stok"
+                    wire:model.live="urutan"
+                    class="min-h-12 w-full rounded-xl border border-[#ded8d5] bg-[#fbf9f8] px-4 text-sm text-[#191c20] outline-none transition focus:border-[#991b2f] focus:ring-4 focus:ring-[#991b2f]/10"
+                >
+                    <option value="golongan">
+                        Golongan darah
+                    </option>
+
+                    <option value="tersedia_terbanyak">
+                        Stok terbanyak
+                    </option>
+
+                    <option value="tersedia_tersedikit">
+                        Stok tersedikit
+                    </option>
+
+                    <option value="total_terbanyak">
+                        Total terbanyak
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div
+            class="mt-4 flex flex-col gap-4 border-t border-[#eee9e6] pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <label
+                class="inline-flex cursor-pointer items-start gap-3"
+            >
+                <input
+                    type="checkbox"
+                    wire:model.live="hanyaTersedia"
+                    class="mt-1 h-4 w-4 rounded border-[#d8ceca] text-[#991b2f] focus:ring-[#991b2f]"
+                >
+
+                <span>
+                    <strong
+                        class="block text-sm text-[#191c20]"
+                    >
+                        Hanya tampilkan stok tersedia
                     </strong>
 
-                    <span>
-                        kantong tersedia
+                    <span
+                        class="mt-1 block text-xs text-[#755f60]"
+                    >
+                        Sembunyikan golongan darah dengan stok kosong.
                     </span>
-                </div>
+                </span>
+            </label>
 
-                <div class="donor-stock-progress">
-                    <div
-                        style="width: {{ $stok['persentase'] }}%;"
-                        class="{{ $stok['status_class'] }}"
-                    ></div>
-                </div>
-
-                <div class="donor-stock-detail">
-                    <div>
-                        <span>Tersedia</span>
-                        <strong>{{ $stok['tersedia'] }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Dipesan</span>
-                        <strong>{{ $stok['dipesan'] }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Distribusi</span>
-                        <strong>{{ $stok['didistribusikan'] }}</strong>
-                    </div>
-                </div>
-            </article>
-        @endforeach
+            @if (
+                filled($pencarian)
+                || $filterRhesus !== 'semua'
+                || $hanyaTersedia
+                || $urutan !== 'golongan'
+            )
+                <button
+                    type="button"
+                    wire:click="resetFilter"
+                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#e6d9dc] bg-white px-4 text-sm font-semibold text-[#76001c] transition hover:bg-[#fff5f6]"
+                >
+                    Reset Filter
+                </button>
+            @endif
+        </div>
     </section>
 
-    <section class="donor-stock-info">
-        <div>
-            <h2>
-                Keterangan Status Stok
+    @if (count($stokDarah) === 0)
+        <section
+            class="rounded-[26px] border border-dashed border-[#e7c9cf] bg-[#fff8f9] px-6 py-16 text-center"
+        >
+            <div
+                class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ffe7ec] text-[#991b2f]"
+            >
+                <svg
+                    class="h-8 w-8"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path
+                        d="M12 2.5S5.5 10 5.5 15a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5Z"
+                    />
+                </svg>
+            </div>
+
+            <h2
+                class="mt-5 text-xl font-bold text-[#191c20]"
+            >
+                Stok tidak ditemukan
             </h2>
 
-            <p>
-                Data stok darah ini bersifat informatif. Kantong darah yang
-                sudah dipesan atau sudah didistribusikan tidak dihitung sebagai
-                stok tersedia.
+            <p
+                class="mx-auto mt-2 max-w-md text-sm leading-6 text-[#755f60]"
+            >
+                Tidak ada golongan darah yang sesuai dengan filter yang dipilih.
             </p>
-        </div>
 
-        <div class="donor-stock-legend">
-            <span>
-                <i class="is-success"></i>
-                Aman
-            </span>
+            <button
+                type="button"
+                wire:click="resetFilter"
+                class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#991b2f] px-5 text-sm font-bold text-white"
+            >
+                Reset Filter
+            </button>
+        </section>
+    @else
+        <section
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
+            @foreach ($stokDarah as $stok)
+                @php
+                    $statusBadgeClass = match (
+                        $stok['status_class']
+                    ) {
+                        'success' =>
+                            'bg-[#dff7e7] text-[#176b3a]',
 
-            <span>
-                <i class="is-warning"></i>
-                Rendah
-            </span>
+                        'warning' =>
+                            'bg-[#fff1c9] text-[#8a5a00]',
 
-            <span>
-                <i class="is-danger"></i>
-                Kosong
-            </span>
-        </div>
+                        'critical' =>
+                            'bg-[#ffe4e1] text-[#b42318]',
 
-        <div class="donor-stock-actions">
-            <a href="{{ route('donor.jadwal') }}">
+                        default =>
+                            'bg-[#f2e7e9] text-[#76001c]',
+                    };
+
+                    $progressClass = match (
+                        $stok['status_class']
+                    ) {
+                        'success' =>
+                            'bg-[#229653]',
+
+                        'warning' =>
+                            'bg-[#e9a400]',
+
+                        'critical' =>
+                            'bg-[#dd4a3d]',
+
+                        default =>
+                            'bg-[#991b2f]',
+                    };
+                @endphp
+
+                <article
+                    wire:key="stok-{{ $stok['golongan'] }}-{{ $stok['rhesus'] }}"
+                    class="group rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_42px_rgba(25,28,32,0.055)] transition duration-200 hover:-translate-y-1 hover:border-[#e2c6cc] hover:shadow-[0_22px_55px_rgba(118,0,28,0.1)]"
+                >
+                    <div
+                        class="flex items-start justify-between gap-4"
+                    >
+                        <div
+                            class="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#ffe7ec] text-2xl font-bold tracking-[-0.05em] text-[#991b2f] transition group-hover:bg-[#991b2f] group-hover:text-white"
+                        >
+                            {{ $stok['kode'] }}
+                        </div>
+
+                        <span
+                            class="inline-flex min-h-8 items-center rounded-full px-3 text-xs font-bold {{ $statusBadgeClass }}"
+                        >
+                            {{ $stok['status_label'] }}
+                        </span>
+                    </div>
+
+                    <div class="mt-6">
+                        <div
+                            class="flex items-end gap-2"
+                        >
+                            <strong
+                                class="text-5xl font-bold leading-none tracking-[-0.06em] text-[#191c20]"
+                            >
+                                {{ number_format($stok['tersedia']) }}
+                            </strong>
+
+                            <span
+                                class="pb-1 text-xs font-semibold text-[#755f60]"
+                            >
+                                kantong tersedia
+                            </span>
+                        </div>
+
+                        <div
+                            class="mt-4 h-2 overflow-hidden rounded-full bg-[#eee9e7]"
+                        >
+                            <div
+                                class="h-full rounded-full transition-all duration-500 {{ $progressClass }}"
+                                style="width: {{ $stok['persentase'] }}%;"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-5 grid grid-cols-3 gap-2 border-t border-[#eee9e7] pt-4"
+                    >
+                        <div
+                            class="rounded-xl bg-[#f7f5f4] p-3 text-center"
+                        >
+                            <span
+                                class="block text-[10px] font-bold uppercase tracking-[0.06em] text-[#8c7071]"
+                            >
+                                Tersedia
+                            </span>
+
+                            <strong
+                                class="mt-1 block text-lg text-[#191c20]"
+                            >
+                                {{ number_format($stok['tersedia']) }}
+                            </strong>
+                        </div>
+
+                        <div
+                            class="rounded-xl bg-[#f7f5f4] p-3 text-center"
+                        >
+                            <span
+                                class="block text-[10px] font-bold uppercase tracking-[0.06em] text-[#8c7071]"
+                            >
+                                Alokasi
+                            </span>
+
+                            <strong
+                                class="mt-1 block text-lg text-[#191c20]"
+                            >
+                                {{ number_format($stok['dipesan']) }}
+                            </strong>
+                        </div>
+
+                        <div
+                            class="rounded-xl bg-[#f7f5f4] p-3 text-center"
+                        >
+                            <span
+                                class="block text-[10px] font-bold uppercase tracking-[0.06em] text-[#8c7071]"
+                            >
+                                Distribusi
+                            </span>
+
+                            <strong
+                                class="mt-1 block text-lg text-[#191c20]"
+                            >
+                                {{ number_format($stok['didistribusikan']) }}
+                            </strong>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
+        </section>
+    @endif
+
+    <section
+        class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+    >
+        <article
+            class="rounded-[24px] border border-[#e6e3df] bg-white p-6"
+        >
+            <h2
+                class="text-lg font-bold tracking-[-0.03em] text-[#191c20]"
+            >
+                Keterangan status stok
+            </h2>
+
+            <p
+                class="mt-2 max-w-2xl text-sm leading-6 text-[#755f60]"
+            >
+                Data ini bersifat informatif. Ketersediaan dapat berubah ketika
+                kantong darah dialokasikan untuk permintaan rumah sakit atau
+                selesai didistribusikan.
+            </p>
+
+            <div
+                class="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-[#584141]"
+            >
+                <span
+                    class="inline-flex items-center gap-2"
+                >
+                    <i
+                        class="h-3 w-3 rounded-full bg-[#229653]"
+                    ></i>
+
+                    Aman, lebih dari 5
+                </span>
+
+                <span
+                    class="inline-flex items-center gap-2"
+                >
+                    <i
+                        class="h-3 w-3 rounded-full bg-[#e9a400]"
+                    ></i>
+
+                    Rendah, 3–5
+                </span>
+
+                <span
+                    class="inline-flex items-center gap-2"
+                >
+                    <i
+                        class="h-3 w-3 rounded-full bg-[#dd4a3d]"
+                    ></i>
+
+                    Kritis, 1–2
+                </span>
+
+                <span
+                    class="inline-flex items-center gap-2"
+                >
+                    <i
+                        class="h-3 w-3 rounded-full bg-[#991b2f]"
+                    ></i>
+
+                    Kosong
+                </span>
+            </div>
+        </article>
+
+        <div
+            class="flex flex-col gap-3 sm:flex-row lg:flex-col"
+        >
+            <a
+                href="{{ route('donor.jadwal') }}"
+                wire:navigate
+                class="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#991b2f] px-6 text-sm font-bold text-white shadow-[0_12px_28px_rgba(153,27,47,0.2)] transition hover:bg-[#76001c]"
+            >
                 Lihat Jadwal Donor
             </a>
 
-            <a href="{{ route('donor.lokasi') }}" class="is-outline">
+            <a
+                href="{{ route('donor.lokasi') }}"
+                wire:navigate
+                class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#e2d4d7] bg-white px-6 text-sm font-bold text-[#76001c] transition hover:bg-[#fff5f6]"
+            >
                 Lihat Lokasi Donor
             </a>
         </div>
     </section>
-
-    <style>
-        .donor-stock-page {
-            display: grid;
-            gap: 28px;
-        }
-
-        .donor-stock-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 260px;
-            gap: 24px;
-            align-items: end;
-        }
-
-        .donor-stock-eyebrow {
-            margin: 0 0 12px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .donor-stock-hero h1 {
-            margin: 0;
-            color: #0f172a;
-            font-size: clamp(36px, 5vw, 54px);
-            line-height: 1.05;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-stock-hero p:not(.donor-stock-eyebrow) {
-            max-width: 760px;
-            margin: 16px 0 0;
-            color: #64748b;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .donor-stock-hero-card {
-            padding: 24px;
-            border: 1px solid #fee2e2;
-            border-radius: 26px;
-            background:
-                radial-gradient(circle at top right, rgba(239, 68, 68, 0.14), transparent 9rem),
-                #ffffff;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-stock-hero-card span {
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
-        .donor-stock-hero-card strong {
-            display: block;
-            margin-top: 12px;
-            color: #0f172a;
-            font-size: 56px;
-            line-height: 1;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-stock-hero-card p {
-            margin: 10px 0 0;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .donor-stock-summary {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .donor-stock-summary article {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            border-radius: 22px;
-            background: #ffffff;
-            box-shadow: 0 14px 38px rgba(15, 23, 42, 0.05);
-        }
-
-        .donor-stock-summary-icon {
-            width: 58px;
-            height: 58px;
-            display: grid;
-            place-items: center;
-            flex: 0 0 auto;
-            border-radius: 18px;
-        }
-
-        .donor-stock-summary-icon svg {
-            width: 26px;
-            height: 26px;
-        }
-
-        .donor-stock-summary-icon.is-success {
-            color: #16a34a;
-            background: #dcfce7;
-        }
-
-        .donor-stock-summary-icon.is-warning {
-            color: #f59e0b;
-            background: #fef3c7;
-        }
-
-        .donor-stock-summary-icon.is-info {
-            color: #2563eb;
-            background: #dbeafe;
-        }
-
-        .donor-stock-summary-icon.is-muted {
-            color: #dc2626;
-            background: #fee2e2;
-        }
-
-        .donor-stock-summary span {
-            display: block;
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .donor-stock-summary strong {
-            display: block;
-            margin-top: 4px;
-            color: #0f172a;
-            font-size: 30px;
-            line-height: 1;
-        }
-
-        .donor-stock-summary p {
-            margin: 6px 0 0;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .donor-stock-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .donor-stock-card {
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 24px;
-            background: #ffffff;
-            box-shadow: 0 16px 44px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-stock-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-        }
-
-        .donor-stock-blood-type {
-            width: 64px;
-            height: 64px;
-            display: grid;
-            place-items: center;
-            border-radius: 22px;
-            color: #dc2626;
-            background: #fee2e2;
-            font-size: 24px;
-            font-weight: 1000;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-stock-status {
-            min-height: 30px;
-            display: inline-flex;
-            align-items: center;
-            padding: 0 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 900;
-        }
-
-        .donor-stock-status.is-success {
-            color: #166534;
-            background: #dcfce7;
-        }
-
-        .donor-stock-status.is-warning {
-            color: #92400e;
-            background: #fef3c7;
-        }
-
-        .donor-stock-status.is-danger {
-            color: #991b1b;
-            background: #fee2e2;
-        }
-
-        .donor-stock-main-number {
-            margin-top: 22px;
-        }
-
-        .donor-stock-main-number strong {
-            display: block;
-            color: #0f172a;
-            font-size: 46px;
-            line-height: 1;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-stock-main-number span {
-            display: block;
-            margin-top: 8px;
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 800;
-        }
-
-        .donor-stock-progress {
-            height: 9px;
-            overflow: hidden;
-            margin-top: 20px;
-            border-radius: 999px;
-            background: #f1f5f9;
-        }
-
-        .donor-stock-progress div {
-            height: 100%;
-            border-radius: 999px;
-        }
-
-        .donor-stock-progress div.is-success {
-            background: #22c55e;
-        }
-
-        .donor-stock-progress div.is-warning {
-            background: #f59e0b;
-        }
-
-        .donor-stock-progress div.is-danger {
-            background: #ef4444;
-        }
-
-        .donor-stock-detail {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .donor-stock-detail div {
-            display: grid;
-            gap: 4px;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 15px;
-            background: #f8fafc;
-            text-align: center;
-        }
-
-        .donor-stock-detail span {
-            color: #64748b;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        .donor-stock-detail strong {
-            color: #0f172a;
-            font-size: 18px;
-        }
-
-        .donor-stock-info {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto;
-            gap: 24px;
-            align-items: center;
-            padding: 24px;
-            border: 1px solid #fee2e2;
-            border-radius: 26px;
-            background: #fff7f7;
-        }
-
-        .donor-stock-info h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 22px;
-            letter-spacing: -0.03em;
-        }
-
-        .donor-stock-info p {
-            margin: 8px 0 0;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .donor-stock-legend {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
-
-        .donor-stock-legend span {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 900;
-        }
-
-        .donor-stock-legend i {
-            width: 12px;
-            height: 12px;
-            border-radius: 999px;
-        }
-
-        .donor-stock-legend i.is-success {
-            background: #22c55e;
-        }
-
-        .donor-stock-legend i.is-warning {
-            background: #f59e0b;
-        }
-
-        .donor-stock-legend i.is-danger {
-            background: #ef4444;
-        }
-
-        .donor-stock-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .donor-stock-actions a {
-            min-height: 44px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 18px;
-            border-radius: 14px;
-            color: #ffffff;
-            background: #dc2626;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-        }
-
-        .donor-stock-actions a.is-outline {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-        }
-
-        @media (max-width: 1100px) {
-            .donor-stock-summary,
-            .donor-stock-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .donor-stock-info {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 760px) {
-            .donor-stock-hero {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-stock-summary,
-            .donor-stock-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-stock-actions {
-                flex-direction: column;
-            }
-
-            .donor-stock-actions a {
-                width: 100%;
-            }
-        }
-    </style>
 </div>

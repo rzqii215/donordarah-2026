@@ -1,833 +1,786 @@
-<div class="donor-schedule-page">
-    
-<section class="donor-schedule-hero">
-        <div>
-            <p class="donor-schedule-eyebrow">
-                Jadwal Donor
-            </p>
-
-            <h1>
-                Pilih Jadwal Donor
-            </h1>
-
-            <p>
-                Lihat jadwal donor yang tersedia, cek detail lokasi,
-                buka peta kegiatan, lalu daftar pada jadwal yang paling sesuai.
-            </p>
-        </div>
-
-        <div class="donor-schedule-search">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-            >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-            </svg>
-
-            <input
-                type="search"
-                wire:model.live.debounce.400ms="pencarian"
-                placeholder="Cari jadwal, lokasi, atau kota..."
-            >
-        </div>
-    </section>
-
-    @if (session('success'))
-        <div class="donor-schedule-alert is-success">
-            {{ session('success') }}
-        </div>
-    @endif
+<div class="space-y-6">
+    @include('components.shared.safe-flash-message')
 
     @error('jadwal')
-        <div class="donor-schedule-alert is-danger">
-            {{ $message }}
+        <div
+            role="alert"
+            class="flex items-start gap-3 rounded-2xl border border-[#ffb4ab] bg-[#ffdad6] px-4 py-3.5 text-sm font-medium text-[#93000a]"
+        >
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-xs font-bold">
+                !
+            </span>
+
+            <span>{{ $message }}</span>
         </div>
     @enderror
 
-    @if ($jadwalDonors->isEmpty())
-        <section class="donor-schedule-empty">
-            <div class="donor-schedule-empty-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <rect x="3" y="5" width="18" height="16" rx="2" />
-                    <path d="M16 3v4M8 3v4M3 10h18" />
-                </svg>
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside class="rounded-2xl border border-[#e6e3df] bg-white p-5 lg:sticky lg:top-[106px] lg:p-6">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold tracking-[-0.025em] text-[#191c20]">
+                    Filter Jadwal
+                </h2>
+
+                <p class="mt-1 text-sm leading-6 text-[#584141]">
+                    Temukan jadwal berdasarkan lokasi dan tanggal.
+                </p>
             </div>
 
-            <h2>
-                Jadwal donor belum tersedia
-            </h2>
+            <form
+                wire:submit="terapkanFilter"
+                class="space-y-5"
+            >
+                <div>
+                    <label
+                        for="pencarian-jadwal"
+                        class="mb-2 block text-sm font-semibold text-[#191c20]"
+                    >
+                        Cari Lokasi/Penyelenggara
+                    </label>
 
-            <p>
-                Belum ada jadwal donor yang dapat ditampilkan.
-                Silakan cek kembali nanti.
-            </p>
-        </section>
-    @else
-        <section class="donor-schedule-grid">
-            @foreach ($jadwalDonors as $jadwal)
-                @php
-                    $lokasi = $jadwal->lokasi;
-                    $pendaftaran = $pendaftaranJadwals->get($jadwal->id);
-                    $catatanLokasi = $this->catatanLokasi($lokasi);
-                @endphp
-
-                <article
-                    class="donor-schedule-card"
-                    wire:key="jadwal-donor-{{ $jadwal->id }}"
-                >
-                    <div class="donor-schedule-map">
-                        <iframe
-                            src="{{ $this->embedMapsUrl($lokasi) }}"
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            title="Peta {{ $this->namaLokasi($lokasi) }}"
-                        ></iframe>
-
-                        <div class="donor-schedule-map-badge">
+                    <div class="relative">
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#8c7071]">
                             <svg
                                 viewBox="0 0 24 24"
+                                class="h-5 w-5"
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="2"
+                                aria-hidden="true"
                             >
+                                <circle
+                                    cx="11"
+                                    cy="11"
+                                    r="7"
+                                ></circle>
+
                                 <path
-                                    d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
-                                />
-                                <circle cx="12" cy="10" r="2.5" />
+                                    d="m20 20-3.5-3.5"
+                                ></path>
                             </svg>
+                        </span>
+
+                        <input
+                            id="pencarian-jadwal"
+                            type="search"
+                            wire:model.live.debounce.300ms="pencarian"
+                            placeholder="Contoh: PMI Jakarta"
+                            autocomplete="off"
+                            class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white py-2 pl-10 pr-4 text-sm text-[#191c20] placeholder:text-[#8c7071] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label
+                        for="filter-kota"
+                        class="mb-2 block text-sm font-semibold text-[#191c20]"
+                    >
+                        Kota
+                    </label>
+
+                    <div class="relative">
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#8c7071] [&>svg]:h-5 [&>svg]:w-5">
+                            <x-donor.icon name="map-pin" />
+                        </span>
+
+                        <select
+                            id="filter-kota"
+                            wire:model="kota"
+                            class="h-12 w-full appearance-none rounded-xl border border-[#e2e2e9] bg-white py-2 pl-10 pr-9 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                        >
+                            <option value="">
+                                Semua Kota
+                            </option>
+
+                            @foreach ($kotaTersedia as $namaKota)
+                                <option value="{{ $namaKota }}">
+                                    {{ $namaKota }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <svg
+                            viewBox="0 0 20 20"
+                            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8c7071]"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="m5 7.5 5 5 5-5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-[#191c20]">
+                        Rentang Tanggal
+                    </label>
+
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                        <div>
+                            <label
+                                for="tanggal-mulai"
+                                class="sr-only"
+                            >
+                                Tanggal mulai
+                            </label>
+
+                            <input
+                                id="tanggal-mulai"
+                                type="date"
+                                wire:model="tanggalMulai"
+                                class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white px-3 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                            >
+
+                            @error('tanggalMulai')
+                                <p class="mt-1 text-xs text-[#ba1a1a]">
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label
+                                for="tanggal-selesai"
+                                class="sr-only"
+                            >
+                                Tanggal selesai
+                            </label>
+
+                            <input
+                                id="tanggal-selesai"
+                                type="date"
+                                wire:model="tanggalSelesai"
+                                class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white px-3 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                            >
+
+                            @error('tanggalSelesai')
+                                <p class="mt-1 text-xs text-[#ba1a1a]">
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
                     </div>
+                </div>
 
-                    <div class="donor-schedule-body">
-                        <div class="donor-schedule-date">
-                            <div>
-                                <span>Tanggal</span>
-                                <strong>{{ $this->tanggalJadwal($jadwal) }}</strong>
-                            </div>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-[#e2e2e9] bg-[#f9f9ff] p-3.5">
+                    <input
+                        type="checkbox"
+                        wire:model.live="hanyaTersedia"
+                        class="mt-0.5 h-4 w-4 rounded border-[#e0bfbf] text-[#76001c] focus:ring-[#76001c]/20"
+                    >
 
-                            <div>
-                                <span>Waktu</span>
-                                <strong>{{ $this->jamJadwal($jadwal) }}</strong>
-                            </div>
-                        </div>
+                    <span>
+                        <span class="block text-sm font-semibold text-[#191c20]">
+                            Pendaftaran tersedia
+                        </span>
 
-                        <h2>
-                            {{ $this->judulJadwal($jadwal) }}
-                        </h2>
+                        <span class="mt-1 block text-xs leading-5 text-[#584141]">
+                            Sembunyikan jadwal yang belum dibuka, sudah didaftarkan, ditutup, atau kuotanya penuh.
+                        </span>
+                    </span>
+                </label>
 
-                        <p class="donor-schedule-description">
-                            {{ $this->deskripsiJadwal($jadwal) }}
-                        </p>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    <button
+                        type="submit"
+                        wire:loading.attr="disabled"
+                        wire:target="terapkanFilter"
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#c52a3d] px-5 text-sm font-semibold text-white transition hover:bg-[#991b2f] disabled:cursor-wait disabled:opacity-60"
+                    >
+                        <span
+                            wire:loading.remove
+                            wire:target="terapkanFilter"
+                        >
+                            Terapkan Filter
+                        </span>
 
-                        <div class="donor-schedule-location">
-                            <h3>
-                                {{ $this->namaLokasi($lokasi) }}
-                            </h3>
+                        <span
+                            wire:loading
+                            wire:target="terapkanFilter"
+                        >
+                            Memproses...
+                        </span>
+                    </button>
 
-                            <p>
-                                {{ $this->alamatLokasi($lokasi) }}
-                            </p>
+                    <button
+                        type="button"
+                        wire:click="resetFilter"
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#584141] transition hover:bg-[#f3f3fa] hover:text-[#76001c]"
+                    >
+                        Reset
+                    </button>
+                </div>
+            </form>
+        </aside>
 
-                            <span>
-                                {{ $this->wilayahLokasi($lokasi) }}
-                            </span>
-                        </div>
+        <section class="min-w-0">
+            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-[#584141]">
+                    Menampilkan
 
-                        <div class="donor-schedule-info">
-                            <div>
-                                <span>Kuota</span>
-                                <strong>{{ $this->kuotaJadwal($jadwal) }}</strong>
-                            </div>
+                    <strong class="text-[#191c20]">
+                        {{ number_format($jadwalDonors->total()) }}
+                    </strong>
 
-                            <div>
-                                <span>Pendaftaran</span>
-                                <strong>{{ $this->periodePendaftaran($jadwal) }}</strong>
-                            </div>
-                        </div>
+                    jadwal tersedia
+                </p>
 
-                        @if ($catatanLokasi !== '-')
-                            <div class="donor-schedule-note">
-                                <span>Catatan Lokasi</span>
-                                <p>{{ $catatanLokasi }}</p>
-                            </div>
-                        @endif
+                <div class="flex items-center gap-2">
+                    <label
+                        for="urutan-jadwal"
+                        class="shrink-0 text-sm text-[#584141]"
+                    >
+                        Urutkan:
+                    </label>
 
-                        <div class="donor-schedule-actions">
-                            @if ($pendaftaran)
-                                <span
-                                    class="donor-schedule-status {{ $this->statusBadgeClass($pendaftaran->status) }}"
-                                >
-                                    {{ $this->labelStatusPendaftaran($pendaftaran->status) }}
+                    <select
+                        id="urutan-jadwal"
+                        wire:model.live="urutan"
+                        class="h-11 rounded-xl border border-[#e2e2e9] bg-white py-2 pl-3 pr-9 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                    >
+                        <option value="terdekat">
+                            Terdekat
+                        </option>
+
+                        <option value="kuota_terbesar">
+                            Kuota Terbesar
+                        </option>
+
+                        <option value="terbaru">
+                            Baru Ditambahkan
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div
+                wire:loading.delay
+                wire:target="pencarian,kota,tanggalMulai,tanggalSelesai,urutan,hanyaTersedia,terapkanFilter,resetFilter"
+                class="mb-4 rounded-xl border border-[#e0bfbf] bg-[#fff7f7] px-4 py-3 text-sm font-medium text-[#76001c]"
+            >
+                Memuat jadwal donor...
+            </div>
+
+            @if ($jadwalDonors->isEmpty())
+                <div class="flex min-h-[430px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0bfbf] bg-white px-6 py-14 text-center">
+                    <span class="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fcedef] text-[#991b2f] [&>svg]:h-8 [&>svg]:w-8">
+                        <x-donor.icon name="calendar" />
+                    </span>
+
+                    <h2 class="mt-5 text-xl font-semibold text-[#191c20]">
+                        Jadwal donor tidak ditemukan
+                    </h2>
+
+                    <p class="mt-2 max-w-md text-sm leading-6 text-[#584141]">
+                        Belum ada jadwal yang cocok dengan filter Anda. Coba ubah kata pencarian, kota, atau rentang tanggal.
+                    </p>
+
+                    <button
+                        type="button"
+                        wire:click="resetFilter"
+                        class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#76001c] transition hover:bg-[#f3f3fa]"
+                    >
+                        Reset filter
+                    </button>
+                </div>
+            @else
+                <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                    @foreach ($jadwalDonors as $jadwal)
+                        @php
+                            $lokasi = $jadwal->lokasi;
+
+                            $pendaftaran =
+                                $pendaftaranJadwals->get(
+                                    $jadwal->id
+                                );
+
+                            $statusJadwal =
+                                $this->statusKetersediaanJadwal(
+                                    $jadwal
+                                );
+
+                            $statusKey =
+                                data_get(
+                                    $statusJadwal,
+                                    'key',
+                                    'closed'
+                                );
+
+                            $statusLabel =
+                                data_get(
+                                    $statusJadwal,
+                                    'label',
+                                    'Tidak Tersedia'
+                                );
+
+                            $kuotaTotal =
+                                $this->kuotaTotal(
+                                    $jadwal
+                                );
+
+                            $sisaKuota =
+                                $this->sisaKuota(
+                                    $jadwal
+                                );
+
+                            $kuotaTerisi =
+                                $this->persentaseKuotaTerisi(
+                                    $jadwal
+                                );
+
+                            $kuotaRendah =
+                                $kuotaTotal > 0
+                                && $sisaKuota > 0
+                                && $sisaKuota <= max(
+                                    5,
+                                    (int) ceil(
+                                        $kuotaTotal * 0.2
+                                    )
+                                );
+
+                            $pendaftaranTone =
+                                $pendaftaran
+                                    ? $this->statusPendaftaranTone(
+                                        $pendaftaran->status
+                                    )
+                                    : null;
+                        @endphp
+
+                        <article
+                            wire:key="jadwal-donor-{{ $jadwal->id }}"
+                            class="flex min-h-[390px] flex-col rounded-2xl border border-[#e6e3df] bg-white p-5 transition duration-200 hover:shadow-[0_4px_14px_rgba(36,38,43,0.06)] sm:p-6"
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="min-w-0">
+                                    @if ($pendaftaran)
+                                        <span
+                                            @class([
+                                                'inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.05em]',
+                                                'bg-[#eaf7f0] text-[#257a57]' => $pendaftaranTone === 'success',
+                                                'bg-[#ffdad6] text-[#93000a]' => $pendaftaranTone === 'danger',
+                                                'bg-[#fff4de] text-[#b86e12]' => $pendaftaranTone === 'warning',
+                                            ])
+                                        >
+                                            {{ $this->labelStatusPendaftaran($pendaftaran->status) }}
+                                        </span>
+                                    @else
+                                        <span
+                                            @class([
+                                                'inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.05em]',
+                                                'bg-[#eaf7f0] text-[#257a57]' => $statusKey === 'open',
+                                                'bg-[#fff4de] text-[#b86e12]' => $statusKey === 'soon',
+                                                'bg-[#ffdad6] text-[#93000a]' => in_array($statusKey, ['closed', 'full', 'finished'], true),
+                                            ])
+                                        >
+                                            {{ $statusLabel }}
+                                        </span>
+                                    @endif
+
+                                    <h2 class="mt-3 text-xl font-semibold leading-7 tracking-[-0.03em] text-[#191c20]">
+                                        {{ $this->judulJadwal($jadwal) }}
+                                    </h2>
+
+                                    <p class="mt-1 flex items-start gap-2 text-sm text-[#584141]">
+                                        <span class="mt-0.5 shrink-0 [&>svg]:h-4 [&>svg]:w-4">
+                                            <x-donor.icon name="map-pin" />
+                                        </span>
+
+                                        <span>
+                                            {{ $this->namaLokasi($lokasi) }}
+                                        </span>
+                                    </p>
+                                </div>
+
+                                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#e2e2e9] bg-[#f3f3fa] text-[#76001c] [&>svg]:h-6 [&>svg]:w-6">
+                                    <x-donor.icon name="droplet" />
                                 </span>
-                            @elseif ($this->jadwalDapatDidaftar($jadwal))
+                            </div>
+
+                            <div class="my-5 space-y-4 border-y border-[#e2e2e9] py-5">
+                                <div class="flex items-start gap-3">
+                                    <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3f3fa] text-[#584141] [&>svg]:h-4 [&>svg]:w-4">
+                                        <x-donor.icon name="calendar" />
+                                    </span>
+
+                                    <div>
+                                        <p class="text-sm font-semibold text-[#191c20]">
+                                            {{ $this->tanggalJadwal($jadwal) }}
+                                        </p>
+
+                                        <p class="mt-0.5 text-sm text-[#584141]">
+                                            {{ $this->jamJadwal($jadwal) }}
+                                            WIB
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-3">
+                                    <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3f3fa] text-[#584141] [&>svg]:h-4 [&>svg]:w-4">
+                                        <x-donor.icon name="map-pin" />
+                                    </span>
+
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-[#191c20]">
+                                            {{ $this->namaLokasi($lokasi) }}
+                                        </p>
+
+                                        <p class="mt-0.5 line-clamp-2 text-sm leading-5 text-[#584141]">
+                                            {{ $this->alamatLokasi($lokasi) }}
+                                        </p>
+
+                                        @if ($this->wilayahLokasi($lokasi) !== '-')
+                                            <p class="mt-0.5 text-xs text-[#8c7071]">
+                                                {{ $this->wilayahLokasi($lokasi) }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-auto flex items-end justify-between gap-4">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-[#584141]">
+                                        Kuota Tersedia
+                                    </p>
+
+                                    @if ($kuotaTotal > 0)
+                                        <p class="mt-1 flex items-baseline gap-1">
+                                            <strong
+                                                @class([
+                                                    'text-xl font-bold',
+                                                    'text-[#b86e12]' => $kuotaRendah,
+                                                    'text-[#76001c]' => ! $kuotaRendah,
+                                                ])
+                                            >
+                                                {{ $sisaKuota }}
+                                            </strong>
+
+                                            <span class="text-sm text-[#584141]">
+                                                / {{ $kuotaTotal }}
+                                            </span>
+                                        </p>
+
+                                        <div class="mt-2 h-1.5 w-28 overflow-hidden rounded-full bg-[#e2e2e9]">
+                                            <div
+                                                @class([
+                                                    'h-full rounded-full',
+                                                    'bg-[#c47a0b]' => $kuotaRendah,
+                                                    'bg-[#76001c]' => ! $kuotaRendah,
+                                                ])
+                                                style="width: {{ $kuotaTerisi }}%;"
+                                            ></div>
+                                        </div>
+                                    @else
+                                        <p class="mt-1 text-sm font-semibold text-[#584141]">
+                                            Menyesuaikan lokasi
+                                        </p>
+                                    @endif
+                                </div>
+
                                 <button
                                     type="button"
-                                    wire:click="daftarJadwal({{ $jadwal->id }})"
+                                    wire:click="pilihJadwal({{ $jadwal->id }})"
                                     wire:loading.attr="disabled"
-                                    wire:target="daftarJadwal({{ $jadwal->id }})"
+                                    wire:target="pilihJadwal({{ $jadwal->id }})"
+                                    class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-4 text-sm font-semibold text-[#24262b] transition hover:bg-[#f3f3fa] disabled:cursor-wait disabled:opacity-60"
                                 >
-                                    <span wire:loading.remove wire:target="daftarJadwal({{ $jadwal->id }})">
-                                        Daftar Donor
-                                    </span>
-
-                                    <span wire:loading wire:target="daftarJadwal({{ $jadwal->id }})">
-                                        Memproses...
-                                    </span>
+                                    Lihat Jadwal
                                 </button>
-                            @else
-                                <span class="donor-schedule-status is-muted">
-                                    Pendaftaran Tidak Tersedia
-                                </span>
-                            @endif
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
 
-                            <button
-                                type="button"
-                                class="is-outline"
-                                wire:click="pilihJadwal({{ $jadwal->id }})"
-                            >
-                                Lihat Detail
-                            </button>
-
-                            <a
-                                href="{{ $this->mapsUrl($lokasi) }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Buka Peta
-                            </a>
-                        </div>
+                @if ($jadwalDonors->hasPages())
+                    <div class="mt-6 rounded-2xl border border-[#e6e3df] bg-white px-4 py-3">
+                        {{ $jadwalDonors->links() }}
                     </div>
-                </article>
-            @endforeach
+                @endif
+            @endif
         </section>
-    @endif
+    </div>
 
     @if ($jadwalTerpilih !== null)
         @php
-            $lokasiTerpilih = $jadwalTerpilih->lokasi;
-            $catatanLokasiTerpilih = $this->catatanLokasi($lokasiTerpilih);
+            $lokasiTerpilih =
+                $jadwalTerpilih->lokasi;
+
+            $statusTerpilih =
+                $this->statusKetersediaanJadwal(
+                    $jadwalTerpilih
+                );
+
+            $statusTerpilihKey =
+                data_get(
+                    $statusTerpilih,
+                    'key',
+                    'closed'
+                );
+
+            $statusTerpilihLabel =
+                data_get(
+                    $statusTerpilih,
+                    'label',
+                    'Tidak Tersedia'
+                );
+
+            $dapatDidaftar =
+                $pendaftaranTerpilih === null
+                && $this->jadwalDapatDidaftar(
+                    $jadwalTerpilih,
+                    false
+                );
+
+            $catatanLokasi =
+                $this->catatanLokasi(
+                    $lokasiTerpilih
+                );
+
+            $kuotaTotalTerpilih =
+                $this->kuotaTotal(
+                    $jadwalTerpilih
+                );
+
+            $sisaKuotaTerpilih =
+                $this->sisaKuota(
+                    $jadwalTerpilih
+                );
+
+            $tonePendaftaranTerpilih =
+                $pendaftaranTerpilih
+                    ? $this->statusPendaftaranTone(
+                        $pendaftaranTerpilih->status
+                    )
+                    : null;
         @endphp
 
         <div
-            class="donor-schedule-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="judul-detail-jadwal"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-[#191c20]/50 p-3 backdrop-blur-sm sm:p-6"
             wire:click="tutupDetailJadwal"
+            x-on:keydown.escape.window="$wire.tutupDetailJadwal()"
         >
             <section
-                class="donor-schedule-modal"
+                class="max-h-[calc(100vh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-[0_32px_90px_rgba(25,28,32,0.3)] sm:max-h-[calc(100vh-3rem)]"
                 wire:click.stop
             >
-                <div class="donor-schedule-modal-header">
-                    <div>
-                        <p>Detail Jadwal Donor</p>
+                <header class="flex items-start justify-between gap-4 border-b border-[#e2e2e9] px-5 py-5 sm:px-7">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold uppercase tracking-[0.08em] text-[#991b2f]">
+                            Detail Jadwal Donor
+                        </p>
 
-                        <h2>
+                        <h2
+                            id="judul-detail-jadwal"
+                            class="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#191c20]"
+                        >
                             {{ $this->judulJadwal($jadwalTerpilih) }}
                         </h2>
+
+                        <span
+                            @class([
+                                'mt-3 inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.05em]',
+                                'bg-[#eaf7f0] text-[#257a57]' => $statusTerpilihKey === 'open',
+                                'bg-[#fff4de] text-[#b86e12]' => $statusTerpilihKey === 'soon',
+                                'bg-[#ffdad6] text-[#93000a]' => in_array($statusTerpilihKey, ['closed', 'full', 'finished'], true),
+                            ])
+                        >
+                            {{ $statusTerpilihLabel }}
+                        </span>
                     </div>
 
                     <button
                         type="button"
                         wire:click="tutupDetailJadwal"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f3f3fa] text-2xl leading-none text-[#584141] transition hover:bg-[#e2e2e9] hover:text-[#76001c]"
                         aria-label="Tutup detail jadwal"
                     >
                         ×
                     </button>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <div class="min-h-[280px] bg-[#ededf4] lg:min-h-full">
+                        <iframe
+                            src="{{ $this->embedMapsUrl($lokasiTerpilih) }}"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            title="Peta {{ $this->namaLokasi($lokasiTerpilih) }}"
+                            class="h-full min-h-[280px] w-full border-0 lg:min-h-[520px]"
+                        ></iframe>
+                    </div>
+
+                    <div class="space-y-5 p-5 sm:p-7">
+                        @error('jadwal')
+                            <div class="rounded-xl border border-[#ffb4ab] bg-[#ffdad6] px-4 py-3 text-sm font-medium text-[#93000a]">
+                                {{ $message }}
+                            </div>
+                        @enderror
+
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.07em] text-[#8c7071]">
+                                Deskripsi
+                            </p>
+
+                            <p class="mt-2 text-sm leading-6 text-[#584141]">
+                                {{ $this->deskripsiJadwal($jadwalTerpilih) }}
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <article class="rounded-xl border border-[#e2e2e9] bg-[#f9f9ff] p-4">
+                                <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                    Jadwal
+                                </p>
+
+                                <p class="mt-2 text-sm font-semibold leading-6 text-[#191c20]">
+                                    {{ $this->tanggalJadwal($jadwalTerpilih) }}
+                                </p>
+
+                                <p class="text-sm text-[#584141]">
+                                    {{ $this->jamJadwal($jadwalTerpilih) }}
+                                    WIB
+                                </p>
+                            </article>
+
+                            <article class="rounded-xl border border-[#e2e2e9] bg-[#f9f9ff] p-4">
+                                <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                    Kuota
+                                </p>
+
+                                <p class="mt-2 text-sm font-semibold text-[#191c20]">
+                                    @if ($kuotaTotalTerpilih > 0)
+                                        {{ $sisaKuotaTerpilih }}
+                                        dari
+                                        {{ $kuotaTotalTerpilih }}
+                                        tersedia
+                                    @else
+                                        Menyesuaikan lokasi
+                                    @endif
+                                </p>
+                            </article>
+                        </div>
+
+                        <div class="rounded-xl border border-[#e0bfbf] bg-[#fff7f7] p-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#991b2f]">
+                                Lokasi
+                            </p>
+
+                            <h3 class="mt-2 text-sm font-semibold text-[#191c20]">
+                                {{ $this->namaLokasi($lokasiTerpilih) }}
+                            </h3>
+
+                            <p class="mt-1 text-sm leading-6 text-[#584141]">
+                                {{ $this->alamatLokasi($lokasiTerpilih) }}
+                            </p>
+
+                            @if ($this->wilayahLokasi($lokasiTerpilih) !== '-')
+                                <p class="mt-1 text-xs text-[#8c7071]">
+                                    {{ $this->wilayahLokasi($lokasiTerpilih) }}
+                                </p>
+                            @endif
+
+                            @if ($this->kontakLokasi($lokasiTerpilih) !== '-')
+                                <p class="mt-3 text-xs font-semibold text-[#584141]">
+                                    Kontak:
+                                    {{ $this->kontakLokasi($lokasiTerpilih) }}
+                                </p>
+                            @endif
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                Periode Pendaftaran
+                            </p>
+
+                            <p class="mt-2 text-sm font-semibold leading-6 text-[#191c20]">
+                                {{ $this->periodePendaftaran($jadwalTerpilih) }}
+                            </p>
+                        </div>
+
+                        @if ($catatanLokasi !== '-')
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                    Catatan Lokasi
+                                </p>
+
+                                <p class="mt-2 text-sm leading-6 text-[#584141]">
+                                    {{ $catatanLokasi }}
+                                </p>
+                            </div>
+                        @endif
+                    </div>
                 </div>
 
-                <div class="donor-schedule-modal-map">
-                    <iframe
-                        src="{{ $this->embedMapsUrl($lokasiTerpilih) }}"
-                        loading="lazy"
-                        referrerpolicy="no-referrer-when-downgrade"
-                        title="Peta {{ $this->namaLokasi($lokasiTerpilih) }}"
-                    ></iframe>
-                </div>
+                <footer class="flex flex-col-reverse gap-3 border-t border-[#e2e2e9] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <a
+                            href="{{ $this->mapsUrl($lokasiTerpilih) }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#24262b] transition hover:bg-[#f3f3fa]"
+                        >
+                            Buka Google Maps
+                        </a>
 
-                <div class="donor-schedule-modal-content">
-                    <div>
-                        <span>Jadwal</span>
-                        <strong>
-                            {{ $this->tanggalJadwal($jadwalTerpilih) }},
-                            {{ $this->jamJadwal($jadwalTerpilih) }}
-                        </strong>
+                        <button
+                            type="button"
+                            wire:click="tutupDetailJadwal"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#584141] transition hover:bg-[#f3f3fa]"
+                        >
+                            Tutup
+                        </button>
                     </div>
 
-                    <div>
-                        <span>Lokasi</span>
-                        <strong>{{ $this->namaLokasi($lokasiTerpilih) }}</strong>
-                    </div>
+                    @if ($pendaftaranTerpilih)
+                        <span
+                            @class([
+                                'inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold',
+                                'bg-[#eaf7f0] text-[#257a57]' => $tonePendaftaranTerpilih === 'success',
+                                'bg-[#ffdad6] text-[#93000a]' => $tonePendaftaranTerpilih === 'danger',
+                                'bg-[#fff4de] text-[#b86e12]' => $tonePendaftaranTerpilih === 'warning',
+                            ])
+                        >
+                            {{ $this->labelStatusPendaftaran($pendaftaranTerpilih->status) }}
+                        </span>
+                    @elseif ($dapatDidaftar)
+                        <button
+                            type="button"
+                            wire:click="daftarJadwal({{ $jadwalTerpilih->id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="daftarJadwal({{ $jadwalTerpilih->id }})"
+                            class="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#c52a3d] px-6 text-sm font-semibold text-white transition hover:bg-[#991b2f] disabled:cursor-wait disabled:opacity-60"
+                        >
+                            <span
+                                wire:loading.remove
+                                wire:target="daftarJadwal({{ $jadwalTerpilih->id }})"
+                            >
+                                Daftar Donor
+                            </span>
 
-                    <div>
-                        <span>Alamat</span>
-                        <strong>{{ $this->alamatLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Wilayah</span>
-                        <strong>{{ $this->wilayahLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Kontak Lokasi</span>
-                        <strong>{{ $this->kontakLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Kuota</span>
-                        <strong>{{ $this->kuotaJadwal($jadwalTerpilih) }}</strong>
-                    </div>
-
-                    <div class="donor-schedule-modal-full">
-                        <span>Periode Pendaftaran</span>
-                        <strong>{{ $this->periodePendaftaran($jadwalTerpilih) }}</strong>
-                    </div>
-
-                    <div class="donor-schedule-modal-full">
-                        <span>Catatan Lokasi</span>
-                        <strong>{{ $catatanLokasiTerpilih }}</strong>
-                    </div>
-                </div>
-
-                <div class="donor-schedule-modal-actions">
-                    <a
-                        href="{{ $this->mapsUrl($lokasiTerpilih) }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Buka Google Maps
-                    </a>
-
-                    <button
-                        type="button"
-                        wire:click="tutupDetailJadwal"
-                    >
-                        Tutup
-                    </button>
-                </div>
+                            <span
+                                wire:loading
+                                wire:target="daftarJadwal({{ $jadwalTerpilih->id }})"
+                            >
+                                Memproses...
+                            </span>
+                        </button>
+                    @else
+                        <span class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#ededf4] px-5 text-sm font-semibold text-[#584141]">
+                            {{ $statusTerpilihLabel }}
+                        </span>
+                    @endif
+                </footer>
             </section>
         </div>
     @endif
-
-    <style>
-        .donor-schedule-page {
-            display: grid;
-            gap: 28px;
-        }
-
-        .donor-schedule-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
-            gap: 24px;
-            align-items: end;
-        }
-
-        .donor-schedule-eyebrow {
-            margin: 0 0 12px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .donor-schedule-hero h1 {
-            margin: 0;
-            color: #0f172a;
-            font-size: clamp(36px, 5vw, 54px);
-            line-height: 1.05;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-schedule-hero p:not(.donor-schedule-eyebrow) {
-            max-width: 760px;
-            margin: 16px 0 0;
-            color: #64748b;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .donor-schedule-search {
-            min-height: 56px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 0 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            background: #ffffff;
-            box-shadow: 0 16px 42px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-schedule-search svg {
-            width: 21px;
-            height: 21px;
-            color: #94a3b8;
-        }
-
-        .donor-schedule-search input {
-            width: 100%;
-            border: 0;
-            outline: 0;
-            color: #0f172a;
-            background: transparent;
-            font: inherit;
-            font-size: 14px;
-        }
-
-        .donor-schedule-alert {
-            padding: 16px 18px;
-            border-radius: 18px;
-            font-size: 14px;
-            font-weight: 800;
-        }
-
-        .donor-schedule-alert.is-success {
-            border: 1px solid #bbf7d0;
-            color: #166534;
-            background: #f0fdf4;
-        }
-
-        .donor-schedule-alert.is-danger {
-            border: 1px solid #fecaca;
-            color: #b91c1c;
-            background: #fff1f2;
-        }
-
-        .donor-schedule-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 22px;
-        }
-
-        .donor-schedule-card {
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-            border-radius: 26px;
-            background: #ffffff;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-schedule-map {
-            position: relative;
-            height: 210px;
-            overflow: hidden;
-            background: #f1f5f9;
-        }
-
-        .donor-schedule-map iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-
-        .donor-schedule-map-badge {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 54px;
-            height: 54px;
-            display: grid;
-            place-items: center;
-            transform: translate(-50%, -50%);
-            border: 8px solid rgba(254, 202, 202, 0.6);
-            border-radius: 999px;
-            color: #ffffff;
-            background: #dc2626;
-            box-shadow: 0 16px 34px rgba(220, 38, 38, 0.28);
-            pointer-events: none;
-        }
-
-        .donor-schedule-map-badge svg {
-            width: 23px;
-            height: 23px;
-        }
-
-        .donor-schedule-body {
-            padding: 24px;
-        }
-
-        .donor-schedule-date {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .donor-schedule-date div,
-        .donor-schedule-info div {
-            display: grid;
-            gap: 6px;
-            padding: 14px;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        .donor-schedule-date span,
-        .donor-schedule-info span {
-            color: #64748b;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .donor-schedule-date strong,
-        .donor-schedule-info strong {
-            color: #0f172a;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .donor-schedule-body h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 24px;
-            line-height: 1.25;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-schedule-description {
-            margin: 10px 0 0;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .donor-schedule-location {
-            margin-top: 18px;
-            padding: 16px;
-            border: 1px solid #fee2e2;
-            border-radius: 18px;
-            background: #fff7f7;
-        }
-
-        .donor-schedule-location h3 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 16px;
-            letter-spacing: -0.02em;
-        }
-
-        .donor-schedule-location p {
-            margin: 8px 0 0;
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .donor-schedule-location span {
-            display: inline-flex;
-            margin-top: 10px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .donor-schedule-info {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-            margin-top: 18px;
-        }
-
-        .donor-schedule-note {
-            margin-top: 18px;
-            padding: 15px;
-            border: 1px solid #fee2e2;
-            border-radius: 18px;
-            background: #fff7f7;
-        }
-
-        .donor-schedule-note span {
-            display: block;
-            margin-bottom: 6px;
-            color: #dc2626;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .donor-schedule-note p {
-            margin: 0;
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .donor-schedule-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 22px;
-        }
-
-        .donor-schedule-actions button,
-        .donor-schedule-actions a,
-        .donor-schedule-status {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 16px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-        }
-
-        .donor-schedule-actions button {
-            border: 0;
-            color: #ffffff;
-            background: #dc2626;
-            cursor: pointer;
-            box-shadow: 0 14px 26px rgba(220, 38, 38, 0.18);
-        }
-
-        .donor-schedule-actions button.is-outline,
-        .donor-schedule-actions a {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-            box-shadow: none;
-        }
-
-        .donor-schedule-actions button:hover,
-        .donor-schedule-actions a:hover {
-            transform: translateY(-1px);
-        }
-
-        .donor-schedule-status.is-success {
-            color: #166534;
-            background: #dcfce7;
-        }
-
-        .donor-schedule-status.is-warning {
-            color: #92400e;
-            background: #fef3c7;
-        }
-
-        .donor-schedule-status.is-danger {
-            color: #991b1b;
-            background: #fee2e2;
-        }
-
-        .donor-schedule-status.is-muted {
-            color: #475569;
-            background: #f1f5f9;
-        }
-
-        .donor-schedule-empty {
-            display: grid;
-            place-items: center;
-            padding: 60px 24px;
-            border: 1px dashed #fecaca;
-            border-radius: 26px;
-            background: #fff7f7;
-            text-align: center;
-        }
-
-        .donor-schedule-empty-icon {
-            width: 68px;
-            height: 68px;
-            display: grid;
-            place-items: center;
-            border-radius: 22px;
-            color: #dc2626;
-            background: #fee2e2;
-        }
-
-        .donor-schedule-empty-icon svg {
-            width: 34px;
-            height: 34px;
-        }
-
-        .donor-schedule-empty h2 {
-            margin: 18px 0 8px;
-            color: #0f172a;
-        }
-
-        .donor-schedule-empty p {
-            margin: 0;
-            max-width: 420px;
-            color: #64748b;
-            line-height: 1.7;
-        }
-
-        .donor-schedule-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            z-index: 80;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: rgba(15, 23, 42, 0.42);
-            backdrop-filter: blur(8px);
-        }
-
-        .donor-schedule-modal {
-            width: min(100%, 900px);
-            max-height: calc(100vh - 48px);
-            overflow: auto;
-            border-radius: 28px;
-            background: #ffffff;
-            box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
-        }
-
-        .donor-schedule-modal-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 26px 28px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .donor-schedule-modal-header p {
-            margin: 0 0 8px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-        }
-
-        .donor-schedule-modal-header h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 28px;
-            line-height: 1.2;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-schedule-modal-header button {
-            width: 42px;
-            height: 42px;
-            border: 0;
-            border-radius: 14px;
-            color: #0f172a;
-            background: #f1f5f9;
-            font-size: 28px;
-            cursor: pointer;
-        }
-
-        .donor-schedule-modal-map {
-            height: 360px;
-            background: #f1f5f9;
-        }
-
-        .donor-schedule-modal-map iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-
-        .donor-schedule-modal-content {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            padding: 24px 28px;
-        }
-
-        .donor-schedule-modal-content div {
-            display: grid;
-            gap: 7px;
-            padding: 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            background: #f8fafc;
-        }
-
-        .donor-schedule-modal-content .donor-schedule-modal-full {
-            grid-column: 1 / -1;
-            border-color: #fee2e2;
-            background: #fff7f7;
-        }
-
-        .donor-schedule-modal-content span {
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .donor-schedule-modal-content strong {
-            color: #0f172a;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .donor-schedule-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            padding: 0 28px 28px;
-        }
-
-        .donor-schedule-modal-actions a,
-        .donor-schedule-modal-actions button {
-            min-height: 44px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 18px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .donor-schedule-modal-actions a {
-            border: 0;
-            color: #ffffff;
-            background: #dc2626;
-        }
-
-        .donor-schedule-modal-actions button {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-        }
-
-        @media (max-width: 980px) {
-            .donor-schedule-hero,
-            .donor-schedule-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .donor-schedule-date,
-            .donor-schedule-info,
-            .donor-schedule-modal-content {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-schedule-modal-content .donor-schedule-modal-full {
-                grid-column: auto;
-            }
-
-            .donor-schedule-actions,
-            .donor-schedule-modal-actions {
-                flex-direction: column;
-            }
-
-            .donor-schedule-actions button,
-            .donor-schedule-actions a,
-            .donor-schedule-status,
-            .donor-schedule-modal-actions a,
-            .donor-schedule-modal-actions button {
-                width: 100%;
-            }
-        }
-    </style>
 </div>

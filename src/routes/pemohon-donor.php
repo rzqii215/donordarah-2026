@@ -7,6 +7,7 @@ use App\Enums\StatusPengguna;
 use App\Enums\StatusPermintaanDarah;
 use App\Enums\StatusVerifikasiRumahSakit;
 use App\Enums\TingkatUrgensiPermintaanDarah;
+use App\Http\Controllers\PemohonDonor\BuktiPemohonDonorController;
 use App\Models\DistribusiDarah;
 use App\Models\PermintaanDarah;
 use App\Models\ProfilRumahSakit;
@@ -493,74 +494,15 @@ Route::middleware('auth')
             );
         })->name('pengajuan.bukti.terbaru');
 
-        Route::get('/pengajuan/{permintaanDarah}/bukti', function (
-            PermintaanDarah $permintaanDarah
-        ) use (
-            $ambilPenggunaPemohon,
-            $ambilProfilPemohon
-        ) {
-            $pengguna = $ambilPenggunaPemohon();
+        Route::get(
+            '/pengajuan/{permintaanDarah}/bukti',
+            [BuktiPemohonDonorController::class, 'pengajuan']
+        )->name('pengajuan.bukti');
 
-            $profil = $ambilProfilPemohon(
-                $pengguna
-            );
-
-            if (
-                $profil === null
-                || (int) $permintaanDarah->profil_rumah_sakit_id !== (int) $profil->id
-            ) {
-                abort(404);
-            }
-
-            return view('pemohon-donor.pengajuan.bukti', [
-                'pengguna' => $pengguna,
-                'profil' => $profil,
-                'pengajuan' => $permintaanDarah,
-                'mode' => 'lihat',
-            ]);
-        })->name('pengajuan.bukti');
-
-        Route::get('/pengajuan/{permintaanDarah}/bukti/unduh', function (
-            PermintaanDarah $permintaanDarah
-        ) use (
-            $ambilPenggunaPemohon,
-            $ambilProfilPemohon
-        ) {
-            $pengguna = $ambilPenggunaPemohon();
-
-            $profil = $ambilProfilPemohon(
-                $pengguna
-            );
-
-            if (
-                $profil === null
-                || (int) $permintaanDarah->profil_rumah_sakit_id !== (int) $profil->id
-            ) {
-                abort(404);
-            }
-
-            $namaFile = 'bukti-pengajuan-'
-                . Str::slug(
-                    $permintaanDarah->nomor_permintaan
-                )
-                . '.html';
-
-            return response()
-                ->view('pemohon-donor.pengajuan.bukti', [
-                    'pengguna' => $pengguna,
-                    'profil' => $profil,
-                    'pengajuan' => $permintaanDarah,
-                    'mode' => 'unduh',
-                ])
-                ->header(
-                    'Content-Type',
-                    'text/html; charset=UTF-8'
-                )
-                ->header(
-                    'Content-Disposition',
-                    'attachment; filename="' . $namaFile . '"'
-                );
-        })->name('pengajuan.bukti.unduh');
+        Route::get(
+            '/pengajuan/{permintaanDarah}/bukti/unduh',
+            [BuktiPemohonDonorController::class, 'unduhPengajuan']
+        )->name('pengajuan.bukti.unduh');
 
         Route::get('/distribusi', function () use (
             $ambilPenggunaPemohon,
@@ -696,82 +638,15 @@ Route::middleware('auth')
             ]);
         })->name('distribusi.index');
 
-        Route::get('/distribusi/{distribusiDarah}/bukti', function (
-            DistribusiDarah $distribusiDarah
-        ) use (
-            $ambilPenggunaPemohon,
-            $ambilProfilPemohon
-        ) {
-            $pengguna = $ambilPenggunaPemohon();
+        Route::get(
+            '/distribusi/{distribusiDarah}/bukti',
+            [BuktiPemohonDonorController::class, 'distribusi']
+        )->name('distribusi.bukti');
 
-            $profil = $ambilProfilPemohon(
-                $pengguna
-            );
-
-            $distribusiDarah->loadMissing('permintaan');
-
-            if (
-                $profil === null
-                || $distribusiDarah->permintaan === null
-                || (int) $distribusiDarah->permintaan->profil_rumah_sakit_id !== (int) $profil->id
-            ) {
-                abort(404);
-            }
-
-            return view('pemohon-donor.distribusi.bukti', [
-                'pengguna' => $pengguna,
-                'profil' => $profil,
-                'distribusi' => $distribusiDarah,
-                'pengajuan' => $distribusiDarah->permintaan,
-                'mode' => 'lihat',
-            ]);
-        })->name('distribusi.bukti');
-
-        Route::get('/distribusi/{distribusiDarah}/bukti/unduh', function (
-            DistribusiDarah $distribusiDarah
-        ) use (
-            $ambilPenggunaPemohon,
-            $ambilProfilPemohon
-        ) {
-            $pengguna = $ambilPenggunaPemohon();
-
-            $profil = $ambilProfilPemohon(
-                $pengguna
-            );
-
-            $distribusiDarah->loadMissing('permintaan');
-
-            if (
-                $profil === null
-                || $distribusiDarah->permintaan === null
-                || (int) $distribusiDarah->permintaan->profil_rumah_sakit_id !== (int) $profil->id
-            ) {
-                abort(404);
-            }
-
-            $namaFile = 'bukti-distribusi-'
-                . Str::slug(
-                    $distribusiDarah->nomor_distribusi
-                )
-                . '.html';
-
-            return response()
-                ->view('pemohon-donor.distribusi.bukti', [
-                    'pengguna' => $pengguna,
-                    'profil' => $profil,
-                    'distribusi' => $distribusiDarah,
-                    'pengajuan' => $distribusiDarah->permintaan,
-                    'mode' => 'unduh',
-                ])
-                ->header(
-                    'Content-Type',
-                    'text/html; charset=UTF-8'
-                )
-                ->header(
-                    'Content-Disposition',
-                    'attachment; filename="' . $namaFile . '"'
-                );
-        })->name('distribusi.bukti.unduh');
+        Route::get(
+            '/distribusi/{distribusiDarah}/bukti/unduh',
+            [BuktiPemohonDonorController::class, 'unduhDistribusi']
+        )->name('distribusi.bukti.unduh');
 
         Route::get('/profil', function () use (
             $ambilPenggunaPemohon,

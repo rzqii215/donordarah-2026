@@ -1,1018 +1,758 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Pengaturan Akun</title>
-
-    <style>
-        :root {
-            --red: #ef1d26;
-            --red-soft: #fff1f2;
-            --red-border: #fecdd3;
-            --green: #16a34a;
-            --green-soft: #dcfce7;
-            --blue: #2563eb;
-            --blue-soft: #dbeafe;
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: #e5e7eb;
-            --soft-line: #f1f5f9;
-            --surface: #ffffff;
-            --body: #f8fafc;
-            --danger: #dc2626;
-            --shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-            --shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.05);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--text);
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(254, 226, 226, 0.72),
-                    transparent 28rem
-                ),
-                linear-gradient(
-                    180deg,
-                    #ffffff 0%,
-                    var(--body) 45%,
-                    #ffffff 100%
-                );
-            font-family:
-                Inter,
-                ui-sans-serif,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        svg {
-            display: block;
-            width: 1.25rem;
-            height: 1.25rem;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-
-        .app {
-            display: grid;
-            grid-template-columns: 250px minmax(0, 1fr);
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            padding: 26px 20px 20px;
-            border-right: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-height: 58px;
-            margin-bottom: 34px;
-        }
-
-        .brand-mark {
-            display: grid;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: #ffffff;
-            border-radius: 18px;
-            background: linear-gradient(135deg, var(--red), #f43f5e);
-            box-shadow: 0 18px 35px rgba(239, 29, 38, 0.22);
-        }
-
-        .brand-mark svg {
-            width: 27px;
-            height: 27px;
-            fill: currentColor;
-            stroke: none;
-        }
-
-        .brand-title {
-            display: grid;
-            gap: 1px;
-            color: var(--text);
-            font-size: 16px;
-            font-weight: 800;
-            line-height: 1.05;
-            text-transform: uppercase;
-        }
-
-        .brand-title strong {
-            color: var(--red);
-            font-size: 19px;
-        }
-
-        .menu {
-            display: grid;
-            gap: 8px;
-        }
-
-        .menu-link,
-        .menu-button {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            width: 100%;
-            min-height: 52px;
-            padding: 0 16px;
-            color: #475569;
-            border: 0;
-            border-radius: 14px;
-            background: transparent;
-            font-size: 15px;
-            font-weight: 750;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .menu-link:hover,
-        .menu-button:hover {
-            color: var(--red);
-            background: #fff5f5;
-        }
-
-        .menu-link.active {
-            color: var(--red);
-            background: linear-gradient(90deg, #ffe4e6 0%, #fff7f7 100%);
-        }
-
-        .menu-link.active::before {
-            content: "";
-            position: absolute;
-            left: -20px;
-            width: 4px;
-            height: 42px;
-            border-radius: 999px;
-            background: var(--red);
-        }
-
-        .menu-icon {
-            display: grid;
-            flex: 0 0 auto;
-            width: 25px;
-            height: 25px;
-            place-items: center;
-        }
-
-        .sidebar-separator {
-            height: 1px;
-            margin: 28px 12px;
-            background: var(--line);
-        }
-
-        .sidebar-bottom {
-            position: absolute;
-            right: 20px;
-            bottom: 20px;
-            left: 20px;
-        }
-
-        .quote-card {
-            display: grid;
-            place-items: center;
-            min-height: 176px;
-            margin-bottom: 18px;
-            padding: 18px;
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            background: #ffffff;
-            box-shadow: var(--shadow-soft);
-            text-align: center;
-        }
-
-        .quote-icon {
-            display: grid;
-            width: 74px;
-            height: 74px;
-            place-items: center;
-            margin-bottom: 12px;
-            color: var(--red);
-            border-radius: 999px;
-            background: var(--red-soft);
-            font-size: 30px;
-            font-weight: 900;
-        }
-
-        .quote-text {
-            margin: 0;
-            color: var(--red);
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.45;
-        }
-
-        .main {
-            min-width: 0;
-        }
-
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-            min-height: 104px;
-            padding: 22px 32px;
-            border-bottom: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .page-title {
-            margin: 0;
-            font-size: 31px;
-            font-weight: 900;
-            letter-spacing: -0.045em;
-        }
-
-        .page-subtitle {
-            margin: 6px 0 0;
-            color: var(--muted);
-            font-size: 15px;
-        }
-
-        .avatar {
-            display: grid;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: var(--red);
-            border-radius: 999px;
-            background: #ffe1e5;
-            font-weight: 900;
-        }
-
-        .content {
-            padding: 30px 32px 40px;
-        }
-
-        .layout-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 340px;
-            gap: 24px;
-            align-items: start;
-        }
-
-        .card {
-            border: 1px solid var(--soft-line);
-            border-radius: 22px;
-            background: var(--surface);
-            box-shadow: var(--shadow);
-        }
-
-        .form-card {
-            padding: 28px;
-        }
-
-        .side-card {
-            padding: 24px;
-        }
-
-        .section-title {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .section-description {
-            margin: 8px 0 24px;
-            color: var(--muted);
-            font-size: 15px;
-            line-height: 1.7;
-        }
-
-        .alert {
-            margin-bottom: 20px;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.6;
-        }
-
-        .alert-success {
-            color: #166534;
-            border: 1px solid #bbf7d0;
-            background: #f0fdf4;
-        }
-
-        .alert-danger {
-            color: #991b1b;
-            border: 1px solid #fecaca;
-            background: #fef2f2;
-        }
-
-        .alert ul {
-            margin: 8px 0 0;
-            padding-left: 20px;
-        }
-
-        .form-section {
-            margin-top: 26px;
-            padding-top: 24px;
-            border-top: 1px solid var(--line);
-        }
-
-        .form-section:first-of-type {
-            margin-top: 0;
-            padding-top: 0;
-            border-top: 0;
-        }
-
-        .form-section-title {
-            margin: 0 0 16px;
-            font-size: 18px;
-            font-weight: 900;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .form-group {
-            display: grid;
-            gap: 8px;
-        }
-
-        .form-group.full {
-            grid-column: 1 / -1;
-        }
-
-        .form-label {
-            color: var(--text);
-            font-size: 14px;
-            font-weight: 850;
-        }
-
-        .form-control {
-            width: 100%;
-            min-height: 50px;
-            padding: 0 14px;
-            color: var(--text);
-            border: 1px solid #dbe1ea;
-            border-radius: 13px;
-            outline: none;
-            background: #ffffff;
-            font-size: 14px;
-        }
-
-        .form-control:focus {
-            border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(239, 29, 38, 0.08);
-        }
-
-        .form-hint {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .form-error {
-            color: var(--danger);
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .button-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .button-primary,
-        .button-secondary {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            min-height: 52px;
-            padding: 0 20px;
-            border-radius: 13px;
-            font-size: 15px;
-            font-weight: 900;
-            cursor: pointer;
-        }
-
-        .button-primary {
-            color: #ffffff;
-            border: 0;
-            background: linear-gradient(135deg, var(--red), #ef4444);
-            box-shadow: 0 16px 28px rgba(239, 29, 38, 0.2);
-        }
-
-        .button-secondary {
-            color: var(--red);
-            border: 1px solid var(--red-border);
-            background: #ffffff;
-        }
-
-        .account-card {
-            display: grid;
-            gap: 16px;
-        }
-
-        .account-main {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding-bottom: 18px;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .account-name {
-            margin: 0;
-            font-size: 17px;
-            font-weight: 900;
-            line-height: 1.4;
-        }
-
-        .account-email {
-            margin: 2px 0 0;
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .info-list {
-            display: grid;
-            gap: 13px;
-        }
-
-        .info-item {
-            padding: 15px;
-            border: 1px solid var(--soft-line);
-            border-radius: 15px;
-            background: #ffffff;
-        }
-
-        .info-label {
-            margin: 0;
-            color: var(--muted);
-            font-size: 12px;
-            font-weight: 850;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .info-value {
-            margin: 6px 0 0;
-            font-size: 14px;
-            font-weight: 850;
-            line-height: 1.5;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            min-height: 30px;
-            padding: 0 10px;
-            color: var(--green);
-            border-radius: 999px;
-            background: var(--green-soft);
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        @media (max-width: 1180px) {
-            .layout-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 980px) {
-            .app {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                position: relative;
-                height: auto;
-                border-right: 0;
-                border-bottom: 1px solid var(--line);
-            }
-
-            .sidebar-bottom {
-                position: static;
-                margin-top: 28px;
-            }
-
-            .topbar {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-        }
-
-        @media (max-width: 720px) {
-            .content,
-            .topbar {
-                padding-right: 18px;
-                padding-left: 18px;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    @php
-        $icon = fn (string $name): string => match ($name) {
-            'drop' => '<svg viewBox="0 0 24 24"><path d="M12 2s7 7.2 7 12a7 7 0 0 1-14 0C5 9.2 12 2 12 2Z"></path><path d="M9.8 14.2 11.4 16l3.2-4"></path></svg>',
-            'home' => '<svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>',
-            'file' => '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>',
-            'truck' => '<svg viewBox="0 0 24 24"><path d="M3 6h11v10H3z"></path><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>',
-            'user' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>',
-            'history' => '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path><path d="M12 7v5l3 2"></path></svg>',
-            'help' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 1 1 5.8 1c-.6 1.5-2.9 1.8-2.9 4"></path><path d="M12 18h.01"></path></svg>',
-            'settings' => '<svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z"></path></svg>',
-            'save' => '<svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg>',
-            'lock' => '<svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>',
-            'logout' => '<svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path></svg>',
-            default => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg>',
-        };
-
-        $namaPemohon = $profil?->nama_rumah_sakit ?? $pengguna->name;
-
-        $inisial = collect(explode(' ', $namaPemohon))
-            ->filter()
-            ->take(2)
-            ->map(fn ($item) => mb_substr($item, 0, 1))
-            ->implode('');
-
-        $inisial = filled($inisial)
-            ? mb_strtoupper($inisial)
-            : 'PD';
-    @endphp
-
-    <div class="app">
-        
-<aside class="sidebar">
-            <a
-                href="{{ route('pemohon-donor.beranda') }}"
-                class="brand"
+@php
+    $namaPemohon =
+        $profil?->nama_rumah_sakit
+        ?? $pengguna->name;
+
+    $inisial = collect(
+        explode(' ', $namaPemohon)
+    )
+        ->filter()
+        ->take(2)
+        ->map(
+            fn (string $bagian): string =>
+                mb_substr($bagian, 0, 1)
+        )
+        ->implode('');
+
+    $inisial = filled($inisial)
+        ? mb_strtoupper($inisial)
+        : 'PD';
+
+    $nilaiEnum = function (
+        mixed $value
+    ): string {
+        if ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return (string) $value->name;
+        }
+
+        return trim((string) $value);
+    };
+
+    $labelEnum = function (
+        mixed $value
+    ) use (
+        $nilaiEnum
+    ): string {
+        if (
+            is_object($value)
+            && method_exists(
+                $value,
+                'label'
+            )
+        ) {
+            return (string) $value->label();
+        }
+
+        return str(
+            $nilaiEnum($value)
+        )
+            ->replace('_', ' ')
+            ->replace('-', ' ')
+            ->headline()
+            ->toString();
+    };
+
+    $statusAkunValue =
+        $nilaiEnum($pengguna->status);
+
+    $statusAkunLabel =
+        $labelEnum($pengguna->status);
+
+    $statusAkunClass = match (
+        $statusAkunValue
+    ) {
+        'active',
+        'aktif' =>
+            'bg-[#dff7e7] text-[#176b3a]',
+
+        'pending',
+        'menunggu' =>
+            'bg-[#fff1c9] text-[#8a5a00]',
+
+        'suspended',
+        'ditangguhkan' =>
+            'bg-[#ffe4e7] text-[#991b2f]',
+
+        default =>
+            'bg-[#f1ecea] text-[#655253]',
+    };
+
+    $emailTerverifikasi =
+        $pengguna->email_verified_at !==
+        null;
+
+    $terakhirLogin =
+        $pengguna->terakhir_login_pada
+        ?? null;
+@endphp
+
+<x-layouts.pemohon-donor
+    title="Pengaturan Akun"
+    heading="Pengaturan Akun"
+    description="Kelola informasi login, keamanan password, dan sesi akun."
+    :pengguna="$pengguna"
+    :profil="$profil"
+>
+    <div class="space-y-6">
+        <section
+            class="relative overflow-hidden rounded-[28px] bg-[#76001c] px-6 py-7 text-white shadow-[0_22px_55px_rgba(118,0,28,0.2)] sm:px-8"
+        >
+            <div
+                class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10"
+            ></div>
+
+            <div
+                class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
             >
-                <span class="brand-mark">
-                    {!! $icon('drop') !!}
-                </span>
-
-                <span class="brand-title">
-                    Portal
-                    <strong>Pemohon Donor</strong>
-                </span>
-            </a>
-
-            <nav class="menu">
-                <a
-                    href="{{ route('pemohon-donor.beranda') }}"
-                    class="menu-link"
+                <div
+                    class="flex flex-col gap-5 sm:flex-row sm:items-center"
                 >
-                    <span class="menu-icon">{!! $icon('home') !!}</span>
-                    Dashboard
-                </a>
+                    <span
+                        class="flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] border border-white/15 bg-white/10 text-2xl font-bold"
+                    >
+                        {{ $inisial }}
+                    </span>
 
-                <a
-                    href="{{ route('pemohon-donor.pengajuan.index') }}"
-                    class="menu-link"
+                    <div>
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.14em] text-white/60"
+                        >
+                            Keamanan Akun
+                        </p>
+
+                        <h2
+                            class="mt-2 text-3xl font-bold tracking-[-0.05em]"
+                        >
+                            {{ $namaPemohon }}
+                        </h2>
+
+                        <p
+                            class="mt-2 text-sm text-white/65"
+                        >
+                            {{ $pengguna->email }}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    class="flex flex-wrap gap-2"
                 >
-                    <span class="menu-icon">{!! $icon('file') !!}</span>
-                    Pengajuan
-                </a>
+                    <span
+                        class="inline-flex min-h-9 items-center rounded-full bg-white/15 px-4 text-xs font-bold"
+                    >
+                        {{ $statusAkunLabel }}
+                    </span>
 
-                <a
-                    href="{{ route('pemohon-donor.distribusi.index') }}"
-                    class="menu-link"
+                    <span
+                        class="inline-flex min-h-9 items-center rounded-full bg-white/15 px-4 text-xs font-bold"
+                    >
+                        {{ $emailTerverifikasi ? 'Email Terverifikasi' : 'Email Belum Terverifikasi' }}
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section
+            class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
+        >
+            <div class="space-y-6">
+                <form
+                    method="POST"
+                    action="{{ route('pemohon-donor.pengaturan.akun.update') }}"
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)] sm:p-6"
                 >
-                    <span class="menu-icon">{!! $icon('truck') !!}</span>
-                    Distribusi
-                </a>
+                    @csrf
+                    @method('PUT')
 
-                <a
-                    href="{{ route('pemohon-donor.profil.index') }}"
-                    class="menu-link"
-                >
-                    <span class="menu-icon">{!! $icon('user') !!}</span>
-                    Profil
-                </a>
+                    <div
+                        class="border-b border-[#eee8e5] pb-5"
+                    >
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                        >
+                            Informasi Login
+                        </p>
 
-                <a
-                    href="{{ route('pemohon-donor.riwayat.index') }}"
-                    class="menu-link"
-                >
-                    <span class="menu-icon">{!! $icon('history') !!}</span>
-                    Riwayat
-                </a>
-            </nav>
+                        <h2
+                            class="mt-1 text-xl font-bold tracking-[-0.04em] text-[#191c20]"
+                        >
+                            Email dan Nomor Telepon
+                        </h2>
 
-            <div class="sidebar-separator"></div>
+                        <p
+                            class="mt-2 text-sm leading-6 text-[#755f60]"
+                        >
+                            Informasi ini digunakan untuk proses login, notifikasi,
+                            dan komunikasi terkait pengajuan darah.
+                        </p>
+                    </div>
 
-            <nav class="menu">
-                <a
-                    href="{{ route('pemohon-donor.bantuan.index') }}"
-                    class="menu-link"
-                >
-                    <span class="menu-icon">{!! $icon('help') !!}</span>
-                    Bantuan
-                </a>
+                    <div
+                        class="mt-6 grid gap-5 md:grid-cols-2"
+                    >
+                        <div>
+                            <label
+                                for="email"
+                                class="mb-2 block text-sm font-semibold text-[#191c20]"
+                            >
+                                Alamat Email
+                                <span class="text-[#b42318]">*</span>
+                            </label>
 
-                <a
-                    href="{{ route('pemohon-donor.pengaturan.index') }}"
-                    class="menu-link active"
-                >
-                    <span class="menu-icon">{!! $icon('settings') !!}</span>
-                    Pengaturan
-                </a>
+                            <div class="relative">
+                                <svg
+                                    class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8c7071]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <rect
+                                        x="3"
+                                        y="5"
+                                        width="18"
+                                        height="14"
+                                        rx="2"
+                                    />
+
+                                    <path d="m3 7 9 6 9-6" />
+                                </svg>
+
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value="{{ old('email', $pengguna->email) }}"
+                                    maxlength="255"
+                                    required
+                                    autocomplete="email"
+                                    @class([
+                                        'min-h-12 w-full rounded-xl border bg-[#fbf9f8] pl-12 pr-4 text-sm outline-none transition focus:ring-4 focus:ring-[#991b2f]/10',
+                                        'border-[#e5b9c2] focus:border-[#991b2f]' => $errors->has('email'),
+                                        'border-[#ded8d5] focus:border-[#991b2f]' => ! $errors->has('email'),
+                                    ])
+                                >
+                            </div>
+
+                            @error('email')
+                                <p
+                                    class="mt-2 text-xs font-semibold text-[#b42318]"
+                                >
+                                    {{ $message }}
+                                </p>
+                            @enderror
+
+                            <div
+                                class="mt-2 flex items-center gap-2"
+                            >
+                                <span
+                                    @class([
+                                        'h-2 w-2 rounded-full',
+                                        'bg-[#229653]' => $emailTerverifikasi,
+                                        'bg-[#d79500]' => ! $emailTerverifikasi,
+                                    ])
+                                ></span>
+
+                                <span
+                                    class="text-xs text-[#8c7071]"
+                                >
+                                    {{ $emailTerverifikasi
+                                        ? 'Email sudah diverifikasi.'
+                                        : 'Email belum diverifikasi.' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                for="nomor_telepon"
+                                class="mb-2 block text-sm font-semibold text-[#191c20]"
+                            >
+                                Nomor Telepon
+                            </label>
+
+                            <div class="relative">
+                                <svg
+                                    class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8c7071]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.4 1.8.6 2.8.7a2 2 0 0 1 1.7 2.1Z"
+                                    />
+                                </svg>
+
+                                <input
+                                    id="nomor_telepon"
+                                    type="tel"
+                                    name="nomor_telepon"
+                                    value="{{ old('nomor_telepon', $pengguna->nomor_telepon) }}"
+                                    maxlength="30"
+                                    autocomplete="tel"
+                                    placeholder="Contoh: 081234567890"
+                                    @class([
+                                        'min-h-12 w-full rounded-xl border bg-[#fbf9f8] pl-12 pr-4 text-sm outline-none transition focus:ring-4 focus:ring-[#991b2f]/10',
+                                        'border-[#e5b9c2] focus:border-[#991b2f]' => $errors->has('nomor_telepon'),
+                                        'border-[#ded8d5] focus:border-[#991b2f]' => ! $errors->has('nomor_telepon'),
+                                    ])
+                                >
+                            </div>
+
+                            @error('nomor_telepon')
+                                <p
+                                    class="mt-2 text-xs font-semibold text-[#b42318]"
+                                >
+                                    {{ $message }}
+                                </p>
+                            @enderror
+
+                            <p
+                                class="mt-2 text-xs text-[#8c7071]"
+                            >
+                                Maksimal 30 karakter.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-6 flex flex-wrap items-center gap-3 border-t border-[#eee8e5] pt-5"
+                    >
+                        <button
+                            type="submit"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#991b2f] px-6 text-sm font-bold text-white shadow-[0_12px_28px_rgba(153,27,47,0.18)] transition hover:bg-[#76001c]"
+                        >
+                            <svg
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"
+                                />
+
+                                <path d="M17 21v-8H7v8M7 3v5h8" />
+                            </svg>
+
+                            Simpan Informasi Akun
+                        </button>
+
+                        <a
+                            href="{{ route('pemohon-donor.profil.index') }}"
+                            class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#e5dadd] bg-white px-5 text-sm font-bold text-[#76001c]"
+                        >
+                            Buka Profil
+                        </a>
+                    </div>
+                </form>
 
                 <form
                     method="POST"
-                    action="{{ route('logout') }}"
+                    action="{{ route('pemohon-donor.pengaturan.password.update') }}"
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)] sm:p-6"
+                >
+                    @csrf
+                    @method('PUT')
+
+                    <div
+                        class="border-b border-[#eee8e5] pb-5"
+                    >
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                        >
+                            Keamanan Password
+                        </p>
+
+                        <h2
+                            class="mt-1 text-xl font-bold tracking-[-0.04em] text-[#191c20]"
+                        >
+                            Ubah Password Akun
+                        </h2>
+
+                        <p
+                            class="mt-2 text-sm leading-6 text-[#755f60]"
+                        >
+                            Gunakan password minimal delapan karakter dan hindari
+                            menggunakan password yang sama dengan layanan lain.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 space-y-5">
+                        <div>
+                            <label
+                                for="password_lama"
+                                class="mb-2 block text-sm font-semibold text-[#191c20]"
+                            >
+                                Password Lama
+                                <span class="text-[#b42318]">*</span>
+                            </label>
+
+                            <div class="relative">
+                                <svg
+                                    class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8c7071]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <rect
+                                        x="4"
+                                        y="10"
+                                        width="16"
+                                        height="11"
+                                        rx="2"
+                                    />
+
+                                    <path
+                                        d="M8 10V7a4 4 0 0 1 8 0v3"
+                                    />
+                                </svg>
+
+                                <input
+                                    id="password_lama"
+                                    type="password"
+                                    name="password_lama"
+                                    required
+                                    autocomplete="current-password"
+                                    @class([
+                                        'min-h-12 w-full rounded-xl border bg-[#fbf9f8] pl-12 pr-4 text-sm outline-none transition focus:ring-4 focus:ring-[#991b2f]/10',
+                                        'border-[#e5b9c2] focus:border-[#991b2f]' => $errors->has('password_lama'),
+                                        'border-[#ded8d5] focus:border-[#991b2f]' => ! $errors->has('password_lama'),
+                                    ])
+                                >
+                            </div>
+
+                            @error('password_lama')
+                                <p
+                                    class="mt-2 text-xs font-semibold text-[#b42318]"
+                                >
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div
+                            class="grid gap-5 md:grid-cols-2"
+                        >
+                            <div>
+                                <label
+                                    for="password_baru"
+                                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                                >
+                                    Password Baru
+                                    <span class="text-[#b42318]">*</span>
+                                </label>
+
+                                <input
+                                    id="password_baru"
+                                    type="password"
+                                    name="password_baru"
+                                    minlength="8"
+                                    required
+                                    autocomplete="new-password"
+                                    @class([
+                                        'min-h-12 w-full rounded-xl border bg-[#fbf9f8] px-4 text-sm outline-none transition focus:ring-4 focus:ring-[#991b2f]/10',
+                                        'border-[#e5b9c2] focus:border-[#991b2f]' => $errors->has('password_baru'),
+                                        'border-[#ded8d5] focus:border-[#991b2f]' => ! $errors->has('password_baru'),
+                                    ])
+                                >
+
+                                @error('password_baru')
+                                    <p
+                                        class="mt-2 text-xs font-semibold text-[#b42318]"
+                                    >
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+
+                                <p
+                                    class="mt-2 text-xs text-[#8c7071]"
+                                >
+                                    Minimal delapan karakter.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="password_baru_confirmation"
+                                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                                >
+                                    Konfirmasi Password
+                                    <span class="text-[#b42318]">*</span>
+                                </label>
+
+                                <input
+                                    id="password_baru_confirmation"
+                                    type="password"
+                                    name="password_baru_confirmation"
+                                    minlength="8"
+                                    required
+                                    autocomplete="new-password"
+                                    class="min-h-12 w-full rounded-xl border border-[#ded8d5] bg-[#fbf9f8] px-4 text-sm outline-none transition focus:border-[#991b2f] focus:ring-4 focus:ring-[#991b2f]/10"
+                                >
+
+                                <p
+                                    class="mt-2 text-xs text-[#8c7071]"
+                                >
+                                    Ketik ulang password baru.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-6 flex flex-wrap items-center gap-3 border-t border-[#eee8e5] pt-5"
+                    >
+                        <button
+                            type="submit"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#991b2f] px-6 text-sm font-bold text-white shadow-[0_12px_28px_rgba(153,27,47,0.18)] transition hover:bg-[#76001c]"
+                        >
+                            <svg
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect
+                                    x="4"
+                                    y="10"
+                                    width="16"
+                                    height="11"
+                                    rx="2"
+                                />
+
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                            </svg>
+
+                            Ubah Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <aside
+                class="space-y-5 xl:sticky xl:top-28 xl:self-start"
+            >
+                <section
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-6 shadow-[0_16px_45px_rgba(25,28,32,0.05)]"
+                >
+                    <div
+                        class="flex items-center gap-4 border-b border-[#eee8e5] pb-5"
+                    >
+                        <span
+                            class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#ffe7ec] text-lg font-bold text-[#991b2f]"
+                        >
+                            {{ $inisial }}
+                        </span>
+
+                        <div class="min-w-0">
+                            <h2
+                                class="truncate text-base font-bold text-[#191c20]"
+                            >
+                                {{ $namaPemohon }}
+                            </h2>
+
+                            <p
+                                class="mt-1 truncate text-xs text-[#8c7071]"
+                            >
+                                {{ $pengguna->email }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <dl class="mt-5 space-y-4">
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt class="text-sm text-[#8c7071]">
+                                Role
+                            </dt>
+
+                            <dd class="text-right text-sm font-bold text-[#191c20]">
+                                Pemohon Donor
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt class="text-sm text-[#8c7071]">
+                                Status Akun
+                            </dt>
+
+                            <dd>
+                                <span
+                                    class="inline-flex min-h-7 items-center rounded-full px-2.5 text-[11px] font-bold {{ $statusAkunClass }}"
+                                >
+                                    {{ $statusAkunLabel }}
+                                </span>
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt class="text-sm text-[#8c7071]">
+                                Email
+                            </dt>
+
+                            <dd>
+                                <span
+                                    @class([
+                                        'inline-flex min-h-7 items-center rounded-full px-2.5 text-[11px] font-bold',
+                                        'bg-[#dff7e7] text-[#176b3a]' => $emailTerverifikasi,
+                                        'bg-[#fff1c9] text-[#8a5a00]' => ! $emailTerverifikasi,
+                                    ])
+                                >
+                                    {{ $emailTerverifikasi
+                                        ? 'Terverifikasi'
+                                        : 'Belum Terverifikasi' }}
+                                </span>
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt class="text-sm text-[#8c7071]">
+                                Kode Pemohon
+                            </dt>
+
+                            <dd class="text-right text-sm font-bold text-[#191c20]">
+                                {{ $profil?->kode_rumah_sakit ?? '-' }}
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt class="text-sm text-[#8c7071]">
+                                Nomor Telepon
+                            </dt>
+
+                            <dd class="text-right text-sm font-bold text-[#191c20]">
+                                {{ $pengguna->nomor_telepon ?? '-' }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section
+                    class="rounded-[24px] border border-[#dce5f4] bg-[#f6f9ff] p-6"
+                >
+                    <div
+                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e7effc] text-[#315b9b]"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"
+                            />
+
+                            <path d="m9 12 2 2 4-4" />
+                        </svg>
+                    </div>
+
+                    <h2
+                        class="mt-4 text-lg font-bold text-[#263f67]"
+                    >
+                        Informasi Keamanan
+                    </h2>
+
+                    <ul
+                        class="mt-4 space-y-3 text-sm leading-6 text-[#506787]"
+                    >
+                        <li class="flex gap-3">
+                            <span
+                                class="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#537bb5]"
+                            ></span>
+
+                            Jangan berikan password kepada siapa pun.
+                        </li>
+
+                        <li class="flex gap-3">
+                            <span
+                                class="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#537bb5]"
+                            ></span>
+
+                            Gunakan password berbeda untuk setiap layanan.
+                        </li>
+
+                        <li class="flex gap-3">
+                            <span
+                                class="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#537bb5]"
+                            ></span>
+
+                            Keluar dari akun setelah memakai perangkat umum.
+                        </li>
+                    </ul>
+                </section>
+
+                @if ($terakhirLogin !== null)
+                    <section
+                        class="rounded-[24px] border border-[#e8e2df] bg-white p-6"
+                    >
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+                        >
+                            Login Terakhir
+                        </p>
+
+                        <strong
+                            class="mt-2 block text-sm text-[#191c20]"
+                        >
+                            {{ $terakhirLogin->translatedFormat('d F Y, H:i') }}
+                            WIB
+                        </strong>
+
+                        <p
+                            class="mt-1 text-xs text-[#8c7071]"
+                        >
+                            IP:
+                            {{ $pengguna->ip_terakhir_login ?? '-' }}
+                        </p>
+                    </section>
+                @endif
+
+                <form
+                    method="POST"
+                    action="{{ route('pemohon-donor.logout') }}"
                 >
                     @csrf
 
                     <button
                         type="submit"
-                        class="menu-button"
+                        class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#f0cbd2] bg-[#fff4f6] px-5 text-sm font-bold text-[#991b2f] transition hover:bg-[#ffe8ec]"
                     >
-                        <span class="menu-icon">{!! $icon('logout') !!}</span>
-                        Keluar
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M10 17l5-5-5-5" />
+                            <path d="M15 12H3" />
+                            <path d="M21 3v18" />
+                        </svg>
+
+                        Keluar dari Akun
                     </button>
                 </form>
-            </nav>
-
-            <div class="sidebar-bottom">
-                <div class="quote-card">
-                    <div class="quote-icon">
-                        ♥
-                    </div>
-
-                    <p class="quote-text">
-                        Setetes darah,<br>
-                        sejuta harapan.
-                    </p>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main">
-            <header class="topbar">
-                <div>
-                    <h1 class="page-title">
-                        Pengaturan Akun
-                    </h1>
-
-                    <p class="page-subtitle">
-                        Kelola keamanan dan informasi login akun Pemohon Donor.
-                    </p>
-                </div>
-
-                <div class="avatar">
-                    {{ $inisial }}
-                </div>
-            </header>
-
-            <section class="content">
-                <div class="layout-grid">
-                    <div>
-                        <article class="card form-card">
-                            <h2 class="section-title">
-                                Informasi Login
-                            </h2>
-
-                            <p class="section-description">
-                                Perbarui email dan nomor telepon yang digunakan untuk akun Portal Pemohon Donor.
-                            </p>
-
-                            @if (session('success'))
-                                <div class="alert alert-success">
-                                    {{ session('success') }}
-                                </div>
-                            @endif
-
-                            @if ($errors->any())
-                                <div class="alert alert-danger">
-                                    Data belum bisa disimpan. Periksa kembali isian berikut:
-
-                                    <ul>
-                                        @foreach ($errors->all() as $error)
-                                            <li>
-                                                {{ $error }}
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-
-                            <form
-                                method="POST"
-                                action="{{ route('pemohon-donor.pengaturan.akun.update') }}"
-                            >
-                                @csrf
-                                @method('PUT')
-
-                                <section class="form-section">
-                                    <h3 class="form-section-title">
-                                        Data Akun
-                                    </h3>
-
-                                    <div class="form-grid">
-                                        <div class="form-group">
-                                            <label
-                                                for="email"
-                                                class="form-label"
-                                            >
-                                                Email
-                                            </label>
-
-                                            <input
-                                                id="email"
-                                                name="email"
-                                                type="email"
-                                                class="form-control"
-                                                value="{{ old('email', $pengguna->email) }}"
-                                                required
-                                            >
-
-                                            @error('email')
-                                                <span class="form-error">
-                                                    {{ $message }}
-                                                </span>
-                                            @enderror
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label
-                                                for="nomor_telepon"
-                                                class="form-label"
-                                            >
-                                                Nomor Telepon
-                                            </label>
-
-                                            <input
-                                                id="nomor_telepon"
-                                                name="nomor_telepon"
-                                                type="text"
-                                                class="form-control"
-                                                value="{{ old('nomor_telepon', $pengguna->nomor_telepon) }}"
-                                                placeholder="Contoh: 081234567890"
-                                            >
-
-                                            @error('nomor_telepon')
-                                                <span class="form-error">
-                                                    {{ $message }}
-                                                </span>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <div class="button-row">
-                                    <button
-                                        type="submit"
-                                        class="button-primary"
-                                    >
-                                        {!! $icon('save') !!}
-                                        Simpan Pengaturan Akun
-                                    </button>
-                                </div>
-                            </form>
-                        </article>
-
-                        <article
-                            class="card form-card"
-                            style="margin-top: 24px;"
-                        >
-                            <h2 class="section-title">
-                                Ubah Password
-                            </h2>
-
-                            <p class="section-description">
-                                Gunakan password yang kuat minimal 8 karakter. Setelah password diperbarui, gunakan password baru untuk login berikutnya.
-                            </p>
-
-                            <form
-                                method="POST"
-                                action="{{ route('pemohon-donor.pengaturan.password.update') }}"
-                            >
-                                @csrf
-                                @method('PUT')
-
-                                <section class="form-section">
-                                    <h3 class="form-section-title">
-                                        Keamanan Password
-                                    </h3>
-
-                                    <div class="form-grid">
-                                        <div class="form-group full">
-                                            <label
-                                                for="password_lama"
-                                                class="form-label"
-                                            >
-                                                Password Lama
-                                            </label>
-
-                                            <input
-                                                id="password_lama"
-                                                name="password_lama"
-                                                type="password"
-                                                class="form-control"
-                                                autocomplete="current-password"
-                                                required
-                                            >
-
-                                            @error('password_lama')
-                                                <span class="form-error">
-                                                    {{ $message }}
-                                                </span>
-                                            @enderror
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label
-                                                for="password_baru"
-                                                class="form-label"
-                                            >
-                                                Password Baru
-                                            </label>
-
-                                            <input
-                                                id="password_baru"
-                                                name="password_baru"
-                                                type="password"
-                                                class="form-control"
-                                                autocomplete="new-password"
-                                                required
-                                            >
-
-                                            <span class="form-hint">
-                                                Minimal 8 karakter.
-                                            </span>
-
-                                            @error('password_baru')
-                                                <span class="form-error">
-                                                    {{ $message }}
-                                                </span>
-                                            @enderror
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label
-                                                for="password_baru_confirmation"
-                                                class="form-label"
-                                            >
-                                                Konfirmasi Password Baru
-                                            </label>
-
-                                            <input
-                                                id="password_baru_confirmation"
-                                                name="password_baru_confirmation"
-                                                type="password"
-                                                class="form-control"
-                                                autocomplete="new-password"
-                                                required
-                                            >
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <div class="button-row">
-                                    <button
-                                        type="submit"
-                                        class="button-primary"
-                                    >
-                                        {!! $icon('lock') !!}
-                                        Ubah Password
-                                    </button>
-
-                                    <a
-                                        href="{{ route('pemohon-donor.beranda') }}"
-                                        class="button-secondary"
-                                    >
-                                        Kembali ke Dashboard
-                                    </a>
-                                </div>
-                            </form>
-                        </article>
-                    </div>
-
-                    <aside class="card side-card">
-                        <div class="account-card">
-                            <div class="account-main">
-                                <div class="avatar">
-                                    {{ $inisial }}
-                                </div>
-
-                                <div>
-                                    <p class="account-name">
-                                        {{ $namaPemohon }}
-                                    </p>
-
-                                    <p class="account-email">
-                                        {{ $pengguna->email }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="info-list">
-                                <div class="info-item">
-                                    <p class="info-label">
-                                        Role Akun
-                                    </p>
-
-                                    <p class="info-value">
-                                        Pemohon Donor
-                                    </p>
-                                </div>
-
-                                <div class="info-item">
-                                    <p class="info-label">
-                                        Status Akun
-                                    </p>
-
-                                    <p class="info-value">
-                                        <span class="status-pill">
-                                            Aktif
-                                        </span>
-                                    </p>
-                                </div>
-
-                                <div class="info-item">
-                                    <p class="info-label">
-                                        Nama Pemohon
-                                    </p>
-
-                                    <p class="info-value">
-                                        {{ $profil?->nama_rumah_sakit ?? '-' }}
-                                    </p>
-                                </div>
-
-                                <div class="info-item">
-                                    <p class="info-label">
-                                        Kode Pemohon
-                                    </p>
-
-                                    <p class="info-value">
-                                        {{ $profil?->kode_rumah_sakit ?? '-' }}
-                                    </p>
-                                </div>
-
-                                <div class="info-item">
-                                    <p class="info-label">
-                                        Nomor Telepon
-                                    </p>
-
-                                    <p class="info-value">
-                                        {{ $pengguna->nomor_telepon ?? '-' }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-            </section>
-        </main>
+            </aside>
+        </section>
     </div>
-</body>
-</html>
+</x-layouts.pemohon-donor>

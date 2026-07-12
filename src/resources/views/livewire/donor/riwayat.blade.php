@@ -1,275 +1,667 @@
-<div class="donor-history-page">
-    
-<section class="donor-history-hero">
-        <div>
-            <p class="donor-history-eyebrow">
-                Riwayat Donor
-            </p>
+<div class="space-y-6">
+    @include('components.shared.safe-flash-message')
 
-            <h1>
-                Perjalanan Donor Anda
-            </h1>
-
-            <p>
-                Pantau semua riwayat pendaftaran donor, mulai dari menunggu
-                verifikasi, disetujui, hadir, pemeriksaan kesehatan, hingga donor selesai.
-            </p>
+    @error('riwayat')
+        <div class="rounded-2xl border border-[#ffb4ab] bg-[#ffdad6] px-4 py-3 text-sm font-medium text-[#93000a]">
+            {{ $message }}
         </div>
+    @enderror
 
-        <div class="donor-history-hero-card">
-            <span>Total Riwayat</span>
-            <strong>{{ $ringkasan['total'] }}</strong>
-            <p>Pendaftaran donor tercatat</p>
+    {{-- Search --}}
+    <section class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+        <div class="relative">
+            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#8c7071]">
+                <svg
+                    viewBox="0 0 24 24"
+                    class="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                >
+                    <circle
+                        cx="11"
+                        cy="11"
+                        r="7"
+                    ></circle>
+
+                    <path
+                        d="m20 20-3.5-3.5"
+                    ></path>
+                </svg>
+            </span>
+
+            <input
+                type="search"
+                wire:model.live.debounce.300ms="pencarian"
+                placeholder="Cari nomor registrasi, jadwal, lokasi, atau kota..."
+                autocomplete="off"
+                class="h-13 w-full rounded-xl border border-[#e2e2e9] bg-white py-3 pl-12 pr-4 text-sm text-[#191c20] placeholder:text-[#8c7071] focus:border-[#76001c] focus:ring-[#76001c]/15"
+            >
         </div>
     </section>
 
-    <section class="donor-history-summary">
-        <article>
-            <span>Total</span>
-            <strong>{{ $ringkasan['total'] }}</strong>
-            <p>Semua pendaftaran</p>
+    {{-- Ringkasan --}}
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <article class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                Total
+            </p>
+
+            <strong class="mt-2 block text-3xl font-bold text-[#191c20]">
+                {{ number_format($ringkasan['total']) }}
+            </strong>
+
+            <p class="mt-1 text-xs text-[#584141]">
+                Semua pendaftaran
+            </p>
         </article>
 
-        <article>
-            <span>Diproses</span>
-            <strong>{{ $ringkasan['proses'] }}</strong>
-            <p>Masih berjalan</p>
+        <article class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                Diproses
+            </p>
+
+            <strong class="mt-2 block text-3xl font-bold text-[#b86e12]">
+                {{ number_format($ringkasan['proses']) }}
+            </strong>
+
+            <p class="mt-1 text-xs text-[#584141]">
+                Masih berjalan
+            </p>
         </article>
 
-        <article>
-            <span>Selesai</span>
-            <strong>{{ $ringkasan['selesai'] }}</strong>
-            <p>Donor selesai</p>
+        <article class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                Selesai
+            </p>
+
+            <strong class="mt-2 block text-3xl font-bold text-[#257a57]">
+                {{ number_format($ringkasan['selesai']) }}
+            </strong>
+
+            <p class="mt-1 text-xs text-[#584141]">
+                Donor diselesaikan
+            </p>
         </article>
 
-        <article>
-            <span>Tidak Lanjut</span>
-            <strong>{{ $ringkasan['bermasalah'] }}</strong>
-            <p>Ditolak / batal / tidak layak</p>
+        <article class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                Tidak Lanjut
+            </p>
+
+            <strong class="mt-2 block text-3xl font-bold text-[#ba1a1a]">
+                {{ number_format($ringkasan['bermasalah']) }}
+            </strong>
+
+            <p class="mt-1 text-xs text-[#584141]">
+                Ditolak, batal, atau tidak layak
+            </p>
         </article>
     </section>
 
-    <section class="donor-history-filter">
+    {{-- Filter --}}
+    <section class="flex gap-2 overflow-x-auto pb-1">
         @foreach ($this->opsiFilterStatus() as $opsi)
             <button
                 type="button"
                 wire:click="$set('filterStatus', '{{ $opsi['value'] }}')"
-                class="{{ $filterStatus === $opsi['value'] ? 'is-active' : '' }}"
+                @class([
+                    'inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border px-5 text-sm font-semibold transition',
+                    'border-[#76001c] bg-[#76001c] text-white' => $filterStatus === $opsi['value'],
+                    'border-[#e2e2e9] bg-white text-[#584141] hover:bg-[#f3f3fa] hover:text-[#76001c]' => $filterStatus !== $opsi['value'],
+                ])
             >
                 {{ $opsi['label'] }}
             </button>
         @endforeach
+
+        @if (
+            filled($pencarian)
+            || $filterStatus !== 'semua'
+        )
+            <button
+                type="button"
+                wire:click="resetFilter"
+                class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[#e2e2e9] bg-white px-5 text-sm font-semibold text-[#76001c]"
+            >
+                Reset
+            </button>
+        @endif
     </section>
 
-    @if ($riwayatDonors->isEmpty())
-        <section class="donor-history-empty">
-            <div class="donor-history-empty-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path d="M3 3v5h5" />
-                    <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-                    <path d="M12 7v5l3 2" />
-                </svg>
-            </div>
+    <div
+        wire:loading.delay
+        wire:target="pencarian,filterStatus,resetFilter"
+        class="rounded-xl border border-[#e0bfbf] bg-[#fff7f7] px-4 py-3 text-sm font-medium text-[#76001c]"
+    >
+        Memuat riwayat donor...
+    </div>
 
-            <h2>
-                Riwayat belum tersedia
+    @if ($riwayatDonors->isEmpty())
+        <section class="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0bfbf] bg-white px-6 py-14 text-center">
+            <span class="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fcedef] text-[#991b2f] [&>svg]:h-8 [&>svg]:w-8">
+                <x-donor.icon name="history" />
+            </span>
+
+            <h2 class="mt-5 text-xl font-semibold text-[#191c20]">
+                Riwayat tidak ditemukan
             </h2>
 
-            <p>
-                Belum ada pendaftaran donor pada kategori ini.
-                Silakan pilih jadwal donor untuk mulai mendaftar.
+            <p class="mt-2 max-w-md text-sm leading-6 text-[#584141]">
+                Belum ada riwayat yang sesuai dengan pencarian atau filter yang dipilih.
             </p>
 
-            <a href="{{ route('donor.jadwal') }}">
-                Lihat Jadwal Donor
-            </a>
+            @if (
+                filled($pencarian)
+                || $filterStatus !== 'semua'
+            )
+                <button
+                    type="button"
+                    wire:click="resetFilter"
+                    class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] px-5 text-sm font-semibold text-[#76001c]"
+                >
+                    Reset filter
+                </button>
+            @else
+                <a
+                    href="{{ route('donor.jadwal') }}"
+                    wire:navigate
+                    class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#c52a3d] px-5 text-sm font-semibold text-white"
+                >
+                    Lihat jadwal donor
+                </a>
+            @endif
         </section>
     @else
-        <section class="donor-history-list">
+        <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             @foreach ($riwayatDonors as $pendaftaran)
                 @php
-                    $jadwal = $pendaftaran->jadwal;
-                    $lokasi = $jadwal?->lokasi;
+                    $jadwal =
+                        $pendaftaran->jadwal;
+
+                    $lokasi =
+                        $jadwal?->lokasi;
+
+                    $tone =
+                        $this->statusTone(
+                            $pendaftaran->status
+                        );
                 @endphp
 
                 <article
-                    class="donor-history-card"
-                    wire:key="riwayat-donor-{{ $pendaftaran->id }}"
+                    wire:key="riwayat-{{ $pendaftaran->id }}"
+                    class="flex flex-col rounded-2xl border border-[#e6e3df] bg-white p-5 transition duration-200 hover:shadow-[0_4px_14px_rgba(36,38,43,0.06)] sm:p-6"
                 >
-                    <div class="donor-history-card-header">
-                        <div>
-                            <span>
-                                {{ $this->nomorPendaftaran($pendaftaran) }}
-                            </span>
-
-                            <h2>
-                                {{ $this->judulJadwal($jadwal) }}
-                            </h2>
-
-                            <p>
-                                {{ $this->tanggalJadwal($jadwal) }},
-                                {{ $this->jamJadwal($jadwal) }}
-                            </p>
-                        </div>
+                    <header class="flex items-start justify-between gap-4 border-b border-[#e2e2e9] pb-4">
+                        <p class="break-all text-sm font-medium text-[#584141]">
+                            {{ $this->nomorPendaftaran($pendaftaran) }}
+                        </p>
 
                         <span
-                            class="donor-history-status {{ $this->statusBadgeClass($pendaftaran->status) }}"
+                            @class([
+                                'inline-flex shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.05em]',
+                                'bg-[#eaf7f0] text-[#257a57]' => $tone === 'success',
+                                'bg-[#ffdad6] text-[#93000a]' => $tone === 'danger',
+                                'bg-[#fff4de] text-[#b86e12]' => $tone === 'warning',
+                            ])
                         >
                             {{ $this->labelStatusPendaftaran($pendaftaran->status) }}
                         </span>
-                    </div>
+                    </header>
 
-                    <div class="donor-history-location">
-                        <div>
-                            <span>Lokasi</span>
-                            <strong>{{ $this->namaLokasi($lokasi) }}</strong>
-                            <p>{{ $this->alamatLokasi($lokasi) }}</p>
-                            <small>{{ $this->wilayahLokasi($lokasi) }}</small>
+                    <div class="space-y-4 py-5">
+                        <div class="flex items-start gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fcedef] text-[#991b2f] [&>svg]:h-5 [&>svg]:w-5">
+                                <x-donor.icon name="calendar" />
+                            </span>
+
+                            <div>
+                                <h2 class="text-base font-semibold leading-6 text-[#191c20]">
+                                    {{ $this->judulJadwal($jadwal) }}
+                                </h2>
+
+                                <p class="mt-1 text-sm font-medium text-[#191c20]">
+                                    {{ $this->tanggalJadwal($jadwal) }}
+                                </p>
+
+                                <p class="text-sm text-[#584141]">
+                                    {{ $this->jamJadwal($jadwal) }}
+                                    WIB
+                                </p>
+                            </div>
                         </div>
 
-                        <a
-                            href="{{ $this->mapsUrl($lokasi) }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            Buka Peta
-                        </a>
-                    </div>
+                        <div class="flex items-start gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fcedef] text-[#991b2f] [&>svg]:h-5 [&>svg]:w-5">
+                                <x-donor.icon name="map-pin" />
+                            </span>
 
-                    <div class="donor-history-timeline">
-                        @foreach ($this->timeline($pendaftaran) as $step)
-                            <div class="donor-history-step {{ $step['class'] }}">
-                                <div class="donor-history-step-marker">
-                                    <span></span>
-                                </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-[#191c20]">
+                                    {{ $this->namaLokasi($lokasi) }}
+                                </p>
 
-                                <div>
-                                    <strong>{{ $step['label'] }}</strong>
-                                    <p>{{ $step['description'] }}</p>
-                                    <small>{{ $step['tanggal'] }}</small>
-                                </div>
+                                <p class="mt-1 line-clamp-2 text-sm leading-5 text-[#584141]">
+                                    {{ $this->alamatLokasi($lokasi) }}
+                                </p>
+
+                                @if ($this->wilayahLokasi($lokasi) !== '-')
+                                    <p class="mt-1 text-xs text-[#8c7071]">
+                                        {{ $this->wilayahLokasi($lokasi) }}
+                                    </p>
+                                @endif
                             </div>
-                        @endforeach
+                        </div>
                     </div>
 
-                    <div class="donor-history-actions">
+                    @if (
+                        in_array(
+                            $this->nilaiEnumForView($pendaftaran->status),
+                            [
+                                'rejected',
+                                'cancelled',
+                                'ineligible',
+                                'no_show',
+                            ],
+                            true
+                        )
+                    )
+                        <div class="mb-4 rounded-xl border border-[#ffb4ab] bg-[#fff5f4] px-4 py-3 text-xs leading-5 text-[#93000a]">
+                            {{ $this->alasanStatus($pendaftaran) }}
+                        </div>
+                    @endif
+
+                    <footer class="mt-auto flex flex-col gap-2 border-t border-[#e2e2e9] pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <button
                             type="button"
                             wire:click="pilihRiwayat({{ $pendaftaran->id }})"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#76001c] transition hover:bg-[#f3f3fa]"
                         >
                             Lihat Detail
                         </button>
 
-                        <a href="{{ route('donor.jadwal') }}">
-                            Jadwal Lain
-                        </a>
-                    </div>
+                        @if ($pendaftaran->dapatDibatalkan())
+                            <button
+                                type="button"
+                                wire:click="bukaPembatalan({{ $pendaftaran->id }})"
+                                class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e0bfbf] bg-white px-5 text-sm font-semibold text-[#991b2f] transition hover:bg-[#fff1f2]"
+                            >
+                                Batalkan
+                            </button>
+                        @endif
+                    </footer>
                 </article>
             @endforeach
         </section>
+
+        @if ($riwayatDonors->hasPages())
+            <div class="rounded-2xl border border-[#e6e3df] bg-white px-4 py-3">
+                {{ $riwayatDonors->links() }}
+            </div>
+        @endif
     @endif
 
+    {{-- Detail riwayat --}}
     @if ($pendaftaranTerpilih !== null)
         @php
-            $jadwalTerpilih = $pendaftaranTerpilih->jadwal;
-            $lokasiTerpilih = $jadwalTerpilih?->lokasi;
+            $jadwalTerpilih =
+                $pendaftaranTerpilih->jadwal;
+
+            $lokasiTerpilih =
+                $jadwalTerpilih?->lokasi;
+
+            $pemeriksaan =
+                $pendaftaranTerpilih
+                    ->pemeriksaanKesehatan;
+
+            $skrining =
+                $this->jawabanSkrining(
+                    $pendaftaranTerpilih
+                );
+
+            $timeline =
+                $this->timeline(
+                    $pendaftaranTerpilih
+                );
+
+            $toneTerpilih =
+                $this->statusTone(
+                    $pendaftaranTerpilih
+                        ->status
+                );
         @endphp
 
         <div
-            class="donor-history-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="judul-detail-riwayat"
             wire:click="tutupDetailRiwayat"
+            x-on:keydown.escape.window="$wire.tutupDetailRiwayat()"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-[#191c20]/50 p-3 backdrop-blur-sm sm:p-6"
         >
             <section
-                class="donor-history-modal"
                 wire:click.stop
+                class="max-h-[calc(100vh-1.5rem)] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[#f9f9ff] shadow-[0_32px_90px_rgba(25,28,32,0.3)] sm:max-h-[calc(100vh-3rem)]"
             >
-                <div class="donor-history-modal-header">
+                <header class="flex items-start justify-between gap-4 border-b border-[#e2e2e9] bg-white px-5 py-5 sm:px-7">
                     <div>
-                        <p>Detail Riwayat Donor</p>
+                        <p class="text-xs font-bold uppercase tracking-[0.07em] text-[#991b2f]">
+                            Detail Pendaftaran
+                        </p>
 
-                        <h2>
+                        <h2
+                            id="judul-detail-riwayat"
+                            class="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#191c20]"
+                        >
                             {{ $this->nomorPendaftaran($pendaftaranTerpilih) }}
                         </h2>
+
+                        <span
+                            @class([
+                                'mt-3 inline-flex rounded-full px-3 py-1.5 text-xs font-bold',
+                                'bg-[#eaf7f0] text-[#257a57]' => $toneTerpilih === 'success',
+                                'bg-[#ffdad6] text-[#93000a]' => $toneTerpilih === 'danger',
+                                'bg-[#fff4de] text-[#b86e12]' => $toneTerpilih === 'warning',
+                            ])
+                        >
+                            {{ $this->labelStatusPendaftaran($pendaftaranTerpilih->status) }}
+                        </span>
                     </div>
 
                     <button
                         type="button"
                         wire:click="tutupDetailRiwayat"
-                        aria-label="Tutup detail riwayat"
+                        aria-label="Tutup detail"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f3f3fa] text-2xl text-[#584141]"
                     >
                         ×
                     </button>
+                </header>
+
+                <div class="grid grid-cols-1 gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                    <main class="space-y-5">
+                        <section class="rounded-2xl border border-[#e6e3df] bg-white p-5">
+                            <h3 class="text-lg font-semibold text-[#191c20]">
+                                Informasi Jadwal
+                            </h3>
+
+                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                    <p class="text-xs font-bold uppercase text-[#8c7071]">
+                                        Lokasi
+                                    </p>
+
+                                    <p class="mt-2 text-sm font-semibold text-[#191c20]">
+                                        {{ $this->namaLokasi($lokasiTerpilih) }}
+                                    </p>
+
+                                    <p class="mt-1 text-sm leading-6 text-[#584141]">
+                                        {{ $this->alamatLokasi($lokasiTerpilih) }}
+                                    </p>
+                                </article>
+
+                                <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                    <p class="text-xs font-bold uppercase text-[#8c7071]">
+                                        Jadwal
+                                    </p>
+
+                                    <p class="mt-2 text-sm font-semibold text-[#191c20]">
+                                        {{ $this->tanggalJadwal($jadwalTerpilih) }}
+                                    </p>
+
+                                    <p class="mt-1 text-sm text-[#584141]">
+                                        {{ $this->jamJadwal($jadwalTerpilih) }}
+                                        WIB
+                                    </p>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section class="rounded-2xl border border-[#e6e3df] bg-white p-5">
+                            <h3 class="text-lg font-semibold text-[#191c20]">
+                                Skrining Awal
+                            </h3>
+
+                            @if ($skrining === [])
+                                <p class="mt-4 text-sm text-[#584141]">
+                                    Jawaban skrining belum tersedia untuk pendaftaran ini.
+                                </p>
+                            @else
+                                <div class="mt-4 divide-y divide-[#e2e2e9]">
+                                    @foreach ($skrining as $jawaban)
+                                        <div class="flex items-center justify-between gap-4 py-3">
+                                            <p class="text-sm text-[#584141]">
+                                                {{ $jawaban['label'] }}
+                                            </p>
+
+                                            <span
+                                                @class([
+                                                    'inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-bold',
+                                                    'bg-[#eaf7f0] text-[#257a57]' => $jawaban['positif'],
+                                                    'bg-[#fff4de] text-[#b86e12]' => ! $jawaban['positif'],
+                                                ])
+                                            >
+                                                {{ $jawaban['jawaban'] }}
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </section>
+
+                        @if ($pemeriksaan !== null)
+                            <section class="rounded-2xl border border-[#e6e3df] bg-white p-5">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <h3 class="text-lg font-semibold text-[#191c20]">
+                                        Hasil Pemeriksaan Kesehatan
+                                    </h3>
+
+                                    <span
+                                        @class([
+                                            'inline-flex rounded-full px-3 py-1.5 text-xs font-bold',
+                                            'bg-[#eaf7f0] text-[#257a57]' => $this->nilaiEnumForView($pemeriksaan->status_kelayakan) === 'eligible',
+                                            'bg-[#ffdad6] text-[#93000a]' => $this->nilaiEnumForView($pemeriksaan->status_kelayakan) === 'ineligible',
+                                        ])
+                                    >
+                                        {{ $this->labelEnum($pemeriksaan->status_kelayakan) }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Berat badan
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#191c20]">
+                                            {{ $pemeriksaan->berat_badan_kg ?? '-' }}
+                                            kg
+                                        </strong>
+                                    </article>
+
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Tekanan darah
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#191c20]">
+                                            {{ $pemeriksaan->tekanan_sistolik ?? '-' }}
+                                            /
+                                            {{ $pemeriksaan->tekanan_diastolik ?? '-' }}
+                                        </strong>
+                                    </article>
+
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Hemoglobin
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#191c20]">
+                                            {{ $pemeriksaan->kadar_hemoglobin ?? '-' }}
+                                            g/dL
+                                        </strong>
+                                    </article>
+
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Suhu tubuh
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#191c20]">
+                                            {{ $pemeriksaan->suhu_tubuh ?? '-' }}
+                                            °C
+                                        </strong>
+                                    </article>
+
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Denyut nadi
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#191c20]">
+                                            {{ $pemeriksaan->denyut_nadi ?? '-' }}
+                                            /menit
+                                        </strong>
+                                    </article>
+
+                                    <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                        <p class="text-xs text-[#8c7071]">
+                                            Golongan darah
+                                        </p>
+
+                                        <strong class="mt-1 block text-sm text-[#76001c]">
+                                            {{ $this->golonganPemeriksaan($pemeriksaan) }}
+                                        </strong>
+                                    </article>
+                                </div>
+
+                                @if (filled($pemeriksaan->alasan_tidak_layak))
+                                    <div class="mt-4 rounded-xl border border-[#ffb4ab] bg-[#fff5f4] p-4 text-sm leading-6 text-[#93000a]">
+                                        {{ $pemeriksaan->alasan_tidak_layak }}
+                                    </div>
+                                @endif
+
+                                @if (filled($pemeriksaan->catatan_medis))
+                                    <div class="mt-4">
+                                        <p class="text-xs font-bold uppercase text-[#8c7071]">
+                                            Catatan Pemeriksaan
+                                        </p>
+
+                                        <p class="mt-2 text-sm leading-6 text-[#584141]">
+                                            {{ $pemeriksaan->catatan_medis }}
+                                        </p>
+                                    </div>
+                                @endif
+                            </section>
+                        @endif
+
+                        @if (
+                            $this->alasanStatus($pendaftaranTerpilih)
+                            !== '-'
+                        )
+                            <section class="rounded-2xl border border-[#ffb4ab] bg-[#fff5f4] p-5">
+                                <p class="text-xs font-bold uppercase text-[#93000a]">
+                                    Catatan atau alasan
+                                </p>
+
+                                <p class="mt-2 text-sm leading-6 text-[#93000a]">
+                                    {{ $this->alasanStatus($pendaftaranTerpilih) }}
+                                </p>
+                            </section>
+                        @endif
+
+                        @if ($pendaftaranTerpilih->kantongDarah)
+                            <section class="rounded-2xl border border-[#e6e3df] bg-white p-5">
+                                <p class="text-xs font-bold uppercase text-[#8c7071]">
+                                    Kantong Darah
+                                </p>
+
+                                <p class="mt-2 text-lg font-bold text-[#76001c]">
+                                    {{ $pendaftaranTerpilih->kantongDarah->kode_kantong }}
+                                </p>
+                            </section>
+                        @endif
+                    </main>
+
+                    <aside class="rounded-2xl border border-[#e6e3df] bg-white p-5">
+                        <h3 class="text-lg font-semibold text-[#191c20]">
+                            Status Pendaftaran
+                        </h3>
+
+                        <div class="relative mt-6 space-y-6 pl-8">
+                            <div class="absolute bottom-5 left-[11px] top-3 w-px bg-[#e2e2e9]"></div>
+
+                            @foreach ($timeline as $tahap)
+                                <article class="relative">
+                                    <span
+                                        @class([
+                                            'absolute -left-8 top-0 z-10 flex h-6 w-6 items-center justify-center rounded-full border',
+                                            'border-[#257a57] bg-[#eaf7f0] text-[#257a57]' => $tahap['class'] === 'done',
+                                            'border-[#76001c] bg-[#76001c] text-white ring-4 ring-[#ffdada]' => $tahap['class'] === 'active',
+                                            'border-[#ba1a1a] bg-[#ffdad6] text-[#ba1a1a]' => $tahap['class'] === 'danger',
+                                            'border-[#d9d9e0] bg-[#f3f3fa] text-[#8c7071]' => $tahap['class'] === 'waiting',
+                                        ])
+                                    >
+                                        @if ($tahap['class'] === 'done')
+                                            ✓
+                                        @elseif ($tahap['class'] === 'active')
+                                            <span class="h-2 w-2 rounded-full bg-white"></span>
+                                        @elseif ($tahap['class'] === 'danger')
+                                            !
+                                        @else
+                                            <span class="h-2 w-2 rounded-full bg-[#d9d9e0]"></span>
+                                        @endif
+                                    </span>
+
+                                    <h4
+                                        @class([
+                                            'text-sm font-semibold',
+                                            'text-[#191c20]' => in_array($tahap['class'], ['done', 'waiting'], true),
+                                            'text-[#76001c]' => $tahap['class'] === 'active',
+                                            'text-[#ba1a1a]' => $tahap['class'] === 'danger',
+                                        ])
+                                    >
+                                        {{ $tahap['label'] }}
+                                    </h4>
+
+                                    <p class="mt-1 text-xs leading-5 text-[#584141]">
+                                        {{ $tahap['description'] }}
+                                    </p>
+
+                                    @if ($tahap['tanggal'] !== '-')
+                                        <p class="mt-1 text-[11px] font-medium text-[#8c7071]">
+                                            {{ $tahap['tanggal'] }}
+                                        </p>
+                                    @endif
+                                </article>
+                            @endforeach
+                        </div>
+
+                        @if ($pendaftaranTerpilih->dapatDibatalkan())
+                            <div class="mt-7 border-t border-[#e2e2e9] pt-5">
+                                <button
+                                    type="button"
+                                    wire:click="bukaPembatalan({{ $pendaftaranTerpilih->id }})"
+                                    class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#e0bfbf] bg-white px-5 text-sm font-semibold text-[#991b2f] transition hover:bg-[#fff1f2]"
+                                >
+                                    Batalkan Pendaftaran
+                                </button>
+
+                                <p class="mt-2 text-center text-xs leading-5 text-[#8c7071]">
+                                    Hanya dapat dibatalkan ketika masih menunggu atau sudah disetujui.
+                                </p>
+                            </div>
+                        @endif
+                    </aside>
                 </div>
 
-                <div class="donor-history-modal-content">
-                    <div>
-                        <span>Status</span>
-                        <strong>
-                            {{ $this->labelStatusPendaftaran($pendaftaranTerpilih->status) }}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <span>Jadwal</span>
-                        <strong>{{ $this->judulJadwal($jadwalTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Tanggal</span>
-                        <strong>
-                            {{ $this->tanggalJadwal($jadwalTerpilih) }},
-                            {{ $this->jamJadwal($jadwalTerpilih) }}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <span>Lokasi</span>
-                        <strong>{{ $this->namaLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div class="donor-history-modal-full">
-                        <span>Alamat</span>
-                        <strong>{{ $this->alamatLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Dibuat Pada</span>
-                        <strong>{{ $this->tanggalFormat($pendaftaranTerpilih->created_at) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Hadir Pada</span>
-                        <strong>{{ $this->tanggalFormat($pendaftaranTerpilih->hadir_pada) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Selesai Pada</span>
-                        <strong>{{ $this->tanggalFormat($pendaftaranTerpilih->selesai_pada) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Kantong Darah</span>
-                        <strong>
-                            {{ $pendaftaranTerpilih->kantongDarah?->kode_kantong ?? '-' }}
-                        </strong>
-                    </div>
-
-                    <div class="donor-history-modal-full">
-                        <span>Catatan / Alasan</span>
-                        <strong>{{ $this->alasanStatus($pendaftaranTerpilih) }}</strong>
-                    </div>
-                </div>
-
-                <div class="donor-history-modal-actions">
+                <footer class="flex flex-col-reverse gap-3 border-t border-[#e2e2e9] bg-white px-5 py-5 sm:flex-row sm:justify-end sm:px-7">
                     <a
                         href="{{ $this->mapsUrl($lokasiTerpilih) }}"
                         target="_blank"
                         rel="noopener noreferrer"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] px-5 text-sm font-semibold text-[#24262b]"
                     >
                         Buka Google Maps
                     </a>
@@ -277,550 +669,108 @@
                     <button
                         type="button"
                         wire:click="tutupDetailRiwayat"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#76001c] px-5 text-sm font-semibold text-white"
                     >
                         Tutup
                     </button>
-                </div>
+                </footer>
             </section>
         </div>
     @endif
 
-    <style>
-        .donor-history-page {
-            display: grid;
-            gap: 28px;
-        }
-
-        .donor-history-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 260px;
-            gap: 24px;
-            align-items: end;
-        }
-
-        .donor-history-eyebrow {
-            margin: 0 0 12px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .donor-history-hero h1 {
-            margin: 0;
-            color: #0f172a;
-            font-size: clamp(36px, 5vw, 54px);
-            line-height: 1.05;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-history-hero p:not(.donor-history-eyebrow) {
-            max-width: 760px;
-            margin: 16px 0 0;
-            color: #64748b;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .donor-history-hero-card {
-            padding: 24px;
-            border: 1px solid #fee2e2;
-            border-radius: 26px;
-            background: #ffffff;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-history-hero-card span {
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
-        .donor-history-hero-card strong {
-            display: block;
-            margin-top: 12px;
-            color: #0f172a;
-            font-size: 54px;
-            line-height: 1;
-        }
-
-        .donor-history-hero-card p {
-            margin: 10px 0 0;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .donor-history-summary {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .donor-history-summary article {
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 22px;
-            background: #ffffff;
-            box-shadow: 0 14px 38px rgba(15, 23, 42, 0.05);
-        }
-
-        .donor-history-summary span {
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .donor-history-summary strong {
-            display: block;
-            margin-top: 8px;
-            color: #0f172a;
-            font-size: 34px;
-            line-height: 1;
-        }
-
-        .donor-history-summary p {
-            margin: 8px 0 0;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .donor-history-filter {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .donor-history-filter button {
-            min-height: 42px;
-            padding: 0 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            color: #334155;
-            background: #ffffff;
-            font: inherit;
-            font-size: 13px;
-            font-weight: 900;
-            cursor: pointer;
-        }
-
-        .donor-history-filter button.is-active {
-            border-color: #dc2626;
-            color: #ffffff;
-            background: #dc2626;
-            box-shadow: 0 14px 28px rgba(220, 38, 38, 0.18);
-        }
-
-        .donor-history-list {
-            display: grid;
-            gap: 22px;
-        }
-
-        .donor-history-card {
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            border-radius: 26px;
-            background: #ffffff;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-history-card-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 20px;
-        }
-
-        .donor-history-card-header span:first-child {
-            display: inline-flex;
-            margin-bottom: 8px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.08em;
-        }
-
-        .donor-history-card-header h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 24px;
-            line-height: 1.25;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-history-card-header p {
-            margin: 10px 0 0;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .donor-history-status {
-            min-height: 34px;
-            display: inline-flex;
-            align-items: center;
-            padding: 0 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 900;
-            white-space: nowrap;
-        }
-
-        .donor-history-status.is-success {
-            color: #166534;
-            background: #dcfce7;
-        }
-
-        .donor-history-status.is-warning {
-            color: #92400e;
-            background: #fef3c7;
-        }
-
-        .donor-history-status.is-danger {
-            color: #991b1b;
-            background: #fee2e2;
-        }
-
-        .donor-history-location {
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
-            margin-top: 20px;
-            padding: 18px;
-            border: 1px solid #fee2e2;
-            border-radius: 20px;
-            background: #fff7f7;
-        }
-
-        .donor-history-location span {
-            color: #dc2626;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .donor-history-location strong {
-            display: block;
-            margin-top: 6px;
-            color: #0f172a;
-            font-size: 16px;
-        }
-
-        .donor-history-location p {
-            margin: 8px 0 0;
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .donor-history-location small {
-            display: block;
-            margin-top: 8px;
-            color: #64748b;
-            font-weight: 800;
-        }
-
-        .donor-history-location a,
-        .donor-history-actions button,
-        .donor-history-actions a,
-        .donor-history-empty a,
-        .donor-history-modal-actions a,
-        .donor-history-modal-actions button {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 16px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-        }
-
-        .donor-history-location a,
-        .donor-history-actions button,
-        .donor-history-empty a,
-        .donor-history-modal-actions a {
-            border: 0;
-            color: #ffffff;
-            background: #dc2626;
-        }
-
-        .donor-history-timeline {
-            display: grid;
-            gap: 0;
-            margin-top: 24px;
-        }
-
-        .donor-history-step {
-            display: grid;
-            grid-template-columns: 34px minmax(0, 1fr);
-            gap: 14px;
-            position: relative;
-            padding-bottom: 20px;
-        }
-
-        .donor-history-step:not(:last-child)::before {
-            content: "";
-            position: absolute;
-            left: 16px;
-            top: 32px;
-            bottom: -2px;
-            width: 2px;
-            background: #e2e8f0;
-        }
-
-        .donor-history-step-marker {
-            position: relative;
-            z-index: 1;
-            width: 34px;
-            height: 34px;
-            display: grid;
-            place-items: center;
-            border-radius: 999px;
-            background: #f1f5f9;
-        }
-
-        .donor-history-step-marker span {
-            width: 14px;
-            height: 14px;
-            border-radius: 999px;
-            background: #94a3b8;
-        }
-
-        .donor-history-step strong {
-            display: block;
-            color: #0f172a;
-            font-size: 15px;
-        }
-
-        .donor-history-step p {
-            margin: 5px 0 0;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .donor-history-step small {
-            display: block;
-            margin-top: 6px;
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .donor-history-step.is-done .donor-history-step-marker,
-        .donor-history-step.is-active .donor-history-step-marker {
-            background: #dcfce7;
-        }
-
-        .donor-history-step.is-done .donor-history-step-marker span,
-        .donor-history-step.is-active .donor-history-step-marker span {
-            background: #16a34a;
-        }
-
-        .donor-history-step.is-danger .donor-history-step-marker {
-            background: #fee2e2;
-        }
-
-        .donor-history-step.is-danger .donor-history-step-marker span {
-            background: #dc2626;
-        }
-
-        .donor-history-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 4px;
-        }
-
-        .donor-history-actions button {
-            font: inherit;
-            cursor: pointer;
-        }
-
-        .donor-history-actions a,
-        .donor-history-modal-actions button {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-        }
-
-        .donor-history-empty {
-            display: grid;
-            place-items: center;
-            padding: 60px 24px;
-            border: 1px dashed #fecaca;
-            border-radius: 26px;
-            background: #fff7f7;
-            text-align: center;
-        }
-
-        .donor-history-empty-icon {
-            width: 68px;
-            height: 68px;
-            display: grid;
-            place-items: center;
-            border-radius: 22px;
-            color: #dc2626;
-            background: #fee2e2;
-        }
-
-        .donor-history-empty-icon svg {
-            width: 34px;
-            height: 34px;
-        }
-
-        .donor-history-empty h2 {
-            margin: 18px 0 8px;
-            color: #0f172a;
-        }
-
-        .donor-history-empty p {
-            margin: 0 0 20px;
-            max-width: 420px;
-            color: #64748b;
-            line-height: 1.7;
-        }
-
-        .donor-history-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            z-index: 80;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: rgba(15, 23, 42, 0.42);
-            backdrop-filter: blur(8px);
-        }
-
-        .donor-history-modal {
-            width: min(100%, 900px);
-            max-height: calc(100vh - 48px);
-            overflow: auto;
-            border-radius: 28px;
-            background: #ffffff;
-            box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
-        }
-
-        .donor-history-modal-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 26px 28px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .donor-history-modal-header p {
-            margin: 0 0 8px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-        }
-
-        .donor-history-modal-header h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 28px;
-            line-height: 1.2;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-history-modal-header button {
-            width: 42px;
-            height: 42px;
-            border: 0;
-            border-radius: 14px;
-            color: #0f172a;
-            background: #f1f5f9;
-            font-size: 28px;
-            cursor: pointer;
-        }
-
-        .donor-history-modal-content {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            padding: 24px 28px;
-        }
-
-        .donor-history-modal-content div {
-            display: grid;
-            gap: 7px;
-            padding: 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            background: #f8fafc;
-        }
-
-        .donor-history-modal-content .donor-history-modal-full {
-            grid-column: 1 / -1;
-            border-color: #fee2e2;
-            background: #fff7f7;
-        }
-
-        .donor-history-modal-content span {
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .donor-history-modal-content strong {
-            color: #0f172a;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .donor-history-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            padding: 0 28px 28px;
-        }
-
-        @media (max-width: 980px) {
-            .donor-history-hero,
-            .donor-history-summary {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-history-location {
-                flex-direction: column;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .donor-history-card-header,
-            .donor-history-modal-actions {
-                flex-direction: column;
-            }
-
-            .donor-history-modal-content {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-history-modal-content .donor-history-modal-full {
-                grid-column: auto;
-            }
-
-            .donor-history-actions,
-            .donor-history-modal-actions {
-                flex-direction: column;
-            }
-
-            .donor-history-actions button,
-            .donor-history-actions a,
-            .donor-history-location a,
-            .donor-history-modal-actions a,
-            .donor-history-modal-actions button {
-                width: 100%;
-            }
-        }
-    </style>
+    {{-- Modal pembatalan --}}
+    @if ($pendaftaranPembatalan !== null)
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="judul-pembatalan"
+            wire:click="tutupPembatalan"
+            x-on:keydown.escape.window="$wire.tutupPembatalan()"
+            class="fixed inset-0 z-[90] flex items-center justify-center bg-[#191c20]/55 p-4 backdrop-blur-sm"
+        >
+            <section
+                wire:click.stop
+                class="w-full max-w-lg rounded-2xl bg-white shadow-[0_32px_90px_rgba(25,28,32,0.3)]"
+            >
+                <header class="border-b border-[#e2e2e9] px-5 py-5 sm:px-6">
+                    <h2
+                        id="judul-pembatalan"
+                        class="text-xl font-semibold text-[#191c20]"
+                    >
+                        Batalkan Pendaftaran
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-[#584141]">
+                        {{ $this->nomorPendaftaran($pendaftaranPembatalan) }}
+                    </p>
+                </header>
+
+                <div class="p-5 sm:p-6">
+                    <div class="rounded-xl border border-[#f2c879] bg-[#fff4de] p-4 text-sm leading-6 text-[#8a4f00]">
+                        Pembatalan tidak dapat dibatalkan kembali. Jadwal yang sama juga tidak dapat didaftarkan ulang.
+                    </div>
+
+                    @error('pembatalan')
+                        <div class="mt-4 rounded-xl border border-[#ffb4ab] bg-[#ffdad6] p-3 text-sm text-[#93000a]">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <label
+                        for="alasan-pembatalan"
+                        class="mb-2 mt-5 block text-sm font-semibold text-[#191c20]"
+                    >
+                        Alasan Pembatalan
+                    </label>
+
+                    <textarea
+                        id="alasan-pembatalan"
+                        wire:model="alasanPembatalan"
+                        rows="5"
+                        maxlength="1000"
+                        placeholder="Tuliskan alasan pembatalan secara jelas..."
+                        class="w-full resize-y rounded-xl border border-[#e2e2e9] px-4 py-3 text-sm text-[#191c20] placeholder:text-[#8c7071] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                    ></textarea>
+
+                    @error('alasanPembatalan')
+                        <p class="mt-1 text-xs font-medium text-[#ba1a1a]">
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <footer class="flex flex-col-reverse gap-3 border-t border-[#e2e2e9] px-5 py-5 sm:flex-row sm:justify-end sm:px-6">
+                    <button
+                        type="button"
+                        wire:click="tutupPembatalan"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] px-5 text-sm font-semibold text-[#584141]"
+                    >
+                        Kembali
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="batalkanPendaftaran"
+                        wire:loading.attr="disabled"
+                        wire:target="batalkanPendaftaran"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#ba1a1a] px-5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                    >
+                        <span
+                            wire:loading.remove
+                            wire:target="batalkanPendaftaran"
+                        >
+                            Batalkan Pendaftaran
+                        </span>
+
+                        <span
+                            wire:loading
+                            wire:target="batalkanPendaftaran"
+                        >
+                            Memproses...
+                        </span>
+                    </button>
+                </footer>
+            </section>
+        </div>
+    @endif
 </div>

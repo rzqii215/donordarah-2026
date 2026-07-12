@@ -1,1266 +1,463 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>{{ $judul ?? 'Bantuan' }}</title>
-
-    <style>
-        :root {
-            --red: #ef1d26;
-            --red-soft: #fff1f2;
-            --red-border: #fecdd3;
-            --blue: #2563eb;
-            --blue-soft: #dbeafe;
-            --green: #16a34a;
-            --green-soft: #dcfce7;
-            --orange: #f97316;
-            --orange-soft: #ffedd5;
-            --yellow: #d97706;
-            --yellow-soft: #fef3c7;
-            --purple: #7c3aed;
-            --purple-soft: #ede9fe;
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: #e5e7eb;
-            --soft-line: #f1f5f9;
-            --surface: #ffffff;
-            --body: #f8fafc;
-            --shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-            --shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.05);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--text);
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(254, 226, 226, 0.72),
-                    transparent 28rem
-                ),
-                linear-gradient(
-                    180deg,
-                    #ffffff 0%,
-                    var(--body) 45%,
-                    #ffffff 100%
-                );
-            font-family:
-                Inter,
-                ui-sans-serif,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        svg {
-            display: block;
-            width: 1.25rem;
-            height: 1.25rem;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-
-        .app {
-            display: grid;
-            grid-template-columns: 250px minmax(0, 1fr);
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            padding: 26px 20px 20px;
-            border-right: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-height: 58px;
-            margin-bottom: 34px;
-        }
-
-        .brand-mark {
-            display: grid;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: #ffffff;
-            border-radius: 18px;
-            background: linear-gradient(135deg, var(--red), #f43f5e);
-            box-shadow: 0 18px 35px rgba(239, 29, 38, 0.22);
-        }
-
-        .brand-title {
-            display: grid;
-            gap: 1px;
-            color: var(--text);
-            font-size: 16px;
-            font-weight: 800;
-            line-height: 1.05;
-            text-transform: uppercase;
-        }
-
-        .brand-title strong {
-            color: var(--red);
-            font-size: 19px;
-        }
-
-        .menu {
-            display: grid;
-            gap: 8px;
-        }
-
-        .menu-link,
-        .menu-button {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            width: 100%;
-            min-height: 52px;
-            padding: 0 16px;
-            color: #475569;
-            border: 0;
-            border-radius: 14px;
-            background: transparent;
-            font-size: 15px;
-            font-weight: 750;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .menu-link:hover,
-        .menu-button:hover {
-            color: var(--red);
-            background: #fff5f5;
-        }
-
-        .menu-link.active {
-            color: var(--red);
-            background: linear-gradient(90deg, #ffe4e6 0%, #fff7f7 100%);
-        }
-
-        .menu-link.active::before {
-            content: "";
-            position: absolute;
-            left: -20px;
-            width: 4px;
-            height: 42px;
-            border-radius: 999px;
-            background: var(--red);
-        }
-
-        .menu-icon {
-            display: grid;
-            flex: 0 0 auto;
-            width: 25px;
-            height: 25px;
-            place-items: center;
-        }
-
-        .sidebar-separator {
-            height: 1px;
-            margin: 28px 12px;
-            background: var(--line);
-        }
-
-        .sidebar-bottom {
-            position: absolute;
-            right: 20px;
-            bottom: 20px;
-            left: 20px;
-        }
-
-        .quote-card {
-            display: grid;
-            place-items: center;
-            min-height: 176px;
-            margin-bottom: 18px;
-            padding: 18px;
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            background: #ffffff;
-            box-shadow: var(--shadow-soft);
-            text-align: center;
-        }
-
-        .quote-icon {
-            display: grid;
-            width: 74px;
-            height: 74px;
-            place-items: center;
-            margin-bottom: 12px;
-            color: var(--red);
-            border-radius: 999px;
-            background: var(--red-soft);
-            font-size: 30px;
-            font-weight: 900;
-        }
-
-        .quote-text {
-            margin: 0;
-            color: var(--red);
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.45;
-        }
-
-        .main {
-            min-width: 0;
-        }
-
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            display: grid;
-            grid-template-columns: minmax(260px, 1fr) minmax(280px, 420px) auto;
-            gap: 24px;
-            align-items: center;
-            min-height: 104px;
-            padding: 22px 32px;
-            border-bottom: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .page-title {
-            margin: 0;
-            font-size: 31px;
-            font-weight: 900;
-            letter-spacing: -0.045em;
-        }
-
-        .page-subtitle {
-            margin: 6px 0 0;
-            color: var(--muted);
-            font-size: 15px;
-        }
-
-        .search-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            height: 54px;
-            min-width: 0;
-            padding: 0 18px;
-            border: 1px solid #dbe1ea;
-            border-radius: 16px;
-            background: #ffffff;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
-        }
-
-        .search-box input {
-            width: 100%;
-            min-width: 0;
-            border: 0;
-            outline: none;
-            color: var(--text);
-            background: transparent;
-            font-size: 14px;
-        }
-
-        .avatar {
-            display: grid;
-            flex: 0 0 auto;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: var(--red);
-            border-radius: 999px;
-            background: #ffe1e5;
-            font-weight: 900;
-        }
-
-        .content {
-            padding: 30px 32px 40px;
-        }
-
-        .hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .card {
-            border: 1px solid var(--soft-line);
-            border-radius: 22px;
-            background: var(--surface);
-            box-shadow: var(--shadow);
-        }
-
-        .hero-card {
-            position: relative;
-            overflow: hidden;
-            padding: 30px;
-            color: #ffffff;
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(255, 255, 255, 0.22),
-                    transparent 16rem
-                ),
-                linear-gradient(135deg, var(--red), #ef4444);
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            min-height: 34px;
-            padding: 0 12px;
-            border-radius: 999px;
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.16);
-            font-size: 13px;
-            font-weight: 900;
-        }
-
-        .hero-title {
-            max-width: 720px;
-            margin: 18px 0 10px;
-            font-size: 34px;
-            font-weight: 950;
-            line-height: 1.08;
-            letter-spacing: -0.055em;
-        }
-
-        .hero-description {
-            max-width: 720px;
-            margin: 0;
-            color: rgba(255, 255, 255, 0.84);
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .hero-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .hero-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 48px;
-            padding: 0 18px;
-            border-radius: 13px;
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        .hero-button.white {
-            color: var(--red);
-            background: #ffffff;
-        }
-
-        .hero-button.ghost {
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.32);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .status-card {
-            padding: 24px;
-        }
-
-        .status-title {
-            margin: 0 0 16px;
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .status-list {
-            display: grid;
-            gap: 12px;
-        }
-
-        .status-item {
-            display: grid;
-            grid-template-columns: 42px minmax(0, 1fr);
-            gap: 12px;
-            align-items: start;
-            padding: 14px;
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            background: #ffffff;
-        }
-
-        .status-icon {
-            display: grid;
-            width: 42px;
-            height: 42px;
-            place-items: center;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 900;
-        }
-
-        .status-icon.red {
-            color: var(--red);
-            background: var(--red-soft);
-        }
-
-        .status-icon.blue {
-            color: var(--blue);
-            background: var(--blue-soft);
-        }
-
-        .status-icon.green {
-            color: var(--green);
-            background: var(--green-soft);
-        }
-
-        .status-icon.orange {
-            color: var(--orange);
-            background: var(--orange-soft);
-        }
-
-        .status-item-title {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        .status-item-description {
-            margin: 4px 0 0;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.55;
-        }
-
-        .section-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 18px;
-            margin-bottom: 24px;
-        }
-
-        .guide-card {
-            padding: 24px;
-        }
-
-        .guide-icon {
-            display: grid;
-            width: 54px;
-            height: 54px;
-            place-items: center;
-            margin-bottom: 16px;
-            border-radius: 18px;
-            font-size: 20px;
-            font-weight: 900;
-        }
-
-        .guide-icon.red {
-            color: var(--red);
-            background: var(--red-soft);
-        }
-
-        .guide-icon.blue {
-            color: var(--blue);
-            background: var(--blue-soft);
-        }
-
-        .guide-icon.green {
-            color: var(--green);
-            background: var(--green-soft);
-        }
-
-        .guide-icon.orange {
-            color: var(--orange);
-            background: var(--orange-soft);
-        }
-
-        .guide-icon.purple {
-            color: var(--purple);
-            background: var(--purple-soft);
-        }
-
-        .guide-title {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 900;
-            letter-spacing: -0.025em;
-        }
-
-        .guide-description {
-            margin: 8px 0 0;
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .guide-list {
-            display: grid;
-            gap: 8px;
-            margin: 16px 0 0;
-            padding: 0;
-            list-style: none;
-        }
-
-        .guide-list li {
-            display: grid;
-            grid-template-columns: 22px minmax(0, 1fr);
-            gap: 8px;
-            align-items: start;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.55;
-        }
-
-        .check {
-            display: grid;
-            width: 22px;
-            height: 22px;
-            place-items: center;
-            color: var(--green);
-            border-radius: 999px;
-            background: var(--green-soft);
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .main-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 360px;
-            gap: 24px;
-            align-items: start;
-        }
-
-        .panel {
-            padding: 26px;
-        }
-
-        .panel-title {
-            margin: 0 0 6px;
-            font-size: 23px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .panel-description {
-            margin: 0 0 22px;
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .faq-list {
-            display: grid;
-            gap: 12px;
-        }
-
-        .faq-item {
-            padding: 18px;
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            background: #ffffff;
-        }
-
-        .faq-question {
-            margin: 0;
-            font-size: 15px;
-            font-weight: 900;
-            line-height: 1.5;
-        }
-
-        .faq-answer {
-            margin: 8px 0 0;
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.75;
-        }
-
-        .side-stack {
-            display: grid;
-            gap: 18px;
-        }
-
-        .contact-card {
-            padding: 24px;
-        }
-
-        .contact-title {
-            margin: 0 0 14px;
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .contact-item {
-            padding: 15px;
-            border: 1px solid var(--line);
-            border-radius: 15px;
-            background: #ffffff;
-        }
-
-        .contact-label {
-            margin: 0;
-            color: var(--muted);
-            font-size: 12px;
-            font-weight: 850;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .contact-value {
-            margin: 6px 0 0;
-            font-size: 14px;
-            font-weight: 850;
-            line-height: 1.5;
-        }
-
-        .quick-links {
-            display: grid;
-            gap: 10px;
-            margin-top: 16px;
-        }
-
-        .quick-link {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            min-height: 48px;
-            padding: 0 14px;
-            border: 1px solid #dbe1ea;
-            border-radius: 13px;
-            background: #ffffff;
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        .quick-link.red {
-            color: var(--red);
-            border-color: var(--red-border);
-            background: var(--red-soft);
-        }
-
-        @media (max-width: 1280px) {
-            .hero,
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-
-            .section-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .topbar {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 1080px) {
-            .app {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                position: relative;
-                height: auto;
-                border-right: 0;
-                border-bottom: 1px solid var(--line);
-            }
-
-            .sidebar-bottom {
-                position: static;
-                margin-top: 28px;
-            }
-
-            .menu {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-
-            .menu-link.active::before {
-                display: none;
-            }
-        }
-
-        @media (max-width: 780px) {
-            .content,
-            .topbar {
-                padding-right: 18px;
-                padding-left: 18px;
-            }
-
-            .section-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .menu {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-title {
-                font-size: 28px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    @php
-        $icon = fn (string $name): string => match ($name) {
-            'drop' => '<svg viewBox="0 0 24 24"><path d="M12 2s7 7.2 7 12a7 7 0 0 1-14 0C5 9.2 12 2 12 2Z"></path><path d="M9.8 14.2 11.4 16l3.2-4"></path></svg>',
-            'home' => '<svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>',
-            'file' => '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>',
-            'truck' => '<svg viewBox="0 0 24 24"><path d="M3 6h11v10H3z"></path><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>',
-            'user' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>',
-            'history' => '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path><path d="M12 7v5l3 2"></path></svg>',
-            'help' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 1 1 5.8 1c-.6 1.5-2.9 1.8-2.9 4"></path><path d="M12 18h.01"></path></svg>',
-            'settings' => '<svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z"></path></svg>',
-            'search' => '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>',
-            'logout' => '<svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path></svg>',
-            default => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg>',
-        };
-
-        $aktif = $aktif ?? 'bantuan';
-
-        $pengguna = \Illuminate\Support\Facades\Auth::user();
-
-        $profil = $pengguna
-            ? \App\Models\ProfilRumahSakit::query()
-                ->where('pengguna_id', $pengguna->id)
-                ->first()
-            : null;
-
-        $namaPemohon = $profil?->nama_rumah_sakit ?? $pengguna?->name ?? 'Pemohon Donor';
-
-        $inisial = collect(explode(' ', $namaPemohon))
-            ->filter()
-            ->take(2)
-            ->map(fn ($item) => mb_substr($item, 0, 1))
-            ->implode('');
-
-        $inisial = filled($inisial)
-            ? mb_strtoupper($inisial)
-            : 'PD';
-
-        $portalUrl = function (string $routeName): string {
-            return \Illuminate\Support\Facades\Route::has($routeName)
-                ? route($routeName)
-                : route('pemohon-donor.beranda');
-        };
-    @endphp
-
-    <div class="app">
-        
-<aside class="sidebar">
-            <a
-                href="{{ $portalUrl('pemohon-donor.beranda') }}"
-                class="brand"
+@php
+    $pengguna = auth()->user();
+
+    $profil = $pengguna !== null
+        ? \App\Models\ProfilRumahSakit::query()
+            ->where(
+                'pengguna_id',
+                $pengguna->id
+            )
+            ->first()
+        : null;
+
+    $namaPemohon =
+        $profil?->nama_rumah_sakit
+        ?? $pengguna?->name
+        ?? 'Pemohon Donor';
+
+    $daftarPanduan = [
+        [
+            'nomor' => '01',
+            'judul' => 'Lengkapi Profil',
+            'deskripsi' =>
+                'Isi identitas rumah sakit, nomor izin, penanggung jawab, alamat, dan informasi lokasi.',
+            'warna' => 'red',
+        ],
+        [
+            'nomor' => '02',
+            'judul' => 'Buat Pengajuan',
+            'deskripsi' =>
+                'Masukkan referensi pasien, dokter, golongan darah, rhesus, jumlah kantong, dan urgensi.',
+            'warna' => 'orange',
+        ],
+        [
+            'nomor' => '03',
+            'judul' => 'Pantau Status',
+            'deskripsi' =>
+                'Periksa perubahan status pengajuan melalui Dashboard, Pengajuan, dan Riwayat.',
+            'warna' => 'blue',
+        ],
+        [
+            'nomor' => '04',
+            'judul' => 'Cek Distribusi',
+            'deskripsi' =>
+                'Lihat jadwal penyerahan, status distribusi, serta bukti distribusi dari petugas.',
+            'warna' => 'green',
+        ],
+    ];
+
+    $daftarFaq = [
+        [
+            'pertanyaan' =>
+                'Kenapa tombol Kirim Pengajuan tidak dapat digunakan?',
+            'jawaban' =>
+                'Pastikan profil rumah sakit sudah tersedia dan seluruh kolom wajib pada formulir pengajuan sudah diisi. Buka menu Profil untuk melengkapi identitas rumah sakit terlebih dahulu.',
+        ],
+        [
+            'pertanyaan' =>
+                'Kenapa status pengajuan belum berubah?',
+            'jawaban' =>
+                'Status pengajuan berubah setelah petugas memeriksa kebutuhan darah melalui panel admin. Pemohon dapat memantau perubahan status melalui Dashboard, Pengajuan, atau Riwayat.',
+        ],
+        [
+            'pertanyaan' =>
+                'Apa arti status Menunggu Stok?',
+            'jawaban' =>
+                'Status Menunggu Stok berarti pengajuan sudah diperiksa, tetapi jumlah kantong darah yang sesuai belum mencukupi. Petugas akan melanjutkan proses ketika stok tersedia.',
+        ],
+        [
+            'pertanyaan' =>
+                'Kenapa halaman Distribusi masih kosong?',
+            'jawaban' =>
+                'Distribusi baru tersedia setelah pengajuan disetujui, kebutuhan kantong darah terpenuhi, dan petugas membuat jadwal penyerahan.',
+        ],
+        [
+            'pertanyaan' =>
+                'Apa perbedaan bukti pengajuan dan bukti distribusi?',
+            'jawaban' =>
+                'Bukti pengajuan menunjukkan bahwa kebutuhan darah sudah tercatat. Bukti distribusi menunjukkan jadwal atau proses penyerahan kantong darah sudah dibuat oleh petugas.',
+        ],
+        [
+            'pertanyaan' =>
+                'Bagaimana cara mengunduh bukti pengajuan?',
+            'jawaban' =>
+                'Buka menu Pengajuan, cari data yang dibutuhkan, kemudian tekan tombol Unduh. Bukti terbaru juga dapat diunduh melalui tombol Bukti Pengajuan Terbaru pada Dashboard.',
+        ],
+        [
+            'pertanyaan' =>
+                'Apakah data rumah sakit dapat dilihat oleh pemohon lain?',
+            'jawaban' =>
+                'Tidak. Data profil, pengajuan, distribusi, dan riwayat dibatasi berdasarkan akun Pemohon Donor yang sedang login.',
+        ],
+        [
+            'pertanyaan' =>
+                'Apa yang harus dilakukan jika profil ditolak?',
+            'jawaban' =>
+                'Buka menu Profil, baca alasan penolakan, perbaiki informasi atau dokumen izin, lalu simpan kembali. Status akan dikembalikan menjadi menunggu verifikasi.',
+        ],
+        [
+            'pertanyaan' =>
+                'Bagaimana jika lupa password?',
+            'jawaban' =>
+                'Keluar dari akun, buka halaman Login, kemudian pilih Lupa Password. Sistem akan mengirimkan tautan pengaturan ulang password ke email akun.',
+        ],
+    ];
+@endphp
+
+<x-layouts.pemohon-donor
+    :title="$judul ?? 'Bantuan'"
+    :heading="$judul ?? 'Bantuan'"
+    :description="$deskripsi ?? 'Pusat bantuan penggunaan Portal Pemohon Donor.'"
+    :pengguna="$pengguna"
+    :profil="$profil"
+>
+    <div class="space-y-6">
+        <section
+            class="relative overflow-hidden rounded-[28px] bg-[#76001c] px-6 py-8 text-white shadow-[0_22px_55px_rgba(118,0,28,0.2)] sm:px-8"
+        >
+            <div
+                class="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10"
+            ></div>
+
+            <div
+                class="pointer-events-none absolute -bottom-24 right-36 h-56 w-56 rounded-full bg-[#fdb7c5]/10"
+            ></div>
+
+            <div
+                class="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center"
             >
-                <span class="brand-mark">
-                    {!! $icon('drop') !!}
-                </span>
-
-                <span class="brand-title">
-                    Portal
-                    <strong>Pemohon Donor</strong>
-                </span>
-            </a>
-
-            <nav class="menu">
-                <a
-                    href="{{ $portalUrl('pemohon-donor.beranda') }}"
-                    class="menu-link {{ $aktif === 'beranda' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('home') !!}</span>
-                    Dashboard
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                    class="menu-link {{ $aktif === 'pengajuan' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('file') !!}</span>
-                    Pengajuan
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.distribusi.index') }}"
-                    class="menu-link {{ $aktif === 'distribusi' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('truck') !!}</span>
-                    Distribusi
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.profil.index') }}"
-                    class="menu-link {{ $aktif === 'profil' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('user') !!}</span>
-                    Profil
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.riwayat.index') }}"
-                    class="menu-link {{ $aktif === 'riwayat' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('history') !!}</span>
-                    Riwayat
-                </a>
-            </nav>
-
-            <div class="sidebar-separator"></div>
-
-            <nav class="menu">
-                <a
-                    href="{{ $portalUrl('pemohon-donor.bantuan.index') }}"
-                    class="menu-link {{ $aktif === 'bantuan' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('help') !!}</span>
-                    Bantuan
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.pengaturan.index') }}"
-                    class="menu-link {{ $aktif === 'pengaturan' ? 'active' : '' }}"
-                >
-                    <span class="menu-icon">{!! $icon('settings') !!}</span>
-                    Pengaturan
-                </a>
-
-                <form
-                    method="POST"
-                    action="{{ route('logout') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="menu-button"
+                <div>
+                    <span
+                        class="inline-flex min-h-9 items-center rounded-full border border-white/15 bg-white/10 px-4 text-xs font-bold uppercase tracking-[0.12em]"
                     >
-                        <span class="menu-icon">{!! $icon('logout') !!}</span>
-                        Keluar
-                    </button>
-                </form>
-            </nav>
+                        Panduan Portal
+                    </span>
 
-            <div class="sidebar-bottom">
-                <div class="quote-card">
-                    <div class="quote-icon">
-                        ♥
+                    <h2
+                        class="mt-5 max-w-3xl text-3xl font-bold tracking-[-0.05em] sm:text-4xl lg:text-5xl"
+                    >
+                        Ada yang bisa kami bantu?
+                    </h2>
+
+                    <p
+                        class="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base"
+                    >
+                        Pelajari cara membuat pengajuan kebutuhan darah, memantau
+                        status, melihat distribusi, dan mengelola akun
+                        {{ $namaPemohon }}.
+                    </p>
+
+                    <div
+                        class="mt-6 flex flex-wrap gap-3"
+                    >
+                        <a
+                            href="{{ route('pemohon-donor.pengajuan.create') }}"
+                            class="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-bold text-[#76001c]"
+                        >
+                            Buat Pengajuan
+                        </a>
+
+                        <a
+                            href="{{ route('pemohon-donor.riwayat.index') }}"
+                            class="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 text-sm font-bold text-white"
+                        >
+                            Lihat Riwayat
+                        </a>
+                    </div>
+                </div>
+
+                <article
+                    class="rounded-[24px] border border-white/15 bg-white/10 p-6"
+                >
+                    <div
+                        class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15"
+                    >
+                        <svg
+                            class="h-7 w-7"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="9"
+                            />
+
+                            <path
+                                d="M9.5 9a2.7 2.7 0 1 1 5 1.4c-.8 1.2-2.5 1.4-2.5 3.6"
+                            />
+
+                            <path d="M12 18h.01" />
+                        </svg>
                     </div>
 
-                    <p class="quote-text">
-                        Setetes darah,<br>
-                        sejuta harapan.
-                    </p>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main">
-            <header class="topbar">
-                <div>
-                    <h1 class="page-title">
-                        {{ $judul ?? 'Bantuan' }}
-                    </h1>
-
-                    <p class="page-subtitle">
-                        {{ $deskripsi ?? 'Pusat bantuan penggunaan Portal Pemohon Donor.' }}
-                    </p>
-                </div>
-
-                <form
-                    method="GET"
-                    action="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                    class="search-box"
-                >
-                    {!! $icon('search') !!}
-
-                    <input
-                        type="search"
-                        name="q"
-                        placeholder="Cari pengajuan atau distribusi..."
+                    <h3
+                        class="mt-5 text-xl font-bold"
                     >
-                </form>
+                        Pusat Bantuan Pemohon
+                    </h3>
 
-                <div class="avatar">
-                    {{ $inisial }}
+                    <p
+                        class="mt-2 text-sm leading-6 text-white/65"
+                    >
+                        Ikuti panduan penggunaan atau buka pertanyaan yang sering ditanyakan.
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <section
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
+            @foreach ($daftarPanduan as $panduan)
+                @php
+                    $warnaNomor = match (
+                        $panduan['warna']
+                    ) {
+                        'orange' =>
+                            'bg-[#fff1c9] text-[#8a5a00]',
+
+                        'blue' =>
+                            'bg-[#e7effc] text-[#315b9b]',
+
+                        'green' =>
+                            'bg-[#dff7e7] text-[#176b3a]',
+
+                        default =>
+                            'bg-[#ffe7ec] text-[#991b2f]',
+                    };
+                @endphp
+
+                <article
+                    class="rounded-[22px] border border-[#e8e2df] bg-white p-5 shadow-[0_14px_38px_rgba(25,28,32,0.05)]"
+                >
+                    <span
+                        class="flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-bold {{ $warnaNomor }}"
+                    >
+                        {{ $panduan['nomor'] }}
+                    </span>
+
+                    <h3
+                        class="mt-5 text-lg font-bold tracking-[-0.03em] text-[#191c20]"
+                    >
+                        {{ $panduan['judul'] }}
+                    </h3>
+
+                    <p
+                        class="mt-2 text-sm leading-6 text-[#755f60]"
+                    >
+                        {{ $panduan['deskripsi'] }}
+                    </p>
+                </article>
+            @endforeach
+        </section>
+
+        <section
+            class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]"
+        >
+            <article
+                class="rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)] sm:p-6"
+            >
+                <div
+                    class="border-b border-[#eee8e5] pb-5"
+                >
+                    <p
+                        class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                    >
+                        Pertanyaan Umum
+                    </p>
+
+                    <h2
+                        class="mt-1 text-2xl font-bold tracking-[-0.04em] text-[#191c20]"
+                    >
+                        Pertanyaan yang Sering Ditanyakan
+                    </h2>
+
+                    <p
+                        class="mt-2 text-sm leading-6 text-[#755f60]"
+                    >
+                        Tekan pertanyaan untuk melihat jawabannya.
+                    </p>
                 </div>
-            </header>
 
-            <section class="content">
-                <section class="hero">
-                    <article class="hero-card card">
-                        <span class="hero-badge">
-                            Panduan Portal
-                        </span>
-
-                        <h2 class="hero-title">
-                            Gunakan portal ini untuk mengajukan kebutuhan donor dan memantau distribusi kantong darah.
-                        </h2>
-
-                        <p class="hero-description">
-                            Portal Pemohon Donor membantu pemohon membuat pengajuan kebutuhan donor, melihat status proses,
-                            mengunduh bukti pengajuan, dan memantau distribusi yang sudah dijadwalkan oleh petugas.
-                        </p>
-
-                        <div class="hero-actions">
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.pengajuan.create') }}"
-                                class="hero-button white"
+                <div class="mt-6 space-y-3">
+                    @foreach ($daftarFaq as $index => $faq)
+                        <details
+                            class="group rounded-2xl border border-[#eee8e5] bg-white open:border-[#e4c9cf] open:bg-[#fffafb]"
+                            @if ($index === 0)
+                                open
+                            @endif
+                        >
+                            <summary
+                                class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4"
                             >
-                                Buat Pengajuan
-                            </a>
+                                <span
+                                    class="text-sm font-bold leading-6 text-[#191c20]"
+                                >
+                                    {{ $faq['pertanyaan'] }}
+                                </span>
 
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.riwayat.index') }}"
-                                class="hero-button ghost"
+                                <span
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f4efed] text-[#76001c] transition group-open:rotate-45 group-open:bg-[#ffe7ec]"
+                                >
+                                    <svg
+                                        class="h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                </span>
+                            </summary>
+
+                            <div
+                                class="border-t border-[#eee8e5] px-5 py-4"
                             >
-                                Lihat Riwayat
-                            </a>
-                        </div>
-                    </article>
-
-                    <aside class="status-card card">
-                        <h3 class="status-title">
-                            Urutan Penggunaan
-                        </h3>
-
-                        <div class="status-list">
-                            <article class="status-item">
-                                <div class="status-icon red">
-                                    1
-                                </div>
-
-                                <div>
-                                    <p class="status-item-title">
-                                        Lengkapi profil
-                                    </p>
-
-                                    <p class="status-item-description">
-                                        Isi identitas pemohon, penanggung jawab, dan alamat.
-                                    </p>
-                                </div>
-                            </article>
-
-                            <article class="status-item">
-                                <div class="status-icon orange">
-                                    2
-                                </div>
-
-                                <div>
-                                    <p class="status-item-title">
-                                        Buat pengajuan
-                                    </p>
-
-                                    <p class="status-item-description">
-                                        Isi golongan darah, rhesus, jumlah kantong, urgensi, dan waktu kebutuhan.
-                                    </p>
-                                </div>
-                            </article>
-
-                            <article class="status-item">
-                                <div class="status-icon blue">
-                                    3
-                                </div>
-
-                                <div>
-                                    <p class="status-item-title">
-                                        Pantau status
-                                    </p>
-
-                                    <p class="status-item-description">
-                                        Lihat proses pengajuan dari dashboard, pengajuan, dan riwayat.
-                                    </p>
-                                </div>
-                            </article>
-
-                            <article class="status-item">
-                                <div class="status-icon green">
-                                    4
-                                </div>
-
-                                <div>
-                                    <p class="status-item-title">
-                                        Cek distribusi
-                                    </p>
-
-                                    <p class="status-item-description">
-                                        Buka distribusi untuk melihat jadwal dan bukti distribusi.
-                                    </p>
-                                </div>
-                            </article>
-                        </div>
-                    </aside>
-                </section>
-
-                <section class="section-grid">
-                    <article class="guide-card card">
-                        <div class="guide-icon red">
-                            P
-                        </div>
-
-                        <h3 class="guide-title">
-                            Pengajuan Donor
-                        </h3>
-
-                        <p class="guide-description">
-                            Digunakan untuk mencatat kebutuhan darah dari pemohon.
-                        </p>
-
-                        <ul class="guide-list">
-                            <li>
-                                <span class="check">✓</span>
-                                Isi referensi pengajuan dengan kode internal atau keterangan kebutuhan.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Pilih golongan darah, rhesus, jumlah kantong, dan tingkat urgensi.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Lampirkan dokumen pendukung jika diperlukan.
-                            </li>
-                        </ul>
-                    </article>
-
-                    <article class="guide-card card">
-                        <div class="guide-icon blue">
-                            S
-                        </div>
-
-                        <h3 class="guide-title">
-                            Status Pengajuan
-                        </h3>
-
-                        <p class="guide-description">
-                            Status menunjukkan posisi pengajuan dalam proses petugas.
-                        </p>
-
-                        <ul class="guide-list">
-                            <li>
-                                <span class="check">✓</span>
-                                Diajukan berarti data sudah masuk ke sistem.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Ditinjau berarti pengajuan sedang diperiksa.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Siap diambil berarti kebutuhan sudah siap masuk distribusi.
-                            </li>
-                        </ul>
-                    </article>
-
-                    <article class="guide-card card">
-                        <div class="guide-icon green">
-                            D
-                        </div>
-
-                        <h3 class="guide-title">
-                            Distribusi
-                        </h3>
-
-                        <p class="guide-description">
-                            Distribusi berisi jadwal dan status penyerahan kantong darah.
-                        </p>
-
-                        <ul class="guide-list">
-                            <li>
-                                <span class="check">✓</span>
-                                Nomor distribusi dibuat oleh sistem saat petugas menjadwalkan penyerahan.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Bukti distribusi bisa dilihat dan diunduh dari tabel distribusi.
-                            </li>
-
-                            <li>
-                                <span class="check">✓</span>
-                                Data penerima akan tampil jika sudah dicatat oleh petugas.
-                            </li>
-                        </ul>
-                    </article>
-                </section>
-
-                <section class="main-layout">
-                    <article class="panel card">
-                        <h2 class="panel-title">
-                            Pertanyaan yang Sering Ditanyakan
-                        </h2>
-
-                        <p class="panel-description">
-                            Ringkasan jawaban untuk kendala umum saat menggunakan Portal Pemohon Donor.
-                        </p>
-
-                        <div class="faq-list">
-                            <article class="faq-item">
-                                <h3 class="faq-question">
-                                    Kenapa tombol Kirim Pengajuan tidak aktif?
-                                </h3>
-
-                                <p class="faq-answer">
-                                    Biasanya karena profil pemohon belum tersedia. Buka menu Profil, lengkapi data pemohon,
-                                    lalu kembali ke halaman Buat Pengajuan.
+                                <p
+                                    class="text-sm leading-7 text-[#655253]"
+                                >
+                                    {{ $faq['jawaban'] }}
                                 </p>
-                            </article>
-
-                            <article class="faq-item">
-                                <h3 class="faq-question">
-                                    Kenapa halaman Distribusi masih kosong?
-                                </h3>
-
-                                <p class="faq-answer">
-                                    Distribusi baru muncul setelah pengajuan diproses dan dibuatkan data distribusi oleh petugas.
-                                    Jika masih kosong, artinya belum ada distribusi untuk akun pemohon tersebut.
-                                </p>
-                            </article>
-
-                            <article class="faq-item">
-                                <h3 class="faq-question">
-                                    Apa bedanya bukti pengajuan dan bukti distribusi?
-                                </h3>
-
-                                <p class="faq-answer">
-                                    Bukti pengajuan adalah tanda bahwa kebutuhan donor sudah diajukan. Bukti distribusi adalah tanda
-                                    bahwa penyerahan atau jadwal distribusi kantong darah sudah tercatat pada sistem.
-                                </p>
-                            </article>
-
-                            <article class="faq-item">
-                                <h3 class="faq-question">
-                                    Kenapa status pengajuan saya belum berubah?
-                                </h3>
-
-                                <p class="faq-answer">
-                                    Status berubah setelah petugas memproses pengajuan melalui panel admin. Pemohon cukup memantau
-                                    perubahan status melalui Dashboard, Pengajuan, dan Riwayat.
-                                </p>
-                            </article>
-
-                            <article class="faq-item">
-                                <h3 class="faq-question">
-                                    Apakah data saya bisa dilihat pemohon lain?
-                                </h3>
-
-                                <p class="faq-answer">
-                                    Tidak. Data pengajuan, distribusi, profil, dan riwayat difilter berdasarkan akun pemohon yang sedang login.
-                                </p>
-                            </article>
-                        </div>
-                    </article>
-
-                    <aside class="side-stack">
-                        <article class="contact-card card">
-                            <h2 class="contact-title">
-                                Kontak Bantuan
-                            </h2>
-
-                            <div class="status-list">
-                                <div class="contact-item">
-                                    <p class="contact-label">
-                                        Admin Sistem
-                                    </p>
-
-                                    <p class="contact-value">
-                                        Hubungi admin jika akun tidak aktif, role salah, atau data tidak muncul.
-                                    </p>
-                                </div>
-
-                                <div class="contact-item">
-                                    <p class="contact-label">
-                                        Petugas Distribusi
-                                    </p>
-
-                                    <p class="contact-value">
-                                        Hubungi petugas jika jadwal distribusi belum muncul setelah pengajuan disetujui.
-                                    </p>
-                                </div>
-
-                                <div class="contact-item">
-                                    <p class="contact-label">
-                                        Data Pemohon
-                                    </p>
-
-                                    <p class="contact-value">
-                                        Pastikan data profil dan penanggung jawab selalu terbaru.
-                                    </p>
-                                </div>
                             </div>
+                        </details>
+                    @endforeach
+                </div>
+            </article>
 
-                            <div class="quick-links">
-                                <a
-                                    href="{{ $portalUrl('pemohon-donor.profil.index') }}"
-                                    class="quick-link"
-                                >
-                                    Lengkapi Profil
-                                    <span>→</span>
-                                </a>
+            <aside class="space-y-5">
+                <article
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-6 shadow-[0_16px_45px_rgba(25,28,32,0.05)]"
+                >
+                    <p
+                        class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                    >
+                        Akses Cepat
+                    </p>
 
-                                <a
-                                    href="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                                    class="quick-link"
-                                >
-                                    Lihat Pengajuan
-                                    <span>→</span>
-                                </a>
+                    <h2
+                        class="mt-2 text-xl font-bold tracking-[-0.04em] text-[#191c20]"
+                    >
+                        Menu yang Sering Digunakan
+                    </h2>
 
-                                <a
-                                    href="{{ $portalUrl('pemohon-donor.distribusi.index') }}"
-                                    class="quick-link"
-                                >
-                                    Lihat Distribusi
-                                    <span>→</span>
-                                </a>
+                    <div class="mt-5 space-y-3">
+                        <a
+                            href="{{ route('pemohon-donor.profil.index') }}"
+                            class="flex min-h-12 items-center justify-between rounded-xl border border-[#eee8e5] px-4 text-sm font-bold text-[#584141] transition hover:border-[#e1c8cd] hover:bg-[#fffafb] hover:text-[#991b2f]"
+                        >
+                            Lengkapi Profil
+                            <span>→</span>
+                        </a>
 
-                                <a
-                                    href="{{ $portalUrl('pemohon-donor.pengajuan.create') }}"
-                                    class="quick-link red"
-                                >
-                                    Buat Pengajuan Baru
-                                    <span>→</span>
-                                </a>
-                            </div>
-                        </article>
-                    </aside>
-                </section>
-            </section>
-        </main>
+                        <a
+                            href="{{ route('pemohon-donor.pengajuan.index') }}"
+                            class="flex min-h-12 items-center justify-between rounded-xl border border-[#eee8e5] px-4 text-sm font-bold text-[#584141] transition hover:border-[#e1c8cd] hover:bg-[#fffafb] hover:text-[#991b2f]"
+                        >
+                            Lihat Pengajuan
+                            <span>→</span>
+                        </a>
+
+                        <a
+                            href="{{ route('pemohon-donor.distribusi.index') }}"
+                            class="flex min-h-12 items-center justify-between rounded-xl border border-[#eee8e5] px-4 text-sm font-bold text-[#584141] transition hover:border-[#d0dceb] hover:bg-[#f9fbff] hover:text-[#315b9b]"
+                        >
+                            Lihat Distribusi
+                            <span>→</span>
+                        </a>
+
+                        <a
+                            href="{{ route('pemohon-donor.riwayat.index') }}"
+                            class="flex min-h-12 items-center justify-between rounded-xl border border-[#eee8e5] px-4 text-sm font-bold text-[#584141] transition hover:border-[#e1c8cd] hover:bg-[#fffafb] hover:text-[#991b2f]"
+                        >
+                            Lihat Riwayat
+                            <span>→</span>
+                        </a>
+
+                        <a
+                            href="{{ route('pemohon-donor.pengaturan.index') }}"
+                            class="flex min-h-12 items-center justify-between rounded-xl border border-[#eee8e5] px-4 text-sm font-bold text-[#584141] transition hover:border-[#e1c8cd] hover:bg-[#fffafb] hover:text-[#991b2f]"
+                        >
+                            Pengaturan Akun
+                            <span>→</span>
+                        </a>
+                    </div>
+                </article>
+
+                <article
+                    class="rounded-[24px] border border-[#dce5f4] bg-[#f6f9ff] p-6"
+                >
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e7effc] text-[#315b9b]"
+                    >
+                        <svg
+                            class="h-6 w-6"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"
+                            />
+
+                            <path d="m9 12 2 2 4-4" />
+                        </svg>
+                    </div>
+
+                    <h2
+                        class="mt-4 text-lg font-bold text-[#263f67]"
+                    >
+                        Keamanan Data
+                    </h2>
+
+                    <p
+                        class="mt-2 text-sm leading-6 text-[#506787]"
+                    >
+                        Data pengajuan, distribusi, profil, dan riwayat hanya dapat
+                        diakses oleh akun Pemohon Donor yang memilikinya.
+                    </p>
+                </article>
+
+                <article
+                    class="rounded-[24px] border border-[#eee0bd] bg-[#fffaf0] p-6"
+                >
+                    <h2
+                        class="text-lg font-bold text-[#5f3d00]"
+                    >
+                        Masih Mengalami Kendala?
+                    </h2>
+
+                    <p
+                        class="mt-2 text-sm leading-6 text-[#755516]"
+                    >
+                        Hubungi administrator sistem apabila akun tidak aktif,
+                        role tidak sesuai, atau data tidak dapat diakses.
+                    </p>
+
+                    <div
+                        class="mt-4 rounded-xl border border-[#eedaa8] bg-white/70 p-4"
+                    >
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.08em] text-[#8a5a00]"
+                        >
+                            Informasi yang perlu disiapkan
+                        </p>
+
+                        <ul
+                            class="mt-3 space-y-2 text-sm text-[#755516]"
+                        >
+                            <li>• Email akun</li>
+                            <li>• Kode pemohon</li>
+                            <li>• Nomor pengajuan/distribusi</li>
+                            <li>• Screenshot kendala</li>
+                        </ul>
+                    </div>
+                </article>
+            </aside>
+        </section>
     </div>
-</body>
-</html>
+</x-layouts.pemohon-donor>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\KeluarController;
+use App\Livewire\Donor\DaftarDonor;
 use App\Livewire\Donor\Jadwal;
 use App\Livewire\Donor\Lokasi;
 use App\Livewire\Donor\Portal;
@@ -14,23 +15,34 @@ Route::get('/donor', Portal::class)
     ->name('donor.beranda');
 
 Route::get('/donor/jadwal', Jadwal::class)
+    ->defaults('section', 'jadwal')
     ->name('donor.jadwal');
 
+Route::get(
+    '/donor/jadwal/{jadwal}/daftar',
+    DaftarDonor::class
+)
+    ->defaults('section', 'jadwal')
+    ->name('donor.jadwal.daftar');
+
 Route::get('/donor/lokasi', Lokasi::class)
+    ->defaults('section', 'lokasi')
     ->name('donor.lokasi');
 
 Route::get('/donor/stok', Stok::class)
+    ->defaults('section', 'stok')
     ->name('donor.stok');
 
 Route::get('/donor/riwayat', Riwayat::class)
+    ->defaults('section', 'riwayat')
     ->name('donor.riwayat');
 
 Route::get('/donor/profil', Profil::class)
+    ->defaults('section', 'profil')
     ->name('donor.profil');
 
-if (! Route::has('donor.logout')) {
-    Route::post(
-        '/donor/logout',
-        KeluarController::class
-    )->name('donor.logout');
-}
+Route::post(
+    '/donor/logout',
+    KeluarController::class
+)
+    ->name('donor.logout');

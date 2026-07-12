@@ -1,273 +1,96 @@
-<div class="reset-password-page">
-    <section class="reset-password-card">
-        <div class="reset-password-brand">
-            <div class="reset-password-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.4"
-                >
-                    <rect x="5" y="11" width="14" height="10" rx="2" />
-                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                </svg>
-            </div>
+<div>
+    <header class="auth-heading">
+        <p class="auth-kicker">Buat password baru</p>
+        <h2>Atur ulang password</h2>
+        <p>Gunakan minimal 8 karakter dan hindari password yang pernah Anda gunakan sebelumnya.</p>
+    </header>
 
-            <div>
-                <strong>Donor Darah</strong>
-                <span>Password Baru</span>
-            </div>
-        </div>
-
-        <div class="reset-password-heading">
-            <p>Reset Password</p>
-
-            <h1>
-                Buat password baru
-            </h1>
-
-            <span>
-                Masukkan password baru untuk akun Anda. Gunakan minimal 8 karakter.
-            </span>
-        </div>
-
-        <form wire:submit="resetPassword" class="reset-password-form">
-            <label class="reset-password-field">
-                <span>Alamat Email</span>
-
+    <form wire:submit="resetPassword" class="auth-form" novalidate>
+        <label class="auth-field">
+            <span class="auth-field-label">Alamat email</span>
+            <span class="auth-control @error('email') auth-control--error @enderror">
+                <span class="auth-control-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2"/>
+                        <path d="m3 7 9 6 9-6"/>
+                    </svg>
+                </span>
                 <input
                     type="email"
                     wire:model="email"
-                    placeholder="nama@email.com"
                     autocomplete="email"
-                    readonly
+                    inputmode="email"
+                    required
                 >
+            </span>
+            @error('email') <span class="auth-field-error">{{ $message }}</span> @enderror
+        </label>
 
-                @error('email')
-                    <small>{{ $message }}</small>
-                @enderror
-            </label>
-
-            <label class="reset-password-field">
-                <span>Password Baru</span>
-
+        <label class="auth-field" x-data="{ tampil: false }">
+            <span class="auth-field-label">Password baru</span>
+            <span class="auth-control @error('password') auth-control--error @enderror">
+                <span class="auth-control-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="5" y="10" width="14" height="11" rx="2"/>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                </span>
                 <input
-                    type="password"
+                    x-bind:type="tampil ? 'text' : 'password'"
                     wire:model="password"
                     placeholder="Minimal 8 karakter"
                     autocomplete="new-password"
+                    required
                 >
+                <button type="button" class="auth-password-toggle" x-on:click="tampil = ! tampil" aria-label="Tampilkan atau sembunyikan password">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/>
+                        <circle cx="12" cy="12" r="2.5"/>
+                    </svg>
+                </button>
+            </span>
+            @error('password') <span class="auth-field-error">{{ $message }}</span> @enderror
+        </label>
 
-                @error('password')
-                    <small>{{ $message }}</small>
-                @enderror
-            </label>
-
-            <label class="reset-password-field">
-                <span>Konfirmasi Password Baru</span>
-
+        <label class="auth-field" x-data="{ tampil: false }">
+            <span class="auth-field-label">Konfirmasi password baru</span>
+            <span class="auth-control">
+                <span class="auth-control-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="m8 12 2.5 2.5L16 9"/>
+                        <rect x="4" y="4" width="16" height="16" rx="4"/>
+                    </svg>
+                </span>
                 <input
-                    type="password"
+                    x-bind:type="tampil ? 'text' : 'password'"
                     wire:model="password_confirmation"
                     placeholder="Ulangi password baru"
                     autocomplete="new-password"
+                    required
                 >
-            </label>
+                <button type="button" class="auth-password-toggle" x-on:click="tampil = ! tampil" aria-label="Tampilkan atau sembunyikan konfirmasi password">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/>
+                        <circle cx="12" cy="12" r="2.5"/>
+                    </svg>
+                </button>
+            </span>
+        </label>
 
-            <button
-                type="submit"
-                wire:loading.attr="disabled"
-            >
-                <span wire:loading.remove>
-                    Simpan Password Baru
-                </span>
+        <button
+            type="submit"
+            class="auth-button auth-button--primary auth-button--full"
+            wire:loading.attr="disabled"
+            wire:target="resetPassword"
+        >
+            <span wire:loading.remove wire:target="resetPassword">Simpan password baru</span>
+            <span wire:loading wire:target="resetPassword">Menyimpan...</span>
+        </button>
+    </form>
 
-                <span wire:loading>
-                    Memproses...
-                </span>
-            </button>
-        </form>
+    <div class="auth-divider">batalkan proses</div>
 
-        <div class="reset-password-footer">
-            <a href="{{ url('/login') }}">
-                Kembali ke Login
-            </a>
-        </div>
-    </section>
-
-    <style>
-        .reset-password-page {
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 32px 18px;
-            background:
-                radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.12), transparent 28rem),
-                linear-gradient(135deg, #fff1f2 0%, #ffffff 65%);
-        }
-
-        .reset-password-card {
-            width: min(100%, 520px);
-            padding: 34px;
-            border: 1px solid #e2e8f0;
-            border-radius: 28px;
-            background: #ffffff;
-            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
-        }
-
-        .reset-password-brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 34px;
-        }
-
-        .reset-password-icon {
-            width: 48px;
-            height: 48px;
-            display: grid;
-            place-items: center;
-            border-radius: 18px;
-            color: #dc2626;
-            background: #fee2e2;
-        }
-
-        .reset-password-icon svg {
-            width: 28px;
-            height: 28px;
-        }
-
-        .reset-password-brand strong {
-            display: block;
-            color: #0f172a;
-            font-size: 16px;
-            font-weight: 1000;
-            line-height: 1.1;
-        }
-
-        .reset-password-brand span {
-            display: block;
-            margin-top: 3px;
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .reset-password-heading p {
-            margin: 0 0 12px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 1000;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .reset-password-heading h1 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 38px;
-            line-height: 1.05;
-            letter-spacing: -0.06em;
-        }
-
-        .reset-password-heading span {
-            display: block;
-            margin-top: 14px;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.75;
-        }
-
-        .reset-password-form {
-            display: grid;
-            gap: 18px;
-            margin-top: 26px;
-        }
-
-        .reset-password-field {
-            display: grid;
-            gap: 8px;
-        }
-
-        .reset-password-field span {
-            color: #334155;
-            font-size: 12px;
-            font-weight: 1000;
-        }
-
-        .reset-password-field input {
-            width: 100%;
-            min-height: 56px;
-            padding: 0 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            color: #0f172a;
-            background: #ffffff;
-            outline: none;
-            font: inherit;
-            font-size: 14px;
-        }
-
-        .reset-password-field input:read-only {
-            color: #64748b;
-            background: #f8fafc;
-            cursor: not-allowed;
-        }
-
-        .reset-password-field input:focus {
-            border-color: #f87171;
-            box-shadow: 0 0 0 4px rgba(254, 202, 202, 0.44);
-        }
-
-        .reset-password-field small {
-            color: #dc2626;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .reset-password-form button {
-            min-height: 58px;
-            border: 0;
-            border-radius: 16px;
-            color: #ffffff;
-            background: #dc2626;
-            font: inherit;
-            font-size: 14px;
-            font-weight: 1000;
-            cursor: pointer;
-            box-shadow: 0 18px 38px rgba(220, 38, 38, 0.2);
-        }
-
-        .reset-password-form button:hover {
-            background: #b91c1c;
-        }
-
-        .reset-password-form button:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
-
-        .reset-password-footer {
-            margin-top: 24px;
-            text-align: center;
-        }
-
-        .reset-password-footer a {
-            color: #dc2626;
-            font-size: 13px;
-            font-weight: 1000;
-            text-decoration: none;
-        }
-
-        @media (max-width: 640px) {
-            .reset-password-card {
-                padding: 26px;
-                border-radius: 24px;
-            }
-
-            .reset-password-heading h1 {
-                font-size: 32px;
-            }
-        }
-    </style>
+    <a href="{{ route('login') }}" class="auth-button auth-button--secondary auth-button--full">
+        Kembali ke halaman masuk
+    </a>
 </div>

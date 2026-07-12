@@ -1,0 +1,28 @@
+There is no installed package depending on "livewire/livewire" in versions not matching 3.6.4
+Not finding what you were looking for? Try calling `composer update "livewire/livewire:3.6.4" --dry-run` to get another view on the problem.
+filament/filament v3.3.53 requires         filament/actions (self.version)                   
+laravel/laravel   -       does not require filament/actions (but v3.3.10 is installed)       
+filament/filament v3.3.53 requires         filament/forms (self.version)                     
+laravel/laravel   -       does not require filament/forms (but v3.3.10 is installed)         
+filament/filament v3.3.53 requires         filament/infolists (self.version)                 
+laravel/laravel   -       does not require filament/infolists (but v3.3.10 is installed)     
+filament/filament v3.3.53 requires         filament/notifications (self.version)             
+laravel/laravel   -       does not require filament/notifications (but v3.3.10 is installed) 
+filament/filament v3.3.53 requires         filament/support (self.version)                   
+laravel/laravel   -       does not require filament/support (but v3.3.10 is installed)       
+filament/filament v3.3.53 requires         filament/tables (self.version)                    
+laravel/laravel   -       does not require filament/tables (but v3.3.10 is installed)        
+filament/filament v3.3.53 requires         filament/widgets (self.version)                   
+laravel/laravel   -       does not require filament/widgets (but v3.3.10 is installed)       
+Not finding what you were looking for? Try calling `composer require "filament/filament:3.3.53" --dry-run` to get another view on the problem.
+Loading composer repositories with package information
+Updating dependencies
+Your requirements could not be resolved to an installable set of packages.
+
+  Problem 1
+    - pestphp/pest is locked to version v3.8.1 and an update of this package was not requested.
+    - pestphp/pest v3.8.1 conflicts with phpunit/phpunit 11.5.56.
+    - pestphp/pest v3.8.1 conflicts with phpunit/phpunit 11.5.55.
+    - pestphp/pest v3.8.1 conflicts with phpunit/phpunit 11.5.50.
+    - pestphp/pest v3.8.1 requires phpunit/phpunit ^11.5.15 -> satisfiable by phpunit/phpunit[11.5.50, ..., 11.5.56].
+

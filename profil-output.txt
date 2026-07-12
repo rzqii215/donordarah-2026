@@ -1,0 +1,1889 @@
+===== PROFIL LIVEWIRE =====
+<?php
+
+namespace App\Livewire\Donor;
+
+use App\Enums\GolonganDarah;
+use App\Enums\JenisKelamin;
+use App\Enums\RhesusDarah;
+use App\Models\PendaftaranDonor;
+use App\Models\ProfilPendonor;
+use App\Models\User;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+
+#[Layout('components.layouts.donor')]
+class Profil extends Component
+{
+    public string $name = '';
+
+    public string $email = '';
+
+    public string $nomor_telepon = '';
+
+    public string $tanggal_lahir = '';
+
+    public string $jenis_kelamin = '';
+
+    public string $golongan_darah = '';
+
+    public string $rhesus = '';
+
+    public string $alamat = '';
+
+    public string $provinsi = '';
+
+    public string $kota = '';
+
+    public string $kecamatan = '';
+
+    public string $kode_pos = '';
+
+    public bool $bersedia_dihubungi = true;
+
+    public ?string $notifikasiBerhasil = null;
+
+    public function mount(): void
+    {
+        $this->muatDataProfil();
+    }
+
+    public function hapusNotifikasi(): void
+    {
+        $this->notifikasiBerhasil = null;
+    }
+
+    public function simpanProfil(): mixed
+    {
+        $user = $this->penggunaSaatIni();
+
+        if ($user === null) {
+            return redirect('/login');
+        }
+
+        $data = $this->validate([
+            'name' => [
+                'required',
+                'string',
+                'min:3',
+                'max:255',
+            ],
+
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+
+            'nomor_telepon' => [
+                'required',
+                'string',
+                'min:9',
+                'max:30',
+                'regex:/^[0-9+\-\s()]+$/',
+            ],
+
+            'tanggal_lahir' => [
+                'required',
+                'date',
+                'before_or_equal:' . now()
+                    ->subYears(17)
+                    ->format('Y-m-d'),
+            ],
+
+            'jenis_kelamin' => [
+                'required',
+                Rule::in($this->nilaiEnumCases(JenisKelamin::cases())),
+            ],
+
+            'golongan_darah' => [
+                'required',
+                Rule::in($this->nilaiEnumCases(GolonganDarah::cases())),
+            ],
+
+            'rhesus' => [
+                'required',
+                Rule::in($this->nilaiEnumCases(RhesusDarah::cases())),
+            ],
+
+            'alamat' => [
+                'required',
+                'string',
+                'min:10',
+                'max:2000',
+            ],
+
+            'provinsi' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'kota' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'kecamatan' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'kode_pos' => [
+                'nullable',
+                'string',
+                'max:10',
+            ],
+
+            'bersedia_dihubungi' => [
+                'boolean',
+            ],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'name.min' => 'Nama lengkap minimal 3 karakter.',
+
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email' => 'Alamat email tidak valid.',
+            'email.unique' => 'Alamat email sudah digunakan.',
+
+            'nomor_telepon.required' => 'Nomor HP wajib diisi.',
+            'nomor_telepon.regex' => 'Format nomor HP tidak valid.',
+
+            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
+            'tanggal_lahir.before_or_equal' => 'Pendonor minimal berusia 17 tahun.',
+
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
+            'golongan_darah.required' => 'Golongan darah wajib dipilih.',
+            'rhesus.required' => 'Rhesus wajib dipilih.',
+
+            'alamat.required' => 'Alamat wajib diisi.',
+            'alamat.min' => 'Alamat minimal 10 karakter.',
+
+            'provinsi.required' => 'Provinsi wajib diisi.',
+            'kota.required' => 'Kota/Kabupaten wajib diisi.',
+        ]);
+
+        DB::transaction(function () use ($user, $data): void {
+            $payloadUser = [
+                'name' => trim($data['name']),
+                'email' => mb_strtolower(trim($data['email'])),
+            ];
+
+            if (Schema::hasColumn('users', 'nomor_telepon')) {
+                $payloadUser['nomor_telepon'] = trim($data['nomor_telepon']);
+            }
+
+            $user->forceFill($payloadUser);
+            $user->save();
+
+            $profil = ProfilPendonor::query()
+                ->where('pengguna_id', $user->id)
+                ->first();
+
+            if ($profil === null) {
+                $profil = new ProfilPendonor();
+                $profil->setAttribute('pengguna_id', $user->id);
+            }
+
+            $kodePendonor = $profil->getAttribute('kode_pendonor');
+
+            $this->isiKolomProfil(
+                $profil,
+                'kode_pendonor',
+                filled($kodePendonor)
+                    ? $kodePendonor
+                    : $this->buatKodePendonor()
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'tanggal_lahir',
+                $data['tanggal_lahir']
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'jenis_kelamin',
+                $data['jenis_kelamin']
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'golongan_darah',
+                $data['golongan_darah']
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'rhesus',
+                $data['rhesus']
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'alamat',
+                trim($data['alamat'])
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'provinsi',
+                trim($data['provinsi'])
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'kota',
+                trim($data['kota'])
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'kecamatan',
+                filled($data['kecamatan'])
+                    ? trim($data['kecamatan'])
+                    : null
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'kode_pos',
+                filled($data['kode_pos'])
+                    ? trim($data['kode_pos'])
+                    : null
+            );
+
+            $this->isiKolomProfil(
+                $profil,
+                'bersedia_dihubungi',
+                (bool) $data['bersedia_dihubungi']
+            );
+
+            $profil->save();
+        });
+
+        $this->muatDataProfil();
+
+        $this->notifikasiBerhasil = 'Profil berhasil disimpan.';
+
+        session()->flash(
+            'success',
+            $this->notifikasiBerhasil
+        );
+
+        return null;
+    }
+
+    public function render(): View
+    {
+        return view('livewire.donor.profil', [
+            'profilPendonor' => $this->profilPendonor(),
+            'kelengkapan' => $this->kelengkapanProfil(),
+            'ringkasan' => $this->ringkasanProfil(),
+        ]);
+    }
+
+    public function opsiJenisKelamin(): array
+    {
+        return collect(JenisKelamin::cases())
+            ->map(fn (\UnitEnum $case): array => [
+                'value' => $this->nilaiDariEnum($case),
+                'label' => $this->labelJenisKelamin(
+                    $this->nilaiDariEnum($case)
+                ),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function opsiGolonganDarah(): array
+    {
+        return collect(GolonganDarah::cases())
+            ->map(fn (\UnitEnum $case): array => [
+                'value' => $this->nilaiDariEnum($case),
+                'label' => $this->labelGolonganDarah(
+                    $this->nilaiDariEnum($case)
+                ),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function opsiRhesusDarah(): array
+    {
+        return collect(RhesusDarah::cases())
+            ->map(fn (\UnitEnum $case): array => [
+                'value' => $this->nilaiDariEnum($case),
+                'label' => $this->labelRhesusDarah(
+                    $this->nilaiDariEnum($case)
+                ),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function labelJenisKelamin(string $value): string
+    {
+        return match (strtolower($value)) {
+            'male',
+            'laki_laki',
+            'laki-laki',
+            'pria' => 'Laki-laki',
+
+            'female',
+            'perempuan',
+            'wanita' => 'Perempuan',
+
+            default => Str::headline(
+                str_replace(['_', '-'], ' ', $value)
+            ),
+        };
+    }
+
+    public function labelGolonganDarah(string $value): string
+    {
+        return strtoupper($value);
+    }
+
+    public function labelRhesusDarah(string $value): string
+    {
+        return match (strtolower($value)) {
+            'positive',
+            'positif',
+            '+',
+            'rh+' => 'Positif (+)',
+
+            'negative',
+            'negatif',
+            '-',
+            'rh-' => 'Negatif (-)',
+
+            default => Str::headline(
+                str_replace(['_', '-'], ' ', $value)
+            ),
+        };
+    }
+
+    public function golonganRhesusTampilan(): string
+    {
+        if (
+            blank($this->golongan_darah)
+            || blank($this->rhesus)
+        ) {
+            return '-';
+        }
+
+        $rhesus = match (strtolower($this->rhesus)) {
+            'positive',
+            'positif',
+            '+',
+            'rh+' => '+',
+
+            'negative',
+            'negatif',
+            '-',
+            'rh-' => '-',
+
+            default => '',
+        };
+
+        return strtoupper($this->golongan_darah) . $rhesus;
+    }
+
+    public function umurPendonor(): string
+    {
+        if (blank($this->tanggal_lahir)) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($this->tanggal_lahir)->age . ' tahun';
+        } catch (\Throwable) {
+            return '-';
+        }
+    }
+
+    public function tanggalLahirTampilan(): string
+    {
+        if (blank($this->tanggal_lahir)) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($this->tanggal_lahir)
+                ->translatedFormat('d F Y');
+        } catch (\Throwable) {
+            return '-';
+        }
+    }
+
+    public function kelengkapanProfil(): array
+    {
+        $items = [
+            [
+                'label' => 'Nama Lengkap',
+                'filled' => filled($this->name),
+            ],
+            [
+                'label' => 'Alamat Email',
+                'filled' => filled($this->email),
+            ],
+            [
+                'label' => 'Nomor HP',
+                'filled' => filled($this->nomor_telepon),
+            ],
+            [
+                'label' => 'Tanggal Lahir',
+                'filled' => filled($this->tanggal_lahir),
+            ],
+            [
+                'label' => 'Jenis Kelamin',
+                'filled' => filled($this->jenis_kelamin),
+            ],
+            [
+                'label' => 'Golongan Darah',
+                'filled' => filled($this->golongan_darah),
+            ],
+            [
+                'label' => 'Rhesus',
+                'filled' => filled($this->rhesus),
+            ],
+            [
+                'label' => 'Alamat',
+                'filled' => filled($this->alamat),
+            ],
+            [
+                'label' => 'Provinsi',
+                'filled' => filled($this->provinsi),
+            ],
+            [
+                'label' => 'Kota/Kabupaten',
+                'filled' => filled($this->kota),
+            ],
+        ];
+
+        $total = count($items);
+
+        $terisi = collect($items)
+            ->filter(fn (array $item): bool => $item['filled'])
+            ->count();
+
+        $persentase = $total > 0
+            ? (int) round(($terisi / $total) * 100)
+            : 0;
+
+        return [
+            'total' => $total,
+            'terisi' => $terisi,
+            'persentase' => $persentase,
+            'lengkap' => $persentase === 100,
+            'belum_lengkap' => collect($items)
+                ->reject(fn (array $item): bool => $item['filled'])
+                ->pluck('label')
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function ringkasanProfil(): array
+    {
+        $profil = $this->profilPendonor();
+
+        return [
+            'kode_pendonor' => (string) (
+                $profil?->getAttribute('kode_pendonor')
+                ?? '-'
+            ),
+
+            'total_pendaftaran' => PendaftaranDonor::query()
+                ->where('pendonor_id', Auth::id())
+                ->count(),
+
+            'donor_selesai' => PendaftaranDonor::query()
+                ->where('pendonor_id', Auth::id())
+                ->where('status', 'completed')
+                ->count(),
+
+            'golongan_rhesus' => $this->golonganRhesusTampilan(),
+
+            'umur' => $this->umurPendonor(),
+        ];
+    }
+
+    private function muatDataProfil(): void
+    {
+        $user = $this->penggunaSaatIni();
+
+        if ($user === null) {
+            return;
+        }
+
+        $profil = $this->profilPendonor();
+
+        $this->name = (string) $user->name;
+        $this->email = (string) $user->email;
+        $this->nomor_telepon = (string) (
+            $user->getAttribute('nomor_telepon')
+            ?? ''
+        );
+
+        $this->tanggal_lahir = $this->tanggalUntukInput(
+            $profil?->getAttribute('tanggal_lahir')
+        );
+
+        $this->jenis_kelamin = $this->nilaiDariEnum(
+            $profil?->getAttribute('jenis_kelamin')
+        );
+
+        $this->golongan_darah = $this->nilaiDariEnum(
+            $profil?->getAttribute('golongan_darah')
+        );
+
+        $this->rhesus = $this->nilaiDariEnum(
+            $profil?->getAttribute('rhesus')
+        );
+
+        $this->alamat = (string) (
+            $profil?->getAttribute('alamat')
+            ?? ''
+        );
+
+        $this->provinsi = (string) (
+            $profil?->getAttribute('provinsi')
+            ?? ''
+        );
+
+        $this->kota = (string) (
+            $profil?->getAttribute('kota')
+            ?? ''
+        );
+
+        $this->kecamatan = (string) (
+            $profil?->getAttribute('kecamatan')
+            ?? ''
+        );
+
+        $this->kode_pos = (string) (
+            $profil?->getAttribute('kode_pos')
+            ?? ''
+        );
+
+        $this->bersedia_dihubungi = (bool) (
+            $profil?->getAttribute('bersedia_dihubungi')
+            ?? true
+        );
+    }
+
+    private function profilPendonor(): ?ProfilPendonor
+    {
+        return ProfilPendonor::query()
+            ->where('pengguna_id', Auth::id())
+            ->first();
+    }
+
+    private function penggunaSaatIni(): ?User
+    {
+        $user = Auth::user();
+
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        return null;
+    }
+
+    private function isiKolomProfil(
+        ProfilPendonor $profil,
+        string $kolom,
+        mixed $nilai
+    ): void {
+        if (! Schema::hasColumn($this->tabelProfilPendonor(), $kolom)) {
+            return;
+        }
+
+        $profil->setAttribute($kolom, $nilai);
+    }
+
+    private function tabelProfilPendonor(): string
+    {
+        return (new ProfilPendonor())->getTable();
+    }
+
+    private function buatKodePendonor(): string
+    {
+        if (! Schema::hasColumn($this->tabelProfilPendonor(), 'kode_pendonor')) {
+            return 'DNR-' . now()->format('Ymd') . '-' . strtoupper(
+                Str::random(6)
+            );
+        }
+
+        $tanggal = now()->format('Ymd');
+
+        for ($i = 1; $i <= 20; $i++) {
+            $nomorUrut = str_pad(
+                (string) (
+                    ProfilPendonor::query()
+                        ->whereDate('created_at', today())
+                        ->count() + $i
+                ),
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            $kode = "DNR-{$tanggal}-{$nomorUrut}";
+
+            if (
+                ! ProfilPendonor::query()
+                    ->where('kode_pendonor', $kode)
+                    ->exists()
+            ) {
+                return $kode;
+            }
+        }
+
+        return 'DNR-' . $tanggal . '-' . strtoupper(
+            Str::random(8)
+        );
+    }
+
+    private function nilaiEnumCases(array $cases): array
+    {
+        return collect($cases)
+            ->map(fn (\UnitEnum $case): string => $this->nilaiDariEnum($case))
+            ->values()
+            ->all();
+    }
+
+    private function nilaiDariEnum(mixed $value): string
+    {
+        if ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return (string) $value->name;
+        }
+
+        if ($value instanceof CarbonInterface) {
+            return $value->toDateString();
+        }
+
+        if (blank($value)) {
+            return '';
+        }
+
+        return (string) $value;
+    }
+
+    private function tanggalUntukInput(mixed $value): string
+    {
+        if ($value instanceof CarbonInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (blank($value)) {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+}===== PROFIL BLADE =====
+<div class="donor-profile-page">
+    
+<section class="donor-profile-hero">
+        <div>
+            <p class="donor-profile-eyebrow">
+                Profil Pendonor
+            </p>
+
+            <h1>
+                Data Pendonor Anda
+            </h1>
+
+            <p>
+                Pastikan data pribadi, golongan darah, rhesus, dan alamat
+                sudah sesuai agar proses pendaftaran donor berjalan lancar.
+            </p>
+        </div>
+
+        <div class="donor-profile-hero-card">
+            <span>Kelengkapan Profil</span>
+
+            <strong>
+                {{ $kelengkapan['persentase'] }}%
+            </strong>
+
+            <div class="donor-profile-progress">
+                <div style="width: {{ $kelengkapan['persentase'] }}%;"></div>
+            </div>
+
+            <p>
+                {{ $kelengkapan['lengkap'] ? 'Profil sudah lengkap' : 'Masih ada data yang perlu dilengkapi' }}
+            </p>
+        </div>
+    </section>
+
+    @if ($notifikasiBerhasil || session('success'))
+        <div class="donor-profile-toast">
+            <div class="donor-profile-toast-icon">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                >
+                    <path d="M20 6 9 17l-5-5" />
+                </svg>
+            </div>
+
+            <div class="donor-profile-toast-content">
+                <strong>Berhasil</strong>
+                <p>{{ $notifikasiBerhasil ?: session('success') }}</p>
+            </div>
+
+            <button
+                type="button"
+                wire:click="hapusNotifikasi"
+                aria-label="Tutup notifikasi"
+            >
+                &times;
+            </button>
+        </div>
+    @endif
+
+    <section class="donor-profile-summary">
+        <article>
+            <span>Kode Pendonor</span>
+            <strong>{{ $ringkasan['kode_pendonor'] }}</strong>
+            <p>Identitas pendonor</p>
+        </article>
+
+        <article>
+            <span>Golongan Darah</span>
+            <strong>{{ $ringkasan['golongan_rhesus'] }}</strong>
+            <p>Golongan dan rhesus</p>
+        </article>
+
+        <article>
+            <span>Usia</span>
+            <strong>{{ $ringkasan['umur'] }}</strong>
+            <p>Berdasarkan tanggal lahir</p>
+        </article>
+
+        <article>
+            <span>Donor Selesai</span>
+            <strong>{{ $ringkasan['donor_selesai'] }}</strong>
+            <p>Dari {{ $ringkasan['total_pendaftaran'] }} pendaftaran</p>
+        </article>
+    </section>
+
+    @if (! $kelengkapan['lengkap'])
+        <section class="donor-profile-warning">
+            <div>
+                <h2>
+                    Data belum lengkap
+                </h2>
+
+                <p>
+                    Lengkapi data berikut supaya proses pendaftaran donor lebih mudah:
+                </p>
+            </div>
+
+            <div class="donor-profile-missing-list">
+                @foreach ($kelengkapan['belum_lengkap'] as $item)
+                    <span>{{ $item }}</span>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    <form wire:submit="simpanProfil" class="donor-profile-form">
+        <section class="donor-profile-section">
+            <div class="donor-profile-section-heading">
+                <h2>Informasi Akun</h2>
+                <p>Data ini digunakan untuk masuk dan menerima informasi donor.</p>
+            </div>
+
+            <div class="donor-profile-grid">
+                <label class="donor-profile-field">
+                    <span>Nama Lengkap</span>
+
+                    <input
+                        type="text"
+                        wire:model="name"
+                        placeholder="Nama lengkap"
+                        autocomplete="name"
+                    >
+
+                    @error('name')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Alamat Email</span>
+
+                    <input
+                        type="email"
+                        wire:model="email"
+                        placeholder="nama@email.com"
+                        autocomplete="email"
+                    >
+
+                    @error('email')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Nomor HP</span>
+
+                    <input
+                        type="text"
+                        wire:model="nomor_telepon"
+                        placeholder="08xxxxxxxxxx"
+                        autocomplete="tel"
+                    >
+
+                    @error('nomor_telepon')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Bersedia Dihubungi</span>
+
+                    <select wire:model="bersedia_dihubungi">
+                        <option value="1">Ya, bersedia</option>
+                        <option value="0">Tidak</option>
+                    </select>
+
+                    @error('bersedia_dihubungi')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+            </div>
+        </section>
+
+        <section class="donor-profile-section">
+            <div class="donor-profile-section-heading">
+                <h2>Profil Pendonor</h2>
+                <p>Data ini membantu petugas menyesuaikan proses donor darah.</p>
+            </div>
+
+            <div class="donor-profile-grid">
+                <label class="donor-profile-field">
+                    <span>Tanggal Lahir</span>
+
+                    <input
+                        type="date"
+                        wire:model="tanggal_lahir"
+                    >
+
+                    @error('tanggal_lahir')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Jenis Kelamin</span>
+
+                    <select wire:model="jenis_kelamin">
+                        <option value="">Pilih jenis kelamin</option>
+
+                        @foreach ($this->opsiJenisKelamin() as $opsi)
+                            <option value="{{ $opsi['value'] }}">
+                                {{ $opsi['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('jenis_kelamin')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Golongan Darah</span>
+
+                    <select wire:model="golongan_darah">
+                        <option value="">Pilih golongan darah</option>
+
+                        @foreach ($this->opsiGolonganDarah() as $opsi)
+                            <option value="{{ $opsi['value'] }}">
+                                {{ $opsi['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('golongan_darah')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Rhesus</span>
+
+                    <select wire:model="rhesus">
+                        <option value="">Pilih rhesus</option>
+
+                        @foreach ($this->opsiRhesusDarah() as $opsi)
+                            <option value="{{ $opsi['value'] }}">
+                                {{ $opsi['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('rhesus')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+            </div>
+        </section>
+
+        <section class="donor-profile-section">
+            <div class="donor-profile-section-heading">
+                <h2>Alamat Domisili</h2>
+                <p>Alamat digunakan untuk kebutuhan administrasi donor.</p>
+            </div>
+
+            <div class="donor-profile-grid">
+                <label class="donor-profile-field">
+                    <span>Provinsi</span>
+
+                    <input
+                        type="text"
+                        wire:model="provinsi"
+                        placeholder="Contoh: DKI Jakarta"
+                    >
+
+                    @error('provinsi')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Kota/Kabupaten</span>
+
+                    <input
+                        type="text"
+                        wire:model="kota"
+                        placeholder="Contoh: Jakarta Selatan"
+                    >
+
+                    @error('kota')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Kecamatan</span>
+
+                    <input
+                        type="text"
+                        wire:model="kecamatan"
+                        placeholder="Opsional"
+                    >
+
+                    @error('kecamatan')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field">
+                    <span>Kode Pos</span>
+
+                    <input
+                        type="text"
+                        wire:model="kode_pos"
+                        placeholder="Opsional"
+                    >
+
+                    @error('kode_pos')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+
+                <label class="donor-profile-field donor-profile-field-full">
+                    <span>Alamat Lengkap</span>
+
+                    <textarea
+                        wire:model="alamat"
+                        rows="4"
+                        placeholder="Tulis alamat lengkap domisili Anda"
+                    ></textarea>
+
+                    @error('alamat')
+                        <small>{{ $message }}</small>
+                    @enderror
+                </label>
+            </div>
+        </section>
+
+        <div class="donor-profile-actions">
+            <a href="{{ route('donor.riwayat') }}">
+                Lihat Riwayat Donor
+            </a>
+
+            <button
+                type="submit"
+                wire:loading.attr="disabled"
+            >
+                <span wire:loading.remove>
+                    Simpan Profil
+                </span>
+
+                <span wire:loading>
+                    Menyimpan...
+                </span>
+            </button>
+        </div>
+    </form>
+
+    <style>
+
+        .donor-profile-toast {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 120;
+            width: min(420px, calc(100vw - 32px));
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px;
+            border: 1px solid #bbf7d0;
+            border-radius: 20px;
+            color: #14532d;
+            background: #f0fdf4;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+        }
+
+        .donor-profile-toast-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border-radius: 15px;
+            color: #16a34a;
+            background: #dcfce7;
+        }
+
+        .donor-profile-toast-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .donor-profile-toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .donor-profile-toast-content strong {
+            display: block;
+            color: #14532d;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .donor-profile-toast-content p {
+            margin: 4px 0 0;
+            color: #166534;
+            font-size: 13px;
+            line-height: 1.6;
+            font-weight: 700;
+        }
+
+        .donor-profile-toast button {
+            width: 32px;
+            height: 32px;
+            border: 0;
+            border-radius: 10px;
+            color: #166534;
+            background: transparent;
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .donor-profile-toast button:hover {
+            background: #dcfce7;
+        }
+
+        .donor-profile-page {
+            display: grid;
+            gap: 28px;
+        }
+
+        .donor-profile-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 280px;
+            gap: 24px;
+            align-items: end;
+        }
+
+        .donor-profile-eyebrow {
+            margin: 0 0 12px;
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .donor-profile-hero h1 {
+            margin: 0;
+            color: #0f172a;
+            font-size: clamp(36px, 5vw, 54px);
+            line-height: 1.05;
+            letter-spacing: -0.06em;
+        }
+
+        .donor-profile-hero p:not(.donor-profile-eyebrow) {
+            max-width: 760px;
+            margin: 16px 0 0;
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .donor-profile-hero-card,
+        .donor-profile-summary article,
+        .donor-profile-section {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
+        }
+
+        .donor-profile-hero-card {
+            padding: 24px;
+            border-color: #fee2e2;
+            border-radius: 26px;
+        }
+
+        .donor-profile-hero-card span {
+            color: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .donor-profile-hero-card strong {
+            display: block;
+            margin-top: 12px;
+            color: #0f172a;
+            font-size: 52px;
+            line-height: 1;
+        }
+
+        .donor-profile-progress {
+            height: 9px;
+            overflow: hidden;
+            margin-top: 18px;
+            border-radius: 999px;
+            background: #f1f5f9;
+        }
+
+        .donor-profile-progress div {
+            height: 100%;
+            border-radius: 999px;
+            background: #dc2626;
+        }
+
+        .donor-profile-hero-card p {
+            margin: 12px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .donor-profile-alert {
+            padding: 16px 18px;
+            border: 1px solid #bbf7d0;
+            border-radius: 18px;
+            color: #166534;
+            background: #f0fdf4;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .donor-profile-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .donor-profile-summary article {
+            padding: 22px;
+            border-radius: 22px;
+        }
+
+        .donor-profile-summary span {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .donor-profile-summary strong {
+            display: block;
+            margin-top: 8px;
+            color: #0f172a;
+            font-size: 28px;
+            line-height: 1.15;
+        }
+
+        .donor-profile-summary p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .donor-profile-warning {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+            gap: 20px;
+            padding: 22px;
+            border: 1px solid #fee2e2;
+            border-radius: 24px;
+            background: #fff7f7;
+        }
+
+        .donor-profile-warning h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+            letter-spacing: -0.03em;
+        }
+
+        .donor-profile-warning p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .donor-profile-missing-list {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .donor-profile-missing-list span {
+            display: inline-flex;
+            min-height: 34px;
+            align-items: center;
+            padding: 0 13px;
+            border-radius: 999px;
+            color: #991b1b;
+            background: #fee2e2;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .donor-profile-form {
+            display: grid;
+            gap: 24px;
+        }
+
+        .donor-profile-section {
+            display: grid;
+            gap: 22px;
+            padding: 24px;
+            border-radius: 24px;
+        }
+
+        .donor-profile-section-heading h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+            letter-spacing: -0.03em;
+        }
+
+        .donor-profile-section-heading p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .donor-profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .donor-profile-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .donor-profile-field-full {
+            grid-column: 1 / -1;
+        }
+
+        .donor-profile-field span {
+            color: #334155;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .donor-profile-field input,
+        .donor-profile-field select,
+        .donor-profile-field textarea {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            color: #0f172a;
+            background: #ffffff;
+            outline: none;
+            font: inherit;
+            font-size: 13px;
+            transition: 160ms ease;
+        }
+
+        .donor-profile-field input,
+        .donor-profile-field select {
+            min-height: 50px;
+            padding: 0 15px;
+        }
+
+        .donor-profile-field textarea {
+            resize: vertical;
+            padding: 14px 15px;
+        }
+
+        .donor-profile-field input:focus,
+        .donor-profile-field select:focus,
+        .donor-profile-field textarea:focus {
+            border-color: #f87171;
+            box-shadow: 0 0 0 4px rgba(254, 202, 202, 0.42);
+        }
+
+        .donor-profile-field small {
+            color: #dc2626;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .donor-profile-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .donor-profile-actions a,
+        .donor-profile-actions button {
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 18px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .donor-profile-actions a {
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        .donor-profile-actions button {
+            min-width: 180px;
+            border: 0;
+            color: #ffffff;
+            background: #dc2626;
+            cursor: pointer;
+            box-shadow: 0 16px 32px rgba(220, 38, 38, 0.18);
+        }
+
+        .donor-profile-actions button:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+        @media (max-width: 980px) {
+            .donor-profile-hero,
+            .donor-profile-summary,
+            .donor-profile-warning {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .donor-profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-profile-field-full {
+                grid-column: auto;
+            }
+
+            .donor-profile-actions {
+                align-items: stretch;
+                flex-direction: column-reverse;
+            }
+
+            .donor-profile-actions a,
+            .donor-profile-actions button {
+                width: 100%;
+            }
+        }
+    </style>
+</div>===== MODEL PROFIL PENDONOR =====
+<?php
+
+namespace App\Models;
+
+use App\Enums\GolonganDarah;
+use App\Enums\JenisKelamin;
+use App\Enums\RhesusDarah;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ProfilPendonor extends Model
+{
+    use HasFactory;
+
+    protected $table = 'profil_pendonor';
+
+    protected $fillable = [
+        'pengguna_id',
+        'kode_pendonor',
+        'tanggal_lahir',
+        'jenis_kelamin',
+        'golongan_darah',
+        'rhesus',
+        'alamat',
+        'provinsi',
+        'kota',
+        'kecamatan',
+        'kode_pos',
+        'nama_kontak_darurat',
+        'telepon_kontak_darurat',
+        'terakhir_donor_pada',
+        'bersedia_dihubungi',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'tanggal_lahir' => 'date',
+            'jenis_kelamin' => JenisKelamin::class,
+            'golongan_darah' => GolonganDarah::class,
+            'rhesus' => RhesusDarah::class,
+            'terakhir_donor_pada' => 'datetime',
+            'bersedia_dihubungi' => 'boolean',
+        ];
+    }
+
+    public function pengguna(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'pengguna_id'
+        );
+    }
+}===== USER MODEL =====
+<?php
+
+namespace App\Models;
+
+use App\Enums\StatusPengguna;
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\VerifyEmailNotification;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
+use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+
+class User extends Authenticatable implements
+    FilamentUser,
+    HasAvatar,
+    MustVerifyEmail
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasApiTokens;
+    use HasFactory;
+    use HasRoles;
+    use Notifiable;
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = [
+        'avatar_url',
+        'name',
+        'email',
+        'nomor_telepon',
+        'password',
+        'status',
+        'terakhir_login_pada',
+        'ip_terakhir_login',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'status' => StatusPengguna::class,
+            'terakhir_login_pada' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(
+            function (User $user): void {
+                if ($user->hasVerifiedEmail()) {
+                    return;
+                }
+
+                $user->sendEmailVerificationNotification();
+            }
+        );
+    }
+
+    public function profilPendonor(): HasOne
+    {
+        return $this->hasOne(
+            ProfilPendonor::class,
+            'pengguna_id'
+        );
+    }
+
+    public function profilRumahSakit(): HasOne
+    {
+        return $this->hasOne(
+            ProfilRumahSakit::class,
+            'pengguna_id'
+        );
+    }
+
+    public function rumahSakitDiverifikasi(): HasMany
+    {
+        return $this->hasMany(
+            ProfilRumahSakit::class,
+            'diverifikasi_oleh'
+        );
+    }
+
+    public function lokasiDonorDibuat(): HasMany
+    {
+        return $this->hasMany(
+            LokasiDonor::class,
+            'dibuat_oleh'
+        );
+    }
+
+    public function jadwalDonorDibuat(): HasMany
+    {
+        return $this->hasMany(
+            JadwalDonor::class,
+            'dibuat_oleh'
+        );
+    }
+
+    public function pendaftaranDonor(): HasMany
+    {
+        return $this->hasMany(
+            PendaftaranDonor::class,
+            'pendonor_id'
+        );
+    }
+
+    public function pendaftaranDitinjau(): HasMany
+    {
+        return $this->hasMany(
+            PendaftaranDonor::class,
+            'ditinjau_oleh'
+        );
+    }
+
+    public function pemeriksaanDilakukan(): HasMany
+    {
+        return $this->hasMany(
+            PemeriksaanKesehatan::class,
+            'diperiksa_oleh'
+        );
+    }
+
+    public function kantongDarahDiverifikasi(): HasMany
+    {
+        return $this->hasMany(
+            KantongDarah::class,
+            'diverifikasi_oleh'
+        );
+    }
+
+    public function alokasiDarahDilakukan(): HasMany
+    {
+        return $this->hasMany(
+            ItemPermintaanDarah::class,
+            'dialokasikan_oleh'
+        );
+    }
+
+    public function alokasiDarahDilepaskan(): HasMany
+    {
+        return $this->hasMany(
+            ItemPermintaanDarah::class,
+            'dilepas_oleh'
+        );
+    }
+
+    public function distribusiDarahDisiapkan(): HasMany
+    {
+        return $this->hasMany(
+            DistribusiDarah::class,
+            'disiapkan_oleh'
+        );
+    }
+
+    public function distribusiDarahDiserahkan(): HasMany
+    {
+        return $this->hasMany(
+            DistribusiDarah::class,
+            'diserahkan_oleh'
+        );
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        if (filled($this->avatar_url)) {
+            return asset(
+                'storage/' . ltrim(
+                    $this->avatar_url,
+                    '/'
+                )
+            );
+        }
+
+        $hash = md5(
+            strtolower(
+                trim($this->email)
+            )
+        );
+
+        return sprintf(
+            'https://www.gravatar.com/avatar/%s?d=mp&r=g&s=250',
+            $hash
+        );
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() !== 'admin') {
+            return false;
+        }
+
+        return $this->hasAnyRole([
+            'super_admin',
+            'super-admin',
+            'admin',
+            'petugas',
+        ]);
+    }
+
+    public function routeNotificationForMail(
+        ?Notification $notification = null
+    ): array|string {
+        if (
+            app()->environment('local')
+            && (bool) config(
+                'mail.testing_recipient.enabled',
+                false
+            )
+        ) {
+            $testingAddress = trim(
+                (string) config(
+                    'mail.testing_recipient.address',
+                    ''
+                )
+            );
+
+            if ($testingAddress !== '') {
+                /*
+                 * Resend testing membutuhkan alamat penerima
+                 * polos tanpa display name.
+                 */
+                return $testingAddress;
+            }
+        }
+
+        return (string) $this->email;
+    }
+
+    public function sendPasswordResetNotification(
+        $token
+    ): void {
+        $this->notify(
+            new ResetPasswordNotification($token)
+        );
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(
+            new VerifyEmailNotification()
+        );
+    }
+}===== ENUM PROFIL =====
+----- src/app/Enums/GolonganDarah.php -----
+<?php
+
+namespace App\Enums;
+
+enum GolonganDarah: string
+{
+    case A = 'A';
+    case B = 'B';
+    case AB = 'AB';
+    case O = 'O';
+
+    public function label(): string
+    {
+        return $this->value;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $golonganDarah) {
+            $options[$golonganDarah->value] = $golonganDarah->label();
+        }
+
+        return $options;
+    }
+}----- src/app/Enums/RhesusDarah.php -----
+<?php
+
+namespace App\Enums;
+
+enum RhesusDarah: string
+{
+    case Positif = 'positive';
+    case Negatif = 'negative';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Positif => 'Positif (+)',
+            self::Negatif => 'Negatif (-)',
+        };
+    }
+
+    public function simbol(): string
+    {
+        return match ($this) {
+            self::Positif => '+',
+            self::Negatif => '-',
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $rhesus) {
+            $options[$rhesus->value] = $rhesus->label();
+        }
+
+        return $options;
+    }
+}----- src/app/Enums/JenisKelamin.php -----
+<?php
+
+namespace App\Enums;
+
+enum JenisKelamin: string
+{
+    case LakiLaki = 'male';
+    case Perempuan = 'female';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::LakiLaki => 'Laki-laki',
+            self::Perempuan => 'Perempuan',
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $jenisKelamin) {
+            $options[$jenisKelamin->value] = $jenisKelamin->label();
+        }
+
+        return $options;
+    }
+}===== MIGRATION PROFIL =====
+src/database/migrations/2026_06_14_134558_tambah_kolom_akun_ke_tabel_users.php:12:            $table->string('nomor_telepon', 30)
+src/database/migrations/2026_06_14_134558_tambah_kolom_akun_ke_tabel_users.php:35:            $table->dropIndex(['nomor_telepon']);
+src/database/migrations/2026_06_14_134558_tambah_kolom_akun_ke_tabel_users.php:39:                'nomor_telepon',
+src/database/migrations/2026_07_04_185845_add_nomor_telepon_to_users_table.php:14:        if (! Schema::hasColumn('users', 'nomor_telepon')) {
+src/database/migrations/2026_07_04_185845_add_nomor_telepon_to_users_table.php:17:                    ->string('nomor_telepon', 30)
+src/database/migrations/2026_07_04_185845_add_nomor_telepon_to_users_table.php:29:        if (Schema::hasColumn('users', 'nomor_telepon')) {
+src/database/migrations/2026_07_04_185845_add_nomor_telepon_to_users_table.php:31:                $table->dropColumn('nomor_telepon');
+src/database/migrations/2026_06_14_133904_create_profil_pendonors_table.php:11:        Schema::create('profil_pendonor', function (Blueprint $table): void {
+src/database/migrations/2026_06_14_133904_create_profil_pendonors_table.php:19:            $table->string('kode_pendonor', 30)->unique();
+src/database/migrations/2026_06_14_133904_create_profil_pendonors_table.php:53:                'profil_pendonor_golongan_rhesus_idx'
+src/database/migrations/2026_06_14_133904_create_profil_pendonors_table.php:60:        Schema::dropIfExists('profil_pendonor');
+src/database/migrations/2026_07_08_121300_tambah_detail_maps_pada_lokasi_donor.php:31:            if (! Schema::hasColumn($tableName, 'nomor_telepon')) {
+src/database/migrations/2026_07_08_121300_tambah_detail_maps_pada_lokasi_donor.php:32:                $table->string('nomor_telepon', 30)->nullable();
+src/database/migrations/2026_07_08_121300_tambah_detail_maps_pada_lokasi_donor.php:63:                'nomor_telepon',

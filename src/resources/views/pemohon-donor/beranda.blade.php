@@ -1,1546 +1,810 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Dashboard Pemohon Donor</title>
-
-    <style>
-        :root {
-            --red: #ef1d26;
-            --red-soft: #fff1f2;
-            --red-border: #fecdd3;
-            --blue: #2563eb;
-            --blue-soft: #dbeafe;
-            --green: #16a34a;
-            --green-soft: #dcfce7;
-            --orange: #f97316;
-            --orange-soft: #ffedd5;
-            --yellow: #d97706;
-            --yellow-soft: #fef3c7;
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: #e5e7eb;
-            --soft-line: #f1f5f9;
-            --surface: #ffffff;
-            --body: #f8fafc;
-            --shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-            --shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.05);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--text);
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(254, 226, 226, 0.72),
-                    transparent 28rem
-                ),
-                linear-gradient(
-                    180deg,
-                    #ffffff 0%,
-                    var(--body) 45%,
-                    #ffffff 100%
-                );
-            font-family:
-                Inter,
-                ui-sans-serif,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        svg {
-            display: block;
-            width: 1.25rem;
-            height: 1.25rem;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-
-        .app {
-            display: grid;
-            grid-template-columns: 250px minmax(0, 1fr);
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            padding: 26px 20px 20px;
-            border-right: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-height: 58px;
-            margin-bottom: 34px;
-        }
-
-        .brand-mark {
-            display: grid;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: #ffffff;
-            border-radius: 18px;
-            background: linear-gradient(135deg, var(--red), #f43f5e);
-            box-shadow: 0 18px 35px rgba(239, 29, 38, 0.22);
-        }
-
-        .brand-title {
-            display: grid;
-            gap: 1px;
-            color: var(--text);
-            font-size: 16px;
-            font-weight: 800;
-            line-height: 1.05;
-            text-transform: uppercase;
-        }
-
-        .brand-title strong {
-            color: var(--red);
-            font-size: 19px;
-        }
-
-        .menu {
-            display: grid;
-            gap: 8px;
-        }
-
-        .menu-link,
-        .menu-button {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            width: 100%;
-            min-height: 52px;
-            padding: 0 16px;
-            color: #475569;
-            border: 0;
-            border-radius: 14px;
-            background: transparent;
-            font-size: 15px;
-            font-weight: 750;
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .menu-link:hover,
-        .menu-button:hover {
-            color: var(--red);
-            background: #fff5f5;
-        }
-
-        .menu-link.active {
-            color: var(--red);
-            background: linear-gradient(90deg, #ffe4e6 0%, #fff7f7 100%);
-        }
-
-        .menu-link.active::before {
-            content: "";
-            position: absolute;
-            left: -20px;
-            width: 4px;
-            height: 42px;
-            border-radius: 999px;
-            background: var(--red);
-        }
-
-        .menu-icon {
-            display: grid;
-            flex: 0 0 auto;
-            width: 25px;
-            height: 25px;
-            place-items: center;
-        }
-
-        .sidebar-separator {
-            height: 1px;
-            margin: 28px 12px;
-            background: var(--line);
-        }
-
-        .sidebar-bottom {
-            position: absolute;
-            right: 20px;
-            bottom: 20px;
-            left: 20px;
-        }
-
-        .quote-card {
-            display: grid;
-            place-items: center;
-            min-height: 176px;
-            margin-bottom: 18px;
-            padding: 18px;
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            background: #ffffff;
-            box-shadow: var(--shadow-soft);
-            text-align: center;
-        }
-
-        .quote-icon {
-            display: grid;
-            width: 74px;
-            height: 74px;
-            place-items: center;
-            margin-bottom: 12px;
-            color: var(--red);
-            border-radius: 999px;
-            background: var(--red-soft);
-            font-size: 30px;
-            font-weight: 900;
-        }
-
-        .quote-text {
-            margin: 0;
-            color: var(--red);
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.45;
-        }
-
-        .main {
-            min-width: 0;
-        }
-
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            display: grid;
-            grid-template-columns: minmax(260px, 1fr) minmax(280px, 420px) auto;
-            gap: 24px;
-            align-items: center;
-            min-height: 104px;
-            padding: 22px 32px;
-            border-bottom: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(18px);
-        }
-
-        .page-title {
-            margin: 0;
-            font-size: 31px;
-            font-weight: 900;
-            letter-spacing: -0.045em;
-        }
-
-        .page-subtitle {
-            margin: 6px 0 0;
-            color: var(--muted);
-            font-size: 15px;
-        }
-
-        .search-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            height: 54px;
-            min-width: 0;
-            padding: 0 18px;
-            border: 1px solid #dbe1ea;
-            border-radius: 16px;
-            background: #ffffff;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
-        }
-
-        .search-box input {
-            width: 100%;
-            min-width: 0;
-            border: 0;
-            outline: none;
-            color: var(--text);
-            background: transparent;
-            font-size: 14px;
-        }
-
-        .top-actions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            justify-content: flex-end;
-            min-width: 0;
-        }
-
-        .notification {
-            position: relative;
-            display: grid;
-            flex: 0 0 auto;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: var(--text);
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            background: #ffffff;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            display: grid;
-            width: 20px;
-            height: 20px;
-            place-items: center;
-            color: #ffffff;
-            border-radius: 999px;
-            background: var(--red);
-            font-size: 11px;
-            font-weight: 900;
-        }
-
-        .user-chip {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-        }
-
-        .avatar {
-            display: grid;
-            flex: 0 0 auto;
-            width: 52px;
-            height: 52px;
-            place-items: center;
-            color: var(--red);
-            border-radius: 999px;
-            background: #ffe1e5;
-            font-weight: 900;
-        }
-
-        .user-info {
-            min-width: 0;
-            max-width: 180px;
-        }
-
-        .user-info strong {
-            display: block;
-            overflow: hidden;
-            font-size: 14px;
-            line-height: 1.25;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .user-info span {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .content {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 340px;
-            gap: 24px;
-            align-items: start;
-            padding: 26px 32px 32px;
-        }
-
-        .left-content,
-        .right-content {
-            display: grid;
-            gap: 24px;
-            min-width: 0;
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-        }
-
-        .card {
-            border: 1px solid var(--soft-line);
-            border-radius: 20px;
-            background: var(--surface);
-            box-shadow: var(--shadow);
-        }
-
-        .stat-card {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            min-height: 126px;
-            padding: 22px;
-        }
-
-        .stat-icon {
-            display: grid;
-            flex: 0 0 auto;
-            width: 68px;
-            height: 68px;
-            place-items: center;
-            border-radius: 18px;
-        }
-
-        .stat-icon.red {
-            color: var(--red);
-            background: var(--red-soft);
-        }
-
-        .stat-icon.orange {
-            color: var(--orange);
-            background: var(--orange-soft);
-        }
-
-        .stat-icon.green {
-            color: var(--green);
-            background: var(--green-soft);
-        }
-
-        .stat-icon.blue {
-            color: var(--blue);
-            background: var(--blue-soft);
-        }
-
-        .stat-label {
-            margin: 0;
-            font-size: 15px;
-            font-weight: 850;
-            line-height: 1.25;
-        }
-
-        .stat-value {
-            margin: 6px 0 2px;
-            font-size: 34px;
-            font-weight: 900;
-            letter-spacing: -0.05em;
-        }
-
-        .stat-note {
-            margin: 0;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.35;
-        }
-
-        .panel {
-            padding: 24px;
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 22px;
-        }
-
-        .panel-title {
-            margin: 0;
-            font-size: 21px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .panel-link {
-            color: var(--red);
-            font-size: 14px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .table-wrap {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid var(--line);
-            border-radius: 16px;
-        }
-
-        .data-table {
-            width: 100%;
-            min-width: 820px;
-            border-collapse: collapse;
-        }
-
-        .data-table th {
-            padding: 15px 16px;
-            color: #64748b;
-            border-bottom: 1px solid var(--line);
-            font-size: 13px;
-            font-weight: 800;
-            text-align: left;
-            white-space: nowrap;
-        }
-
-        .data-table td {
-            padding: 17px 16px;
-            border-bottom: 1px solid var(--line);
-            font-size: 14px;
-            vertical-align: middle;
-        }
-
-        .data-table tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .main-text {
-            display: block;
-            color: var(--text);
-            font-weight: 900;
-            line-height: 1.35;
-        }
-
-        .sub-text {
-            display: block;
-            margin-top: 3px;
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .blood-badge,
-        .status-badge,
-        .priority-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 34px;
-            padding: 0 13px;
-            border-radius: 9px;
-            font-size: 14px;
-            font-weight: 900;
-            white-space: nowrap;
-        }
-
-        .blood-badge {
-            color: var(--red);
-            border: 1px solid var(--red-border);
-            background: #fff5f5;
-        }
-
-        .priority-high {
-            color: var(--red);
-            background: #ffe4e6;
-        }
-
-        .priority-medium {
-            color: #ea580c;
-            background: var(--orange-soft);
-        }
-
-        .status-warning {
-            color: #d97706;
-            background: var(--yellow-soft);
-        }
-
-        .status-info {
-            color: var(--blue);
-            background: var(--blue-soft);
-        }
-
-        .status-success {
-            color: var(--green);
-            background: var(--green-soft);
-        }
-
-        .status-danger {
-            color: var(--red);
-            background: #fee2e2;
-        }
-
-        .action-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 34px;
-            padding: 0 11px;
-            border-radius: 9px;
-            color: var(--blue);
-            background: var(--blue-soft);
-            font-size: 12px;
-            font-weight: 900;
-            white-space: nowrap;
-        }
-
-        .activity-list {
-            display: grid;
-            gap: 18px;
-        }
-
-        .activity-item {
-            display: grid;
-            grid-template-columns: 36px minmax(0, 1fr);
-            gap: 14px;
-            align-items: start;
-        }
-
-        .activity-icon {
-            display: grid;
-            width: 36px;
-            height: 36px;
-            place-items: center;
-            border-radius: 999px;
-        }
-
-        .activity-title {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.45;
-        }
-
-        .activity-date {
-            margin: 3px 0 0;
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .quick-card,
-        .info-card {
-            padding: 22px;
-        }
-
-        .quick-title {
-            margin: 0 0 18px;
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-        }
-
-        .quick-actions {
-            display: grid;
-            gap: 12px;
-        }
-
-        .quick-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            min-height: 55px;
-            padding: 0 18px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 900;
-            text-align: center;
-        }
-
-        .quick-button.primary {
-            color: #ffffff;
-            background: linear-gradient(135deg, var(--red), #ef4444);
-            box-shadow: 0 16px 28px rgba(239, 29, 38, 0.22);
-        }
-
-        .quick-button.secondary {
-            color: var(--text);
-            border: 1px solid #dbe1ea;
-            background: #ffffff;
-        }
-
-        .schedule-list {
-            display: grid;
-            gap: 16px;
-        }
-
-        .schedule-item {
-            display: grid;
-            grid-template-columns: 44px minmax(0, 1fr);
-            gap: 14px;
-            align-items: start;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .schedule-item:last-child {
-            padding-bottom: 0;
-            border-bottom: 0;
-        }
-
-        .schedule-icon {
-            display: grid;
-            width: 44px;
-            height: 44px;
-            place-items: center;
-            color: var(--red);
-            border-radius: 12px;
-            background: var(--red-soft);
-        }
-
-        .schedule-main {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 900;
-            line-height: 1.4;
-        }
-
-        .schedule-sub {
-            margin: 3px 0 0;
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .schedule-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 11px;
-        }
-
-        .small-pill {
-            display: inline-flex;
-            align-items: center;
-            min-height: 27px;
-            padding: 0 9px;
-            border-radius: 999px;
-            color: var(--green);
-            background: var(--green-soft);
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .info-profile {
-            display: flex;
-            align-items: center;
-            gap: 13px;
-            margin-bottom: 22px;
-        }
-
-        .info-name {
-            margin: 0;
-            font-size: 15px;
-            font-weight: 900;
-        }
-
-        .info-row {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .info-row span {
-            color: var(--muted);
-        }
-
-        .info-row strong {
-            font-weight: 900;
-            text-align: right;
-        }
-
-        .profile-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            min-height: 48px;
-            margin-top: 18px;
-            border: 1px solid #dbe1ea;
-            border-radius: 11px;
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        .empty-state {
-            padding: 28px;
-            color: var(--muted);
-            border: 1px dashed var(--red-border);
-            border-radius: 16px;
-            background: #fff7f7;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        @media (max-width: 1536px) {
-            .content {
-                grid-template-columns: minmax(0, 1fr) 330px;
-                gap: 20px;
-                padding-right: 28px;
-                padding-left: 28px;
-            }
-
-            .stat-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 1280px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-
-            .right-content {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 1080px) {
-            .app {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                position: relative;
-                height: auto;
-                border-right: 0;
-                border-bottom: 1px solid var(--line);
-            }
-
-            .sidebar-bottom {
-                position: static;
-                margin-top: 28px;
-            }
-
-            .menu {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-
-            .menu-link.active::before {
-                display: none;
-            }
-
-            .topbar {
-                grid-template-columns: 1fr;
-            }
-
-            .right-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 780px) {
-            .content,
-            .topbar {
-                padding-right: 18px;
-                padding-left: 18px;
-            }
-
-            .stat-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .menu {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    @php
-        $icon = fn (string $name): string => match ($name) {
-            'drop' => '<svg viewBox="0 0 24 24"><path d="M12 2s7 7.2 7 12a7 7 0 0 1-14 0C5 9.2 12 2 12 2Z"></path><path d="M9.8 14.2 11.4 16l3.2-4"></path></svg>',
-            'home' => '<svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>',
-            'file' => '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>',
-            'truck' => '<svg viewBox="0 0 24 24"><path d="M3 6h11v10H3z"></path><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>',
-            'user' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>',
-            'history' => '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path><path d="M12 7v5l3 2"></path></svg>',
-            'help' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 1 1 5.8 1c-.6 1.5-2.9 1.8-2.9 4"></path><path d="M12 18h.01"></path></svg>',
-            'settings' => '<svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z"></path></svg>',
-            'clipboard' => '<svg viewBox="0 0 24 24"><path d="M9 4h6a2 2 0 0 1 2 2v1H7V6a2 2 0 0 1 2-2Z"></path><path d="M8 7H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>',
-            'clock' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
-            'check' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>',
-            'bell' => '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>',
-            'search' => '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>',
-            'download' => '<svg viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>',
-            'plus-drop' => '<svg viewBox="0 0 24 24"><path d="M12 2s7 7.2 7 12a7 7 0 0 1-14 0C5 9.2 12 2 12 2Z"></path><path d="M12 9v6"></path><path d="M9 12h6"></path></svg>',
-            'calendar' => '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M3 11h18"></path></svg>',
-            'shield' => '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="m9 12 2 2 4-4"></path></svg>',
-            'logout' => '<svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path></svg>',
-            default => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg>',
+@php
+    $statusLabel = function (
+        mixed $status
+    ): string {
+        if (
+            is_object($status)
+            && method_exists(
+                $status,
+                'label'
+            )
+        ) {
+            return (string) $status->label();
+        }
+
+        $nilai = $status instanceof \BackedEnum
+            ? $status->value
+            : (string) $status;
+
+        return str($nilai)
+            ->replace('_', ' ')
+            ->replace('-', ' ')
+            ->headline()
+            ->toString();
+    };
+
+    $statusClass = function (
+        mixed $status
+    ): string {
+        $nilai = $status instanceof \BackedEnum
+            ? $status->value
+            : (string) $status;
+
+        return match ($nilai) {
+            'submitted',
+            'under_review',
+            'waiting_for_stock',
+            'draft',
+            'diajukan',
+            'ditinjau',
+            'menunggu_stok',
+            'draf' =>
+                'bg-[#fff1c9] text-[#8a5a00]',
+
+            'approved',
+            'ready_for_pickup',
+            'disetujui',
+            'siap_diambil' =>
+                'bg-[#e7effc] text-[#315b9b]',
+
+            'completed',
+            'selesai' =>
+                'bg-[#dff7e7] text-[#176b3a]',
+
+            'rejected',
+            'cancelled',
+            'ditolak',
+            'dibatalkan' =>
+                'bg-[#ffe4e7] text-[#991b2f]',
+
+            default =>
+                'bg-[#f1ecea] text-[#655253]',
         };
+    };
 
-        $portalUrl = function (string $routeName): string {
-            return \Illuminate\Support\Facades\Route::has($routeName)
-                ? route($routeName)
-                : route('pemohon-donor.beranda');
+    $urgensiLabel = function (
+        mixed $urgensi
+    ): string {
+        if (
+            is_object($urgensi)
+            && method_exists(
+                $urgensi,
+                'label'
+            )
+        ) {
+            return (string) $urgensi->label();
+        }
+
+        $nilai = $urgensi instanceof \BackedEnum
+            ? $urgensi->value
+            : (string) $urgensi;
+
+        return str($nilai)
+            ->replace('_', ' ')
+            ->headline()
+            ->toString();
+    };
+
+    $urgensiClass = function (
+        mixed $urgensi
+    ): string {
+        $nilai = $urgensi instanceof \BackedEnum
+            ? $urgensi->value
+            : (string) $urgensi;
+
+        return match ($nilai) {
+            'urgent',
+            'emergency',
+            'mendesak',
+            'darurat' =>
+                'bg-[#ffe4e7] text-[#991b2f]',
+
+            default =>
+                'bg-[#fff1c9] text-[#8a5a00]',
         };
+    };
 
-        $namaPemohon = $profil?->nama_rumah_sakit ?? $pengguna->name;
+    $golonganLabel = function (
+        mixed $golongan
+    ): string {
+        if (
+            is_object($golongan)
+            && method_exists(
+                $golongan,
+                'label'
+            )
+        ) {
+            return (string) $golongan->label();
+        }
 
-        $inisial = collect(explode(' ', $namaPemohon))
-            ->filter()
-            ->take(2)
-            ->map(fn ($item) => mb_substr($item, 0, 1))
-            ->implode('');
+        return (string) (
+            $golongan instanceof \BackedEnum
+                ? $golongan->value
+                : $golongan
+        );
+    };
 
-        $inisial = filled($inisial)
-            ? mb_strtoupper($inisial)
-            : 'PD';
+    $rhesusSimbol = function (
+        mixed $rhesus
+    ): string {
+        if (
+            is_object($rhesus)
+            && method_exists(
+                $rhesus,
+                'simbol'
+            )
+        ) {
+            return (string) $rhesus->simbol();
+        }
 
-        $formatTanggal = fn ($tanggal): string => $tanggal ? $tanggal->format('d M Y') : '-';
+        $nilai = $rhesus instanceof \BackedEnum
+            ? $rhesus->value
+            : (string) $rhesus;
 
-        $formatJam = fn ($tanggal): string => $tanggal ? $tanggal->format('H:i') : '-';
+        return match ($nilai) {
+            'positive',
+            'positif',
+            '+' => '+',
 
-        $statusClass = function ($status): string {
-            $value = $status instanceof \BackedEnum
-                ? $status->value
-                : (string) $status;
+            'negative',
+            'negatif',
+            '-' => '-',
 
-            return match ($value) {
-                'submitted',
-                'under_review',
-                'waiting_for_stock',
-                'draft',
-                'diajukan',
-                'ditinjau',
-                'menunggu_stok',
-                'draf' => 'status-warning',
-
-                'approved',
-                'ready_for_pickup',
-                'disetujui',
-                'siap_diambil' => 'status-info',
-
-                'completed',
-                'selesai' => 'status-success',
-
-                'rejected',
-                'cancelled',
-                'ditolak',
-                'dibatalkan' => 'status-danger',
-
-                default => 'status-info',
-            };
+            default => $nilai,
         };
+    };
 
-        $distribusiStatusClass = function ($status): string {
-            $value = $status instanceof \BackedEnum
-                ? $status->value
-                : (string) $status;
+    $distribusiTerbaru =
+        $jadwalDistribusi->first();
 
-            return match ($value) {
-                'scheduled',
-                'dijadwalkan' => 'status-warning',
+    $namaPemohon =
+        $profil?->nama_rumah_sakit
+        ?? $pengguna->name;
+@endphp
 
-                'ready',
-                'siap_diserahkan' => 'status-info',
-
-                'completed',
-                'selesai' => 'status-success',
-
-                'cancelled',
-                'dibatalkan' => 'status-danger',
-
-                default => 'status-info',
-            };
-        };
-
-        $priorityClass = function ($urgensi): string {
-            $value = $urgensi instanceof \BackedEnum
-                ? $urgensi->value
-                : (string) $urgensi;
-
-            return match ($value) {
-                'urgent',
-                'emergency',
-                'mendesak',
-                'darurat' => 'priority-high',
-
-                default => 'priority-medium',
-            };
-        };
-
-        $statusLabel = function ($status): string {
-            if (is_object($status) && method_exists($status, 'label')) {
-                return $status->label();
-            }
-
-            return str((string) ($status instanceof \BackedEnum ? $status->value : $status))
-                ->replace('_', ' ')
-                ->replace('-', ' ')
-                ->headline()
-                ->toString();
-        };
-
-        $urgensiLabel = function ($urgensi): string {
-            if (is_object($urgensi) && method_exists($urgensi, 'label')) {
-                return $urgensi->label();
-            }
-
-            return str((string) ($urgensi instanceof \BackedEnum ? $urgensi->value : $urgensi))
-                ->replace('_', ' ')
-                ->replace('-', ' ')
-                ->headline()
-                ->toString();
-        };
-
-        $golonganLabel = function ($golongan): string {
-            if (is_object($golongan) && method_exists($golongan, 'label')) {
-                return $golongan->label();
-            }
-
-            return (string) ($golongan instanceof \BackedEnum ? $golongan->value : $golongan);
-        };
-
-        $rhesusSimbol = function ($rhesus): string {
-            if (is_object($rhesus) && method_exists($rhesus, 'simbol')) {
-                return $rhesus->simbol();
-            }
-
-            return (string) ($rhesus instanceof \BackedEnum ? $rhesus->value : $rhesus);
-        };
-
-        $distribusiTerbaru = $jadwalDistribusi->first();
-    @endphp
-
-    <div class="app">
-        
-<aside class="sidebar">
-            <a
-                href="{{ $portalUrl('pemohon-donor.beranda') }}"
-                class="brand"
+<x-layouts.pemohon-donor
+    title="Dashboard Pemohon"
+    heading="Dashboard Pemohon"
+    :description="'Selamat datang kembali, ' . $namaPemohon . '.'"
+    :pengguna="$pengguna"
+    :profil="$profil"
+    :notification-count="$pengajuanBaru"
+>
+    <div class="space-y-6">
+        @if ($profil === null)
+            <section
+                class="rounded-[22px] border border-[#f0cbd2] bg-[#fff4f6] p-5"
             >
-                <span class="brand-mark">
-                    {!! $icon('drop') !!}
-                </span>
-
-                <span class="brand-title">
-                    Portal
-                    <strong>Pemohon Donor</strong>
-                </span>
-            </a>
-
-            <nav class="menu">
-                <a
-                    href="{{ $portalUrl('pemohon-donor.beranda') }}"
-                    class="menu-link active"
+                <div
+                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <span class="menu-icon">{!! $icon('home') !!}</span>
-                    Dashboard
-                </a>
+                    <div>
+                        <p
+                            class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                        >
+                            Profil belum lengkap
+                        </p>
 
-                <a
-                    href="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                    class="menu-link"
-                >
-                    <span class="menu-icon">{!! $icon('file') !!}</span>
-                    Pengajuan
-                </a>
+                        <h2
+                            class="mt-1 text-lg font-bold text-[#3f0716]"
+                        >
+                            Lengkapi profil rumah sakit terlebih dahulu
+                        </h2>
 
-                <a
-                    href="{{ $portalUrl('pemohon-donor.distribusi.index') }}"
-                    class="menu-link"
+                        <p
+                            class="mt-1 text-sm leading-6 text-[#755b61]"
+                        >
+                            Profil diperlukan sebelum membuat pengajuan kebutuhan darah.
+                        </p>
+                    </div>
+
+                    <a
+                        href="{{ route('pemohon-donor.profil.index') }}"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#991b2f] px-5 text-sm font-bold text-white"
+                    >
+                        Lengkapi Profil
+                    </a>
+                </div>
+            </section>
+        @endif
+
+        <section
+            class="grid grid-cols-2 gap-3 xl:grid-cols-4"
+        >
+            <article
+                class="rounded-[22px] border border-[#eadfe1] bg-white p-5 shadow-[0_14px_38px_rgba(25,28,32,0.05)]"
+            >
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ffe7ec] text-[#991b2f]"
                 >
-                    <span class="menu-icon">{!! $icon('truck') !!}</span>
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M9 4h6a2 2 0 0 1 2 2v1H7V6a2 2 0 0 1 2-2Z" />
+                        <path d="M8 7H6a2 2 0 0 0-2 2v11h12V9a2 2 0 0 0-2-2h-2" />
+                    </svg>
+                </div>
+
+                <p
+                    class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+                >
+                    Pengajuan Baru
+                </p>
+
+                <strong
+                    class="mt-1 block text-4xl tracking-[-0.05em] text-[#191c20]"
+                >
+                    {{ number_format($pengajuanBaru) }}
+                </strong>
+
+                <p
+                    class="mt-1 text-xs text-[#755f60]"
+                >
+                    Menunggu diproses
+                </p>
+            </article>
+
+            <article
+                class="rounded-[22px] border border-[#eee0bd] bg-white p-5 shadow-[0_14px_38px_rgba(25,28,32,0.05)]"
+            >
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#fff1c9] text-[#8a5a00]"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                    </svg>
+                </div>
+
+                <p
+                    class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+                >
+                    Sedang Diproses
+                </p>
+
+                <strong
+                    class="mt-1 block text-4xl tracking-[-0.05em] text-[#191c20]"
+                >
+                    {{ number_format($diproses) }}
+                </strong>
+
+                <p
+                    class="mt-1 text-xs text-[#755f60]"
+                >
+                    Dalam verifikasi
+                </p>
+            </article>
+
+            <article
+                class="rounded-[22px] border border-[#d9eadf] bg-white p-5 shadow-[0_14px_38px_rgba(25,28,32,0.05)]"
+            >
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#dff7e7] text-[#176b3a]"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="m8 12 2.5 2.5L16 9" />
+                    </svg>
+                </div>
+
+                <p
+                    class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+                >
+                    Siap Diterima
+                </p>
+
+                <strong
+                    class="mt-1 block text-4xl tracking-[-0.05em] text-[#191c20]"
+                >
+                    {{ number_format($diterima) }}
+                </strong>
+
+                <p
+                    class="mt-1 text-xs text-[#755f60]"
+                >
+                    Siap didistribusikan
+                </p>
+            </article>
+
+            <article
+                class="rounded-[22px] border border-[#dce5f4] bg-white p-5 shadow-[0_14px_38px_rgba(25,28,32,0.05)]"
+            >
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e7effc] text-[#315b9b]"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M3 7h11v10H3z" />
+                        <path d="M14 10h4l3 3v4h-7z" />
+                    </svg>
+                </div>
+
+                <p
+                    class="mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#8c7071]"
+                >
                     Distribusi
-                </a>
+                </p>
 
-                <a
-                    href="{{ $portalUrl('pemohon-donor.profil.index') }}"
-                    class="menu-link"
+                <strong
+                    class="mt-1 block text-4xl tracking-[-0.05em] text-[#191c20]"
                 >
-                    <span class="menu-icon">{!! $icon('user') !!}</span>
-                    Profil
-                </a>
+                    {{ number_format($distribusi) }}
+                </strong>
 
-                <a
-                    href="{{ $portalUrl('pemohon-donor.riwayat.index') }}"
-                    class="menu-link"
+                <p
+                    class="mt-1 text-xs text-[#755f60]"
                 >
-                    <span class="menu-icon">{!! $icon('history') !!}</span>
-                    Riwayat
-                </a>
-            </nav>
+                    Distribusi tercatat
+                </p>
+            </article>
+        </section>
 
-            <div class="sidebar-separator"></div>
-
-            <nav class="menu">
-                <a
-                    href="{{ $portalUrl('pemohon-donor.bantuan.index') }}"
-                    class="menu-link"
+        <section
+            class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]"
+        >
+            <div class="space-y-6">
+                <article
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)] sm:p-6"
                 >
-                    <span class="menu-icon">{!! $icon('help') !!}</span>
-                    Bantuan
-                </a>
-
-                <a
-                    href="{{ $portalUrl('pemohon-donor.pengaturan.index') }}"
-                    class="menu-link"
-                >
-                    <span class="menu-icon">{!! $icon('settings') !!}</span>
-                    Pengaturan
-                </a>
-
-                <form
-                    method="POST"
-                    action="{{ route('logout') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="menu-button"
+                    <div
+                        class="flex items-center justify-between gap-4"
                     >
-                        <span class="menu-icon">{!! $icon('logout') !!}</span>
-                        Keluar
-                    </button>
-                </form>
-            </nav>
+                        <div>
+                            <p
+                                class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                            >
+                                Pengajuan
+                            </p>
 
-            <div class="sidebar-bottom">
-                <div class="quote-card">
-                    <div class="quote-icon">
-                        ♥
-                    </div>
-
-                    <p class="quote-text">
-                        Setetes darah,<br>
-                        sejuta harapan.
-                    </p>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main">
-            <header class="topbar">
-                <div>
-                    <h1 class="page-title">
-                        Dashboard Pemohon
-                    </h1>
-
-                    <p class="page-subtitle">
-                        Selamat datang kembali, {{ $namaPemohon }}.
-                    </p>
-                </div>
-
-                <form
-                    method="GET"
-                    action="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                    class="search-box"
-                >
-                    {!! $icon('search') !!}
-
-                    <input
-                        type="search"
-                        name="q"
-                        placeholder="Cari pengajuan, kode, atau referensi..."
-                        value="{{ request('q') }}"
-                    >
-                </form>
-
-                <div class="top-actions">
-                    <div class="notification">
-                        {!! $icon('bell') !!}
-
-                        <span class="notification-badge">
-                            {{ $pengajuanBaru > 9 ? '9+' : $pengajuanBaru }}
-                        </span>
-                    </div>
-
-                    <div class="user-chip">
-                        <div class="avatar">
-                            {{ $inisial }}
-                        </div>
-
-                        <div class="user-info">
-                            <strong>
-                                {{ $namaPemohon }}
-                            </strong>
-
-                            <span>
-                                Pemohon
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <section class="content">
-                <div class="left-content">
-                    <section class="stat-grid">
-                        <article class="card stat-card">
-                            <div class="stat-icon red">
-                                {!! $icon('clipboard') !!}
-                            </div>
-
-                            <div>
-                                <p class="stat-label">
-                                    Pengajuan Baru
-                                </p>
-
-                                <p class="stat-value">
-                                    {{ number_format($pengajuanBaru) }}
-                                </p>
-
-                                <p class="stat-note">
-                                    Menunggu diproses
-                                </p>
-                            </div>
-                        </article>
-
-                        <article class="card stat-card">
-                            <div class="stat-icon orange">
-                                {!! $icon('clock') !!}
-                            </div>
-
-                            <div>
-                                <p class="stat-label">
-                                    Diproses
-                                </p>
-
-                                <p class="stat-value">
-                                    {{ number_format($diproses) }}
-                                </p>
-
-                                <p class="stat-note">
-                                    Sedang diverifikasi
-                                </p>
-                            </div>
-                        </article>
-
-                        <article class="card stat-card">
-                            <div class="stat-icon green">
-                                {!! $icon('check') !!}
-                            </div>
-
-                            <div>
-                                <p class="stat-label">
-                                    Diterima
-                                </p>
-
-                                <p class="stat-value">
-                                    {{ number_format($diterima) }}
-                                </p>
-
-                                <p class="stat-note">
-                                    Siap didistribusikan
-                                </p>
-                            </div>
-                        </article>
-
-                        <article class="card stat-card">
-                            <div class="stat-icon blue">
-                                {!! $icon('truck') !!}
-                            </div>
-
-                            <div>
-                                <p class="stat-label">
-                                    Distribusi
-                                </p>
-
-                                <p class="stat-value">
-                                    {{ number_format($distribusi) }}
-                                </p>
-
-                                <p class="stat-note">
-                                    Data distribusi tercatat
-                                </p>
-                            </div>
-                        </article>
-                    </section>
-
-                    <section class="card panel">
-                        <div class="panel-header">
-                            <h2 class="panel-title">
-                                Status Pengajuan Terbaru
+                            <h2
+                                class="mt-1 text-xl font-bold tracking-[-0.04em] text-[#191c20]"
+                            >
+                                Pengajuan Terbaru
                             </h2>
-
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.pengajuan.index') }}"
-                                class="panel-link"
-                            >
-                                Lihat semua
-                            </a>
-                        </div>
-
-                        @if ($pengajuanTerbaru->isNotEmpty())
-                            <div class="table-wrap">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Kode Pengajuan</th>
-                                            <th>Tanggal</th>
-                                            <th>Gol. Darah</th>
-                                            <th>Kebutuhan</th>
-                                            <th>Prioritas</th>
-                                            <th>Status</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        @foreach ($pengajuanTerbaru as $pengajuan)
-                                            <tr>
-                                                <td>
-                                                    <span class="main-text">
-                                                        {{ $pengajuan->nomor_permintaan }}
-                                                    </span>
-
-                                                    <span class="sub-text">
-                                                        {{ $pengajuan->referensi_pasien ?? 'Pengajuan kebutuhan donor' }}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span class="main-text">
-                                                        {{ $formatTanggal($pengajuan->created_at) }}
-                                                    </span>
-
-                                                    <span class="sub-text">
-                                                        {{ $formatJam($pengajuan->created_at) }}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span class="blood-badge">
-                                                        {{ $golonganLabel($pengajuan->golongan_darah) }}{{ $rhesusSimbol($pengajuan->rhesus) }}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    {{ number_format($pengajuan->jumlah_kantong) }} kantong
-                                                </td>
-
-                                                <td>
-                                                    <span class="priority-badge {{ $priorityClass($pengajuan->tingkat_urgensi) }}">
-                                                        {{ $urgensiLabel($pengajuan->tingkat_urgensi) }}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span class="status-badge {{ $statusClass($pengajuan->status) }}">
-                                                        {{ $statusLabel($pengajuan->status) }}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <a
-                                                        href="{{ route('pemohon-donor.pengajuan.bukti', $pengajuan) }}"
-                                                        class="action-link"
-                                                    >
-                                                        Bukti
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="empty-state">
-                                Belum ada pengajuan kebutuhan donor.
-                            </div>
-                        @endif
-                    </section>
-
-                    <section class="card panel">
-                        <div class="panel-header">
-                            <h2 class="panel-title">
-                                Riwayat Aktivitas Terbaru
-                            </h2>
-
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.riwayat.index') }}"
-                                class="panel-link"
-                            >
-                                Lihat semua
-                            </a>
-                        </div>
-
-                        @if ($riwayatAktivitas->isNotEmpty())
-                            <div class="activity-list">
-                                @foreach ($riwayatAktivitas as $aktivitas)
-                                    <article class="activity-item">
-                                        <div class="activity-icon status-info">
-                                            {!! $icon('shield') !!}
-                                        </div>
-
-                                        <div>
-                                            <p class="activity-title">
-                                                Pengajuan {{ $aktivitas->nomor_permintaan }}
-                                                diperbarui menjadi {{ mb_strtolower($statusLabel($aktivitas->status)) }}.
-                                            </p>
-
-                                            <p class="activity-date">
-                                                {{ $aktivitas->updated_at?->format('d M Y, H:i') ?? '-' }}
-                                            </p>
-                                        </div>
-                                    </article>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="empty-state">
-                                Belum ada aktivitas terbaru.
-                            </div>
-                        @endif
-                    </section>
-                </div>
-
-                <aside class="right-content">
-                    <section class="card quick-card">
-                        <h2 class="quick-title">
-                            Aksi Cepat
-                        </h2>
-
-                        <div class="quick-actions">
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.pengajuan.create') }}"
-                                class="quick-button primary"
-                            >
-                                {!! $icon('plus-drop') !!}
-                                Ajukan Donor
-                            </a>
-
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.distribusi.index') }}"
-                                class="quick-button secondary"
-                            >
-                                {!! $icon('truck') !!}
-                                Buka Distribusi
-                            </a>
-
-                            @if ($distribusiTerbaru)
-                                <a
-                                    href="{{ route('pemohon-donor.distribusi.bukti', $distribusiTerbaru) }}"
-                                    class="quick-button secondary"
-                                >
-                                    {!! $icon('download') !!}
-                                    Bukti Distribusi Terbaru
-                                </a>
-                            @else
-                                <a
-                                    href="{{ $portalUrl('pemohon-donor.pengajuan.bukti.terbaru') }}"
-                                    class="quick-button secondary"
-                                >
-                                    {!! $icon('download') !!}
-                                    Bukti Pengajuan Terbaru
-                                </a>
-                            @endif
-                        </div>
-                    </section>
-
-                    <section class="card panel">
-                        <div class="panel-header">
-                            <h2 class="panel-title">
-                                Jadwal Distribusi
-                            </h2>
-
-                            <a
-                                href="{{ $portalUrl('pemohon-donor.distribusi.index') }}"
-                                class="panel-link"
-                            >
-                                Lihat semua
-                            </a>
-                        </div>
-
-                        @if ($jadwalDistribusi->isNotEmpty())
-                            <div class="schedule-list">
-                                @foreach ($jadwalDistribusi as $jadwal)
-                                    <article class="schedule-item">
-                                        <div class="schedule-icon">
-                                            {!! $icon('calendar') !!}
-                                        </div>
-
-                                        <div>
-                                            <p class="schedule-main">
-                                                {{ $jadwal->dijadwalkan_pada?->format('d M Y') ?? '-' }}
-                                                ·
-                                                {{ $jadwal->dijadwalkan_pada?->format('H:i') ?? '-' }}
-                                            </p>
-
-                                            <p class="schedule-sub">
-                                                {{ $jadwal->nomor_distribusi ?? '-' }}
-                                                ·
-                                                {{ $jadwal->permintaan?->nomor_permintaan ?? 'Pengajuan' }}
-                                            </p>
-
-                                            <div class="schedule-actions">
-                                                <span class="status-badge {{ $distribusiStatusClass($jadwal->status) }}">
-                                                    {{ $statusLabel($jadwal->status) }}
-                                                </span>
-
-                                                <a
-                                                    href="{{ route('pemohon-donor.distribusi.bukti', $jadwal) }}"
-                                                    class="action-link"
-                                                >
-                                                    Lihat Bukti
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </article>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="empty-state">
-                                Belum ada jadwal distribusi.
-                            </div>
-                        @endif
-                    </section>
-
-                    <section class="card info-card">
-                        <h2 class="quick-title">
-                            Informasi Pemohon
-                        </h2>
-
-                        <div class="info-profile">
-                            <div class="avatar">
-                                {{ $inisial }}
-                            </div>
-
-                            <div>
-                                <p class="info-name">
-                                    {{ $namaPemohon }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="info-row">
-                            <span>
-                                Kode Pemohon
-                            </span>
-
-                            <strong>
-                                {{ $profil?->kode_rumah_sakit ?? '-' }}
-                            </strong>
-                        </div>
-
-                        <div class="info-row">
-                            <span>
-                                Penanggung Jawab
-                            </span>
-
-                            <strong>
-                                {{ $profil?->nama_penanggung_jawab ?? '-' }}
-                            </strong>
                         </div>
 
                         <a
-                            href="{{ $portalUrl('pemohon-donor.profil.index') }}"
-                            class="profile-button"
+                            href="{{ route('pemohon-donor.pengajuan.index') }}"
+                            class="text-sm font-bold text-[#991b2f]"
                         >
-                            Lihat Profil Lengkap
+                            Lihat semua
                         </a>
-                    </section>
-                </aside>
-            </section>
-        </main>
+                    </div>
+
+                    @if ($pengajuanTerbaru->isEmpty())
+                        <div
+                            class="mt-6 rounded-2xl border border-dashed border-[#e5d5d8] bg-[#fff8f9] px-5 py-12 text-center"
+                        >
+                            <p
+                                class="font-semibold text-[#584141]"
+                            >
+                                Belum ada pengajuan kebutuhan darah.
+                            </p>
+
+                            <a
+                                href="{{ route('pemohon-donor.pengajuan.create') }}"
+                                class="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#991b2f] px-5 text-sm font-bold text-white"
+                            >
+                                Buat Pengajuan
+                            </a>
+                        </div>
+                    @else
+                        <div
+                            class="mt-6 overflow-x-auto rounded-2xl border border-[#eee8e5]"
+                        >
+                            <table
+                                class="w-full min-w-[850px] border-collapse"
+                            >
+                                <thead class="bg-[#faf8f7]">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Pengajuan
+                                        </th>
+
+                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Darah
+                                        </th>
+
+                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Kebutuhan
+                                        </th>
+
+                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Urgensi
+                                        </th>
+
+                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Status
+                                        </th>
+
+                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach ($pengajuanTerbaru as $pengajuan)
+                                        <tr
+                                            class="border-t border-[#eee8e5]"
+                                        >
+                                            <td class="px-4 py-4">
+                                                <strong
+                                                    class="block text-sm text-[#191c20]"
+                                                >
+                                                    {{ $pengajuan->nomor_permintaan }}
+                                                </strong>
+
+                                                <span
+                                                    class="mt-1 block text-xs text-[#8c7071]"
+                                                >
+                                                    {{ $pengajuan->referensi_pasien ?? 'Tanpa referensi pasien' }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <span
+                                                    class="inline-flex min-h-9 items-center rounded-xl border border-[#efcbd2] bg-[#fff5f7] px-3 text-sm font-bold text-[#991b2f]"
+                                                >
+                                                    {{ $golonganLabel($pengajuan->golongan_darah) }}{{ $rhesusSimbol($pengajuan->rhesus) }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <strong
+                                                    class="text-sm text-[#191c20]"
+                                                >
+                                                    {{ number_format($pengajuan->jumlah_kantong) }} kantong
+                                                </strong>
+
+                                                <span
+                                                    class="mt-1 block text-xs text-[#8c7071]"
+                                                >
+                                                    {{ $pengajuan->dibutuhkan_pada?->translatedFormat('d M Y, H:i') ?? '-' }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <span
+                                                    class="inline-flex min-h-8 items-center rounded-full px-3 text-xs font-bold {{ $urgensiClass($pengajuan->tingkat_urgensi) }}"
+                                                >
+                                                    {{ $urgensiLabel($pengajuan->tingkat_urgensi) }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <span
+                                                    class="inline-flex min-h-8 items-center rounded-full px-3 text-xs font-bold {{ $statusClass($pengajuan->status) }}"
+                                                >
+                                                    {{ $statusLabel($pengajuan->status) }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-4 text-right">
+                                                <a
+                                                    href="{{ route('pemohon-donor.pengajuan.bukti', $pengajuan) }}"
+                                                    class="inline-flex min-h-9 items-center justify-center rounded-xl bg-[#f1ecea] px-3 text-xs font-bold text-[#655253] hover:bg-[#ffe9ed] hover:text-[#991b2f]"
+                                                >
+                                                    Lihat Bukti
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </article>
+
+                <article
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-5 shadow-[0_16px_45px_rgba(25,28,32,0.05)] sm:p-6"
+                >
+                    <div
+                        class="flex items-center justify-between gap-4"
+                    >
+                        <div>
+                            <p
+                                class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                            >
+                                Aktivitas
+                            </p>
+
+                            <h2
+                                class="mt-1 text-xl font-bold tracking-[-0.04em] text-[#191c20]"
+                            >
+                                Riwayat Terbaru
+                            </h2>
+                        </div>
+
+                        @if (
+                            \Illuminate\Support\Facades\Route::has(
+                                'pemohon-donor.riwayat.index'
+                            )
+                        )
+                            <a
+                                href="{{ route('pemohon-donor.riwayat.index') }}"
+                                class="text-sm font-bold text-[#991b2f]"
+                            >
+                                Lihat semua
+                            </a>
+                        @endif
+                    </div>
+
+                    @if ($riwayatAktivitas->isEmpty())
+                        <div
+                            class="mt-6 rounded-2xl bg-[#faf8f7] px-5 py-10 text-center text-sm text-[#755f60]"
+                        >
+                            Belum ada aktivitas terbaru.
+                        </div>
+                    @else
+                        <div class="mt-6 space-y-4">
+                            @foreach ($riwayatAktivitas as $aktivitas)
+                                <article
+                                    class="flex gap-4 rounded-2xl border border-[#eee8e5] p-4"
+                                >
+                                    <span
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffe7ec] text-[#991b2f]"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                    </span>
+
+                                    <div>
+                                        <p
+                                            class="text-sm font-semibold leading-6 text-[#3f3030]"
+                                        >
+                                            Pengajuan
+                                            <strong>{{ $aktivitas->nomor_permintaan }}</strong>
+                                            diperbarui menjadi
+                                            <strong>{{ mb_strtolower($statusLabel($aktivitas->status)) }}</strong>.
+                                        </p>
+
+                                        <time
+                                            class="mt-1 block text-xs text-[#8c7071]"
+                                        >
+                                            {{ $aktivitas->updated_at?->translatedFormat('d F Y, H:i') ?? '-' }}
+                                            WIB
+                                        </time>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    @endif
+                </article>
+            </div>
+
+            <aside class="space-y-6">
+                <article
+                    class="rounded-[24px] bg-[#76001c] p-6 text-white shadow-[0_20px_50px_rgba(118,0,28,0.2)]"
+                >
+                    <p
+                        class="text-xs font-bold uppercase tracking-[0.12em] text-white/65"
+                    >
+                        Aksi Cepat
+                    </p>
+
+                    <h2
+                        class="mt-2 text-2xl font-bold tracking-[-0.04em]"
+                    >
+                        Apa yang ingin dilakukan?
+                    </h2>
+
+                    <div class="mt-6 space-y-3">
+                        <a
+                            href="{{ route('pemohon-donor.pengajuan.create') }}"
+                            class="flex min-h-12 items-center justify-center rounded-xl bg-white px-4 text-sm font-bold text-[#76001c]"
+                        >
+                            Buat Pengajuan Baru
+                        </a>
+
+                        <a
+                            href="{{ route('pemohon-donor.distribusi.index') }}"
+                            class="flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white"
+                        >
+                            Lihat Distribusi
+                        </a>
+
+                        @if ($distribusiTerbaru !== null)
+                            <a
+                                href="{{ route('pemohon-donor.distribusi.bukti', $distribusiTerbaru) }}"
+                                class="flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white"
+                            >
+                                Bukti Distribusi Terbaru
+                            </a>
+                        @else
+                            <a
+                                href="{{ route('pemohon-donor.pengajuan.bukti.terbaru') }}"
+                                class="flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white"
+                            >
+                                Bukti Pengajuan Terbaru
+                            </a>
+                        @endif
+                    </div>
+                </article>
+
+                <article
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-6 shadow-[0_16px_45px_rgba(25,28,32,0.05)]"
+                >
+                    <div
+                        class="flex items-center justify-between gap-3"
+                    >
+                        <h2
+                            class="text-lg font-bold tracking-[-0.03em] text-[#191c20]"
+                        >
+                            Jadwal Distribusi
+                        </h2>
+
+                        <a
+                            href="{{ route('pemohon-donor.distribusi.index') }}"
+                            class="text-xs font-bold text-[#991b2f]"
+                        >
+                            Lihat semua
+                        </a>
+                    </div>
+
+                    @if ($jadwalDistribusi->isEmpty())
+                        <div
+                            class="mt-5 rounded-2xl bg-[#faf8f7] px-4 py-8 text-center text-sm text-[#755f60]"
+                        >
+                            Belum ada jadwal distribusi.
+                        </div>
+                    @else
+                        <div class="mt-5 space-y-4">
+                            @foreach ($jadwalDistribusi as $jadwal)
+                                <article
+                                    class="border-b border-[#eee8e5] pb-4 last:border-0 last:pb-0"
+                                >
+                                    <div class="flex gap-3">
+                                        <span
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ffe7ec] text-[#991b2f]"
+                                        >
+                                            <svg
+                                                class="h-5 w-5"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <rect x="3" y="5" width="18" height="16" rx="2" />
+                                                <path d="M8 3v4M16 3v4M3 11h18" />
+                                            </svg>
+                                        </span>
+
+                                        <div class="min-w-0">
+                                            <strong
+                                                class="block text-sm text-[#191c20]"
+                                            >
+                                                {{ $jadwal->dijadwalkan_pada?->translatedFormat('d M Y, H:i') ?? '-' }}
+                                                WIB
+                                            </strong>
+
+                                            <span
+                                                class="mt-1 block truncate text-xs text-[#8c7071]"
+                                            >
+                                                {{ $jadwal->nomor_distribusi ?? '-' }}
+                                            </span>
+
+                                            <span
+                                                class="mt-2 inline-flex min-h-7 items-center rounded-full px-2.5 text-[11px] font-bold {{ $statusClass($jadwal->status) }}"
+                                            >
+                                                {{ $statusLabel($jadwal->status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <a
+                                        href="{{ route('pemohon-donor.distribusi.bukti', $jadwal) }}"
+                                        class="mt-3 inline-flex text-xs font-bold text-[#991b2f]"
+                                    >
+                                        Lihat bukti distribusi
+                                    </a>
+                                </article>
+                            @endforeach
+                        </div>
+                    @endif
+                </article>
+
+                <article
+                    class="rounded-[24px] border border-[#e8e2df] bg-white p-6 shadow-[0_16px_45px_rgba(25,28,32,0.05)]"
+                >
+                    <p
+                        class="text-xs font-bold uppercase tracking-[0.1em] text-[#991b2f]"
+                    >
+                        Informasi Pemohon
+                    </p>
+
+                    <h2
+                        class="mt-2 text-lg font-bold tracking-[-0.03em] text-[#191c20]"
+                    >
+                        {{ $namaPemohon }}
+                    </h2>
+
+                    <dl class="mt-5 space-y-4">
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt
+                                class="text-sm text-[#8c7071]"
+                            >
+                                Kode Pemohon
+                            </dt>
+
+                            <dd
+                                class="text-right text-sm font-bold text-[#191c20]"
+                            >
+                                {{ $profil?->kode_rumah_sakit ?? '-' }}
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt
+                                class="text-sm text-[#8c7071]"
+                            >
+                                Penanggung Jawab
+                            </dt>
+
+                            <dd
+                                class="text-right text-sm font-bold text-[#191c20]"
+                            >
+                                {{ $profil?->nama_penanggung_jawab ?? '-' }}
+                            </dd>
+                        </div>
+
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <dt
+                                class="text-sm text-[#8c7071]"
+                            >
+                                Kota
+                            </dt>
+
+                            <dd
+                                class="text-right text-sm font-bold text-[#191c20]"
+                            >
+                                {{ $profil?->kota ?? '-' }}
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <a
+                        href="{{ route('pemohon-donor.profil.index') }}"
+                        class="mt-6 flex min-h-11 items-center justify-center rounded-xl border border-[#eadde0] bg-[#fff8f9] px-4 text-sm font-bold text-[#991b2f]"
+                    >
+                        Lihat Profil Lengkap
+                    </a>
+                </article>
+            </aside>
+        </section>
     </div>
-</body>
-</html> 
+</x-layouts.pemohon-donor>

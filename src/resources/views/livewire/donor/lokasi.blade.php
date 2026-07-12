@@ -1,162 +1,296 @@
-<div class="donor-location-page">
-    
-<section class="donor-location-hero">
-        <div>
-            <p class="donor-location-eyebrow">
-                Lokasi Kegiatan
-            </p>
+<div class="space-y-6">
+    @include('components.shared.safe-flash-message')
 
-            <h1>
-                Lokasi Donor
-            </h1>
+    @error('lokasi')
+        <div class="rounded-2xl border border-[#ffb4ab] bg-[#ffdad6] px-4 py-3 text-sm font-medium text-[#93000a]">
+            {{ $message }}
+        </div>
+    @enderror
 
-            <p>
-                Cari lokasi donor yang sudah ditentukan oleh petugas.
-                Anda dapat melihat alamat, kontak, catatan lokasi, dan membuka
-                lokasi langsung melalui Google Maps.
-            </p>
+    {{-- Filter --}}
+    <section class="rounded-2xl border border-[#e6e3df] bg-white p-4 sm:p-5">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
+            <div>
+                <label
+                    for="pencarian-lokasi"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Cari Lokasi
+                </label>
+
+                <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#8c7071]">
+                        <svg
+                            viewBox="0 0 24 24"
+                            class="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                cx="11"
+                                cy="11"
+                                r="7"
+                            ></circle>
+
+                            <path
+                                d="m20 20-3.5-3.5"
+                            ></path>
+                        </svg>
+                    </span>
+
+                    <input
+                        id="pencarian-lokasi"
+                        type="search"
+                        wire:model.live.debounce.300ms="pencarian"
+                        placeholder="Cari nama, alamat, kota, atau kontak..."
+                        autocomplete="off"
+                        class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white py-2 pl-12 pr-4 text-sm text-[#191c20] placeholder:text-[#8c7071] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label
+                    for="filter-kota-lokasi"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Kota
+                </label>
+
+                <select
+                    id="filter-kota-lokasi"
+                    wire:model.live="kota"
+                    class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white px-3 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                >
+                    <option value="">
+                        Semua Kota
+                    </option>
+
+                    @foreach ($kotaTersedia as $namaKota)
+                        <option value="{{ $namaKota }}">
+                            {{ $namaKota }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label
+                    for="urutan-lokasi"
+                    class="mb-2 block text-sm font-semibold text-[#191c20]"
+                >
+                    Urutkan
+                </label>
+
+                <select
+                    id="urutan-lokasi"
+                    wire:model.live="urutan"
+                    class="h-12 w-full rounded-xl border border-[#e2e2e9] bg-white px-3 text-sm text-[#191c20] focus:border-[#76001c] focus:ring-[#76001c]/15"
+                >
+                    <option value="nama">
+                        Nama Lokasi
+                    </option>
+
+                    <option value="jadwal_terdekat">
+                        Jadwal Terdekat
+                    </option>
+
+                    <option value="terbaru">
+                        Baru Ditambahkan
+                    </option>
+                </select>
+            </div>
         </div>
 
-        <div class="donor-location-search">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-            >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-            </svg>
+        <div class="mt-4 flex flex-col gap-3 border-t border-[#e2e2e9] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <label class="flex cursor-pointer items-start gap-3">
+                <input
+                    type="checkbox"
+                    wire:model.live="hanyaDenganJadwal"
+                    class="mt-0.5 h-5 w-5 rounded border-[#e0bfbf] text-[#76001c] focus:ring-[#76001c]/20"
+                >
 
-            <input
-                type="search"
-                wire:model.live.debounce.400ms="pencarian"
-                placeholder="Cari lokasi, alamat, atau kota..."
-            >
+                <span>
+                    <span class="block text-sm font-semibold text-[#191c20]">
+                        Hanya lokasi dengan jadwal aktif
+                    </span>
+
+                    <span class="mt-0.5 block text-xs text-[#584141]">
+                        Menampilkan lokasi yang memiliki jadwal donor mendatang.
+                    </span>
+                </span>
+            </label>
+
+            @if (
+                filled($pencarian)
+                || filled($kota)
+                || $hanyaDenganJadwal
+                || $urutan !== 'nama'
+            )
+                <button
+                    type="button"
+                    wire:click="resetFilter"
+                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-4 text-sm font-semibold text-[#76001c]"
+                >
+                    Reset Filter
+                </button>
+            @endif
         </div>
     </section>
 
+    <div class="flex items-center justify-between gap-4">
+        <p class="text-sm text-[#584141]">
+            Menampilkan
+
+            <strong class="text-[#191c20]">
+                {{ number_format($lokasiDonors->total()) }}
+            </strong>
+
+            lokasi aktif
+        </p>
+    </div>
+
+    <div
+        wire:loading.delay
+        wire:target="pencarian,kota,hanyaDenganJadwal,urutan,resetFilter"
+        class="rounded-xl border border-[#e0bfbf] bg-[#fff7f7] px-4 py-3 text-sm font-medium text-[#76001c]"
+    >
+        Memuat lokasi donor...
+    </div>
+
     @if ($lokasiDonors->isEmpty())
-        <section class="donor-location-empty">
-            <div class="donor-location-empty-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path
-                        d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
-                    />
+        <section class="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0bfbf] bg-white px-6 py-14 text-center">
+            <span class="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fcedef] text-[#991b2f] [&>svg]:h-8 [&>svg]:w-8">
+                <x-donor.icon name="map-pin" />
+            </span>
 
-                    <circle cx="12" cy="10" r="2.5" />
-                </svg>
-            </div>
-
-            <h2>
-                Lokasi belum tersedia
+            <h2 class="mt-5 text-xl font-semibold text-[#191c20]">
+                Lokasi tidak ditemukan
             </h2>
 
-            <p>
-                Belum ada lokasi donor yang dapat ditampilkan.
-                Silakan cek kembali nanti.
+            <p class="mt-2 max-w-md text-sm leading-6 text-[#584141]">
+                Belum ada lokasi yang sesuai dengan pencarian atau filter yang dipilih.
             </p>
+
+            <button
+                type="button"
+                wire:click="resetFilter"
+                class="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] px-5 text-sm font-semibold text-[#76001c]"
+            >
+                Reset filter
+            </button>
         </section>
     @else
-        <section class="donor-location-grid">
+        <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             @foreach ($lokasiDonors as $lokasi)
                 @php
-                    $catatanLokasi = (string) ($lokasi->catatan_lokasi ?? '');
+                    $jadwalTerdekat =
+                        $this->jadwalTerdekat(
+                            $lokasi
+                        );
+
+                    $jumlahJadwal =
+                        $this->jumlahJadwalAktif(
+                            $lokasi
+                        );
+
+                    $teleponUrl =
+                        $this->teleponUrl(
+                            $lokasi
+                        );
                 @endphp
 
                 <article
-                    class="donor-location-card"
-                    wire:key="lokasi-donor-{{ $lokasi->id }}"
+                    wire:key="lokasi-{{ $lokasi->id }}"
+                    class="overflow-hidden rounded-2xl border border-[#e6e3df] bg-white transition duration-200 hover:shadow-[0_4px_14px_rgba(36,38,43,0.06)]"
                 >
-                    <div class="donor-location-map-preview">
+                    <div class="relative h-52 overflow-hidden bg-[#ededf4]">
                         <iframe
                             src="{{ $this->embedMapsUrl($lokasi) }}"
                             loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade"
                             title="Peta {{ $this->namaLokasi($lokasi) }}"
+                            class="h-full w-full border-0"
                         ></iframe>
 
-                        <div class="donor-location-pin">
-                            <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
-                                />
-
-                                <circle cx="12" cy="10" r="2.5" />
-                            </svg>
-                        </div>
+                        <span class="pointer-events-none absolute left-4 top-4 inline-flex rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-[#76001c] shadow-sm backdrop-blur">
+                            {{ $jumlahJadwal }}
+                            jadwal aktif
+                        </span>
                     </div>
 
-                    <div class="donor-location-card-body">
-                        <h2>
+                    <div class="p-5 sm:p-6">
+                        <h2 class="text-xl font-semibold tracking-[-0.03em] text-[#191c20]">
                             {{ $this->namaLokasi($lokasi) }}
                         </h2>
 
-                        <p class="donor-location-address">
-                            {{ $this->alamatLokasi($lokasi) }}
+                        <p class="mt-2 line-clamp-2 text-sm leading-6 text-[#584141]">
+                            {{ $this->alamatLengkap($lokasi) }}
                         </p>
 
-                        <div class="donor-location-meta">
-                            <span>
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
-                                    />
+                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <article class="rounded-xl bg-[#f3f3fa] p-3.5">
+                                <p class="text-xs font-semibold text-[#8c7071]">
+                                    Wilayah
+                                </p>
 
-                                    <circle cx="12" cy="10" r="2.5" />
-                                </svg>
+                                <p class="mt-1 text-sm font-semibold text-[#191c20]">
+                                    {{ $this->wilayahLokasi($lokasi) }}
+                                </p>
+                            </article>
 
-                                {{ $this->wilayahLokasi($lokasi) }}
-                            </span>
+                            <article class="rounded-xl bg-[#f3f3fa] p-3.5">
+                                <p class="text-xs font-semibold text-[#8c7071]">
+                                    Kontak
+                                </p>
 
-                            <span>
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.95.35 1.88.66 2.77a2 2 0 0 1-.45 2.11L8.05 9.87a16 16 0 0 0 6.08 6.08l1.27-1.27a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.77.66A2 2 0 0 1 22 16.92Z"
-                                    />
-                                </svg>
-
-                                {{ $this->kontakLokasi($lokasi) }}
-                            </span>
+                                @if ($teleponUrl)
+                                    <a
+                                        href="{{ $teleponUrl }}"
+                                        class="mt-1 block text-sm font-semibold text-[#76001c] hover:underline"
+                                    >
+                                        {{ $this->kontakLokasi($lokasi) }}
+                                    </a>
+                                @else
+                                    <p class="mt-1 text-sm font-semibold text-[#191c20]">
+                                        -
+                                    </p>
+                                @endif
+                            </article>
                         </div>
 
-                        @if (filled($catatanLokasi))
-                            <div class="donor-location-note">
-                                <span>
-                                    Catatan Lokasi
-                                </span>
-
-                                <p>
-                                    {{ $catatanLokasi }}
+                        @if ($jadwalTerdekat)
+                            <div class="mt-4 rounded-xl border border-[#e0bfbf] bg-[#fff7f7] p-4">
+                                <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#991b2f]">
+                                    Jadwal Terdekat
                                 </p>
+
+                                <p class="mt-2 text-sm font-semibold text-[#191c20]">
+                                    {{ $this->judulJadwal($jadwalTerdekat) }}
+                                </p>
+
+                                <p class="mt-1 text-sm text-[#584141]">
+                                    {{ $this->tanggalJadwal($jadwalTerdekat) }}
+                                </p>
+
+                                <p class="text-sm text-[#584141]">
+                                    {{ $this->jamJadwal($jadwalTerdekat) }}
+                                    WIB
+                                </p>
+                            </div>
+                        @else
+                            <div class="mt-4 rounded-xl border border-[#e2e2e9] bg-[#f9f9ff] p-4 text-sm text-[#584141]">
+                                Belum ada jadwal donor mendatang di lokasi ini.
                             </div>
                         @endif
 
-                        <div class="donor-location-actions">
+                        <div class="mt-5 flex flex-col gap-2 sm:flex-row">
                             <button
                                 type="button"
                                 wire:click="pilihLokasi({{ $lokasi->id }})"
+                                class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[#c52a3d] px-5 text-sm font-semibold text-white transition hover:bg-[#991b2f]"
                             >
                                 Lihat Detail
                             </button>
@@ -165,533 +299,223 @@
                                 href="{{ $this->mapsUrl($lokasi) }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-[#e6e3df] bg-white px-5 text-sm font-semibold text-[#24262b] transition hover:bg-[#f3f3fa]"
                             >
-                                Buka Google Maps
+                                Google Maps
                             </a>
                         </div>
                     </div>
                 </article>
             @endforeach
         </section>
+
+        @if ($lokasiDonors->hasPages())
+            <div class="rounded-2xl border border-[#e6e3df] bg-white px-4 py-3">
+                {{ $lokasiDonors->links() }}
+            </div>
+        @endif
     @endif
 
+    {{-- Detail lokasi --}}
     @if ($lokasiTerpilih !== null)
         @php
-            $catatanLokasiTerpilih = (string) ($lokasiTerpilih->catatan_lokasi ?? '');
+            $teleponUrlTerpilih =
+                $this->teleponUrl(
+                    $lokasiTerpilih
+                );
+
+            $jadwalAktifTerpilih =
+                $lokasiTerpilih
+                    ->jadwalDonors;
+
+            $catatanTerpilih =
+                $this->catatanLokasi(
+                    $lokasiTerpilih
+                );
         @endphp
 
         <div
-            class="donor-location-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="judul-detail-lokasi"
             wire:click="tutupDetailLokasi"
+            x-on:keydown.escape.window="$wire.tutupDetailLokasi()"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-[#191c20]/50 p-3 backdrop-blur-sm sm:p-6"
         >
             <section
-                class="donor-location-modal"
                 wire:click.stop
+                class="max-h-[calc(100vh-1.5rem)] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-[0_32px_90px_rgba(25,28,32,0.3)] sm:max-h-[calc(100vh-3rem)]"
             >
-                <div class="donor-location-modal-header">
+                <header class="flex items-start justify-between gap-4 border-b border-[#e2e2e9] px-5 py-5 sm:px-7">
                     <div>
-                        <p>
+                        <p class="text-xs font-bold uppercase tracking-[0.07em] text-[#991b2f]">
                             Detail Lokasi Donor
                         </p>
 
-                        <h2>
+                        <h2
+                            id="judul-detail-lokasi"
+                            class="mt-2 text-2xl font-semibold tracking-[-0.035em] text-[#191c20]"
+                        >
                             {{ $this->namaLokasi($lokasiTerpilih) }}
                         </h2>
+
+                        <p class="mt-2 text-sm text-[#584141]">
+                            {{ $this->wilayahLokasi($lokasiTerpilih) }}
+                        </p>
                     </div>
 
                     <button
                         type="button"
                         wire:click="tutupDetailLokasi"
                         aria-label="Tutup detail lokasi"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f3f3fa] text-2xl text-[#584141]"
                     >
                         ×
                     </button>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <div class="min-h-[320px] bg-[#ededf4]">
+                        <iframe
+                            src="{{ $this->embedMapsUrl($lokasiTerpilih) }}"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            title="Peta {{ $this->namaLokasi($lokasiTerpilih) }}"
+                            class="h-full min-h-[320px] w-full border-0 lg:min-h-[600px]"
+                        ></iframe>
+                    </div>
+
+                    <div class="space-y-5 p-5 sm:p-7">
+                        <section>
+                            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                Alamat Lengkap
+                            </p>
+
+                            <p class="mt-2 text-sm leading-6 text-[#191c20]">
+                                {{ $this->alamatLengkap($lokasiTerpilih) }}
+                            </p>
+                        </section>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                <p class="text-xs font-semibold text-[#8c7071]">
+                                    Kontak
+                                </p>
+
+                                <p class="mt-2 text-sm font-semibold text-[#191c20]">
+                                    {{ $this->namaKontak($lokasiTerpilih) }}
+                                </p>
+
+                                @if ($teleponUrlTerpilih)
+                                    <a
+                                        href="{{ $teleponUrlTerpilih }}"
+                                        class="mt-1 block text-sm text-[#76001c] hover:underline"
+                                    >
+                                        {{ $this->kontakLokasi($lokasiTerpilih) }}
+                                    </a>
+                                @endif
+                            </article>
+
+                            <article class="rounded-xl bg-[#f3f3fa] p-4">
+                                <p class="text-xs font-semibold text-[#8c7071]">
+                                    Koordinat
+                                </p>
+
+                                <p class="mt-2 break-all text-sm font-semibold text-[#191c20]">
+                                    {{ $this->koordinatLokasi($lokasiTerpilih) }}
+                                </p>
+                            </article>
+                        </div>
+
+                        <section>
+                            <p class="text-xs font-bold uppercase tracking-[0.06em] text-[#8c7071]">
+                                Deskripsi
+                            </p>
+
+                            <p class="mt-2 text-sm leading-6 text-[#584141]">
+                                {{ $this->deskripsiLokasi($lokasiTerpilih) }}
+                            </p>
+                        </section>
+
+                        @if ($catatanTerpilih !== '-')
+                            <section class="rounded-xl border border-[#f2c879] bg-[#fff4de] p-4">
+                                <p class="text-xs font-bold uppercase text-[#8a4f00]">
+                                    Catatan Lokasi
+                                </p>
+
+                                <p class="mt-2 text-sm leading-6 text-[#8a4f00]">
+                                    {{ $catatanTerpilih }}
+                                </p>
+                            </section>
+                        @endif
+
+                        <section>
+                            <div class="flex items-center justify-between gap-4">
+                                <h3 class="text-base font-semibold text-[#191c20]">
+                                    Jadwal Mendatang
+                                </h3>
+
+                                <span class="text-xs font-semibold text-[#8c7071]">
+                                    {{ $jadwalAktifTerpilih->count() }}
+                                    jadwal
+                                </span>
+                            </div>
+
+                            @if ($jadwalAktifTerpilih->isEmpty())
+                                <p class="mt-3 rounded-xl bg-[#f3f3fa] p-4 text-sm text-[#584141]">
+                                    Belum ada jadwal donor mendatang.
+                                </p>
+                            @else
+                                <div class="mt-3 space-y-3">
+                                    @foreach ($jadwalAktifTerpilih as $jadwal)
+                                        <article class="rounded-xl border border-[#e2e2e9] p-4">
+                                            <p class="text-sm font-semibold text-[#191c20]">
+                                                {{ $this->judulJadwal($jadwal) }}
+                                            </p>
+
+                                            <p class="mt-1 text-xs text-[#584141]">
+                                                {{ $this->tanggalJadwal($jadwal) }}
+                                            </p>
+
+                                            <p class="text-xs text-[#584141]">
+                                                {{ $this->jamJadwal($jadwal) }}
+                                                WIB
+                                            </p>
+                                        </article>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </section>
+                    </div>
                 </div>
 
-                <div class="donor-location-modal-map">
-                    <iframe
-                        src="{{ $this->embedMapsUrl($lokasiTerpilih) }}"
-                        loading="lazy"
-                        referrerpolicy="no-referrer-when-downgrade"
-                        title="Peta {{ $this->namaLokasi($lokasiTerpilih) }}"
-                    ></iframe>
-                </div>
+                <footer class="flex flex-col-reverse gap-3 border-t border-[#e2e2e9] px-5 py-5 sm:flex-row sm:justify-end sm:px-7">
+                    <button
+                        type="button"
+                        wire:click="tutupDetailLokasi"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6e3df] px-5 text-sm font-semibold text-[#584141]"
+                    >
+                        Tutup
+                    </button>
 
-                <div class="donor-location-modal-info">
-                    <div>
-                        <span>Alamat</span>
-                        <strong>{{ $this->alamatLokasi($lokasiTerpilih) }}</strong>
-                    </div>
+                    <a
+                        href="{{ route('donor.jadwal', ['cari' => $this->namaLokasi($lokasiTerpilih)]) }}"
+                        wire:navigate
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e0bfbf] px-5 text-sm font-semibold text-[#76001c]"
+                    >
+                        Lihat Jadwal
+                    </a>
 
-                    <div>
-                        <span>Wilayah</span>
-                        <strong>{{ $this->wilayahLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Kontak</span>
-                        <strong>{{ $this->kontakLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div>
-                        <span>Koordinat</span>
-                        <strong>{{ $this->koordinatLokasi($lokasiTerpilih) }}</strong>
-                    </div>
-
-                    <div class="donor-location-modal-info-full">
-                        <span>Catatan Lokasi</span>
-
-                        <strong>
-                            {{ filled($catatanLokasiTerpilih) ? $catatanLokasiTerpilih : '-' }}
-                        </strong>
-                    </div>
-                </div>
-
-                <div class="donor-location-modal-actions">
                     <a
                         href="{{ $this->mapsUrl($lokasiTerpilih) }}"
                         target="_blank"
                         rel="noopener noreferrer"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#c52a3d] px-5 text-sm font-semibold text-white"
                     >
-                        Buka di Google Maps
+                        Buka Google Maps
                     </a>
-
-                    <button
-                        type="button"
-                        wire:click="tutupDetailLokasi"
-                    >
-                        Tutup
-                    </button>
-                </div>
+                </footer>
             </section>
         </div>
     @endif
-
-    <style>
-        .donor-location-page {
-            display: grid;
-            gap: 28px;
-        }
-
-        .donor-location-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(280px, 365px);
-            gap: 24px;
-            align-items: end;
-        }
-
-        .donor-location-eyebrow {
-            margin: 0 0 12px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .donor-location-hero h1 {
-            margin: 0;
-            color: #0f172a;
-            font-size: clamp(36px, 5vw, 54px);
-            line-height: 1.05;
-            letter-spacing: -0.06em;
-        }
-
-        .donor-location-hero p:not(.donor-location-eyebrow) {
-            max-width: 720px;
-            margin: 16px 0 0;
-            color: #64748b;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .donor-location-search {
-            min-height: 56px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 0 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            background: #ffffff;
-            box-shadow: 0 16px 42px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-location-search svg {
-            width: 21px;
-            height: 21px;
-            color: #94a3b8;
-        }
-
-        .donor-location-search input {
-            width: 100%;
-            border: 0;
-            outline: 0;
-            color: #0f172a;
-            background: transparent;
-            font: inherit;
-            font-size: 14px;
-        }
-
-        .donor-location-search input::placeholder {
-            color: #94a3b8;
-        }
-
-        .donor-location-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 22px;
-        }
-
-        .donor-location-card {
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-            border-radius: 24px;
-            background: #ffffff;
-            box-shadow: 0 16px 46px rgba(15, 23, 42, 0.06);
-        }
-
-        .donor-location-map-preview {
-            position: relative;
-            height: 190px;
-            overflow: hidden;
-            background: #f1f5f9;
-        }
-
-        .donor-location-map-preview iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            filter: grayscale(0.08);
-        }
-
-        .donor-location-pin {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 52px;
-            height: 52px;
-            display: grid;
-            place-items: center;
-            transform: translate(-50%, -50%);
-            border: 8px solid rgba(254, 202, 202, 0.55);
-            border-radius: 999px;
-            color: #ffffff;
-            background: #dc2626;
-            box-shadow: 0 16px 34px rgba(220, 38, 38, 0.28);
-            pointer-events: none;
-        }
-
-        .donor-location-pin svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .donor-location-card-body {
-            padding: 24px;
-        }
-
-        .donor-location-card-body h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 21px;
-            line-height: 1.3;
-            letter-spacing: -0.03em;
-        }
-
-        .donor-location-address {
-            margin: 10px 0 0;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.65;
-        }
-
-        .donor-location-meta {
-            display: grid;
-            gap: 10px;
-            margin-top: 18px;
-        }
-
-        .donor-location-meta span {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .donor-location-meta svg {
-            width: 17px;
-            height: 17px;
-            color: #ef4444;
-        }
-
-        .donor-location-note {
-            margin-top: 18px;
-            padding: 15px;
-            border: 1px solid #fee2e2;
-            border-radius: 18px;
-            background: #fff7f7;
-        }
-
-        .donor-location-note span {
-            display: block;
-            margin-bottom: 6px;
-            color: #dc2626;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .donor-location-note p {
-            margin: 0;
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .donor-location-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 22px;
-        }
-
-        .donor-location-actions button,
-        .donor-location-actions a {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 16px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-            transition: 160ms ease;
-        }
-
-        .donor-location-actions button {
-            border: 0;
-            color: #ffffff;
-            background: #dc2626;
-            cursor: pointer;
-            box-shadow: 0 14px 26px rgba(220, 38, 38, 0.18);
-        }
-
-        .donor-location-actions a {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-        }
-
-        .donor-location-actions button:hover,
-        .donor-location-actions a:hover {
-            transform: translateY(-1px);
-        }
-
-        .donor-location-empty {
-            display: grid;
-            place-items: center;
-            padding: 60px 24px;
-            border: 1px dashed #fecaca;
-            border-radius: 26px;
-            background: #fff7f7;
-            text-align: center;
-        }
-
-        .donor-location-empty-icon {
-            width: 68px;
-            height: 68px;
-            display: grid;
-            place-items: center;
-            border-radius: 22px;
-            color: #dc2626;
-            background: #fee2e2;
-        }
-
-        .donor-location-empty-icon svg {
-            width: 34px;
-            height: 34px;
-        }
-
-        .donor-location-empty h2 {
-            margin: 18px 0 8px;
-            color: #0f172a;
-        }
-
-        .donor-location-empty p {
-            margin: 0;
-            max-width: 420px;
-            color: #64748b;
-            line-height: 1.7;
-        }
-
-        .donor-location-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            z-index: 80;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: rgba(15, 23, 42, 0.42);
-            backdrop-filter: blur(8px);
-        }
-
-        .donor-location-modal {
-            width: min(100%, 860px);
-            max-height: calc(100vh - 48px);
-            overflow: auto;
-            border-radius: 28px;
-            background: #ffffff;
-            box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
-        }
-
-        .donor-location-modal-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 26px 28px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .donor-location-modal-header p {
-            margin: 0 0 8px;
-            color: #dc2626;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-        }
-
-        .donor-location-modal-header h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 28px;
-            line-height: 1.2;
-            letter-spacing: -0.04em;
-        }
-
-        .donor-location-modal-header button {
-            width: 42px;
-            height: 42px;
-            border: 0;
-            border-radius: 14px;
-            color: #0f172a;
-            background: #f1f5f9;
-            font-size: 28px;
-            line-height: 1;
-            cursor: pointer;
-        }
-
-        .donor-location-modal-map {
-            height: 360px;
-            background: #f1f5f9;
-        }
-
-        .donor-location-modal-map iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-
-        .donor-location-modal-info {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-            padding: 24px 28px;
-        }
-
-        .donor-location-modal-info div {
-            display: grid;
-            gap: 7px;
-            padding: 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            background: #f8fafc;
-        }
-
-        .donor-location-modal-info .donor-location-modal-info-full {
-            grid-column: 1 / -1;
-            border-color: #fee2e2;
-            background: #fff7f7;
-        }
-
-        .donor-location-modal-info span {
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .donor-location-modal-info strong {
-            color: #0f172a;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .donor-location-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            padding: 0 28px 28px;
-        }
-
-        .donor-location-modal-actions a,
-        .donor-location-modal-actions button {
-            min-height: 44px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 18px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 900;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .donor-location-modal-actions a {
-            border: 0;
-            color: #ffffff;
-            background: #dc2626;
-        }
-
-        .donor-location-modal-actions button {
-            border: 1px solid #e2e8f0;
-            color: #0f172a;
-            background: #ffffff;
-        }
-
-        @media (max-width: 900px) {
-            .donor-location-hero {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-location-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .donor-location-modal-info {
-                grid-template-columns: 1fr;
-            }
-
-            .donor-location-modal-info .donor-location-modal-info-full {
-                grid-column: auto;
-            }
-
-            .donor-location-modal-actions {
-                flex-direction: column;
-            }
-
-            .donor-location-modal-actions a,
-            .donor-location-modal-actions button {
-                width: 100%;
-            }
-        }
-    </style>
 </div>

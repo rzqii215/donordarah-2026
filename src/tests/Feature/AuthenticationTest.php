@@ -10,8 +10,8 @@ use App\Notifications\Auth\VerifyEmailNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
-use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -30,18 +30,14 @@ final class AuthenticationTest extends TestCase
             ->forgetCachedPermissions();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function halaman_login_dapat_dibuka_oleh_pengunjung(): void
     {
         $this->get('/login')
             ->assertOk();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pengunjung_halaman_utama_diarahkan_ke_login(): void
     {
         $this->get('/')
@@ -78,9 +74,7 @@ final class AuthenticationTest extends TestCase
         ];
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     #[DataProvider('roleRedirectProvider')]
     public function pengguna_aktif_diarahkan_ke_portal_berdasarkan_role(
         PeranPengguna $peran,
@@ -90,7 +84,7 @@ final class AuthenticationTest extends TestCase
             $peran
         );
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -107,16 +101,14 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function login_mencatat_waktu_dan_alamat_ip_pengguna(): void
     {
         $user = $this->buatPengguna(
             PeranPengguna::Pendonor
         );
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -140,16 +132,14 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function kata_sandi_yang_salah_ditolak(): void
     {
         $user = $this->buatPengguna(
             PeranPengguna::Pendonor
         );
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -190,9 +180,7 @@ final class AuthenticationTest extends TestCase
         ];
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     #[DataProvider('statusTidakAktifProvider')]
     public function login_pengguna_dengan_status_tidak_aktif_ditolak(
         StatusPengguna $status
@@ -202,7 +190,7 @@ final class AuthenticationTest extends TestCase
             $status
         );
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -219,9 +207,7 @@ final class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function akun_tanpa_role_tidak_dapat_mempertahankan_sesi_login(): void
     {
         $user = User::factory()->create([
@@ -230,7 +216,7 @@ final class AuthenticationTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -247,9 +233,7 @@ final class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function akun_belum_terverifikasi_diarahkan_ke_halaman_verifikasi(): void
     {
         $user = $this->buatPengguna(
@@ -258,7 +242,7 @@ final class AuthenticationTest extends TestCase
             false
         );
 
-        Livewire::test(Login::class)
+        $this->livewire()->test(Login::class)
             ->set(
                 'email',
                 $user->email
@@ -277,9 +261,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function akun_belum_terverifikasi_tidak_dapat_membuka_portal(): void
     {
         $user = $this->buatPengguna(
@@ -299,9 +281,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function akun_ditangguhkan_dikeluarkan_saat_membuka_portal(): void
     {
         $user = $this->buatPengguna(
@@ -320,9 +300,7 @@ final class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pendonor_tidak_dapat_membuka_portal_pemohon_donor(): void
     {
         $user = $this->buatPengguna(
@@ -342,9 +320,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function pemohon_donor_tidak_dapat_membuka_portal_pendonor(): void
     {
         $user = $this->buatPengguna(
@@ -364,9 +340,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function akun_belum_terverifikasi_menerima_notifikasi_verifikasi(): void
     {
         $user = $this->buatPengguna(
@@ -381,9 +355,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function link_bertanda_tangan_memverifikasi_email(): void
     {
         $user = $this->buatPengguna(
@@ -419,9 +391,7 @@ final class AuthenticationTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function link_dengan_hash_email_salah_ditolak(): void
     {
         $user = $this->buatPengguna(
@@ -451,6 +421,11 @@ final class AuthenticationTest extends TestCase
         $this->assertFalse(
             $user->hasVerifiedEmail()
         );
+    }
+
+    private function livewire(): mixed
+    {
+        return app('livewire');
     }
 
     private function buatPengguna(
