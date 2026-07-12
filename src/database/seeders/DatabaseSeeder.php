@@ -6,28 +6,16 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * DatabaseSeeder hanya menyiapkan data sistem.
+     *
+     * Data pengguna, lokasi, jadwal, stok, permintaan,
+     * dan distribusi harus dimasukkan melalui aplikasi.
+     */
     public function run(): void
     {
         $this->call([
             RoleSeeder::class,
-            UserManagementPermissionSeeder::class,
-            RoleManagementPermissionSeeder::class,
-            UserSeeder::class,
-
-            ProfilPendonorSeeder::class,
-            ProfilRumahSakitSeeder::class,
-
-            LokasiDonorSeeder::class,
-            JadwalDonorSeeder::class,
-
-            PendaftaranDonorSeeder::class,
-            PemeriksaanKesehatanSeeder::class,
-
-            KantongDarahSeeder::class,
-
-            PermintaanDarahSeeder::class,
-            ItemPermintaanDarahSeeder::class,
-            DistribusiDarahSeeder::class,
         ]);
     }
 }
