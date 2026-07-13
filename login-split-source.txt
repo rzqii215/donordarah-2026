@@ -1,0 +1,1848 @@
+===== LOGIN LIVEWIRE =====
+<?php
+
+namespace App\Livewire\Auth;
+
+use App\Enums\StatusPengguna;
+use App\Models\User;
+use BackedEnum;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+
+#[Layout('components.layouts.auth')]
+class Login extends Component
+{
+    public string $email = '';
+
+    public string $password = '';
+
+    public bool $remember = false;
+
+    public function authenticate(): mixed
+    {
+        $this->validate([
+            'email' => [
+                'required',
+                'email',
+            ],
+
+            'password' => [
+                'required',
+                'string',
+            ],
+        ], [
+            'email.required' => 'Alamat email wajib diisi.',
+
+            'email.email' => 'Alamat email tidak valid.',
+
+            'password.required' => 'Kata sandi wajib diisi.',
+        ]);
+
+        $this->pastikanTidakTerlaluBanyakPercobaan();
+
+        $berhasil = Auth::attempt([
+            'email' => mb_strtolower(
+                trim($this->email)
+            ),
+
+            'password' => $this->password,
+        ], $this->remember);
+
+        if (! $berhasil) {
+            RateLimiter::hit(
+                $this->throttleKey()
+            );
+
+            throw ValidationException::withMessages([
+                'email' => 'Email atau kata sandi tidak sesuai.',
+            ]);
+        }
+
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            $this->keluarkanPengguna();
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    'Sesi login tidak valid. Silakan masuk kembali.'
+                );
+        }
+
+        RateLimiter::clear(
+            $this->throttleKey()
+        );
+
+        if (! $this->statusPenggunaAktif($user)) {
+            $pesan = $this->pesanStatusPengguna(
+                $user
+            );
+
+            $this->keluarkanPengguna();
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    $pesan
+                );
+        }
+
+        /*
+         * Menggunakan session helper agar session regeneration
+         * tetap bekerja pada request HTTP dan pengujian Livewire.
+         */
+        session()->regenerate();
+
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()
+                ->route('verification.notice');
+        }
+
+        $redirectPath = $this->redirectPathByRole(
+            $user
+        );
+
+        if ($redirectPath === '/login') {
+            $this->keluarkanPengguna();
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    'Akun tidak memiliki akses ke portal.'
+                );
+        }
+
+        return redirect()
+            ->intended(
+                $redirectPath
+            );
+    }
+
+    public function render(): View
+    {
+        return view('livewire.auth.login');
+    }
+
+    private function pastikanTidakTerlaluBanyakPercobaan(): void
+    {
+        if (
+            ! RateLimiter::tooManyAttempts(
+                $this->throttleKey(),
+                5
+            )
+        ) {
+            return;
+        }
+
+        $detik = RateLimiter::availableIn(
+            $this->throttleKey()
+        );
+
+        throw ValidationException::withMessages([
+            'email' => "Terlalu banyak percobaan masuk. Silakan coba lagi dalam {$detik} detik.",
+        ]);
+    }
+
+    private function throttleKey(): string
+    {
+        return Str::lower(
+            trim($this->email)
+        ) . '|' . request()->ip();
+    }
+
+    private function statusPenggunaAktif(
+        User $user
+    ): bool {
+        return $this->nilaiStatusPengguna($user)
+            === StatusPengguna::Aktif->value;
+    }
+
+    private function pesanStatusPengguna(
+        User $user
+    ): string {
+        return match (
+            $this->nilaiStatusPengguna($user)
+        ) {
+            StatusPengguna::Menunggu->value => 'Akun masih menunggu aktivasi.',
+
+            StatusPengguna::TidakAktif->value => 'Akun sedang tidak aktif. Hubungi administrator.',
+
+            StatusPengguna::Ditangguhkan->value => 'Akun sedang ditangguhkan. Hubungi administrator.',
+
+            StatusPengguna::Ditolak->value => 'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+
+            default => 'Akun belum dapat digunakan. Hubungi administrator.',
+        };
+    }
+
+    private function nilaiStatusPengguna(
+        User $user
+    ): string {
+        $status = $user->status;
+
+        if ($status instanceof BackedEnum) {
+            return strtolower(
+                trim(
+                    (string) $status->value
+                )
+            );
+        }
+
+        return strtolower(
+            trim(
+                (string) $status
+            )
+        );
+    }
+
+    private function keluarkanPengguna(): void
+    {
+        Auth::guard('web')->logout();
+
+        /*
+         * session() mengembalikan store yang sama dengan guard web,
+         * tetapi tidak bergantung pada session yang terpasang di Request.
+         */
+        session()->invalidate();
+        session()->regenerateToken();
+    }
+
+    private function redirectPathByRole(
+        User $user
+    ): string {
+        $roles = $this->rolesPengguna(
+            $user
+        );
+
+        if (
+            $roles->contains(
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'super_admin',
+                        'super-admin',
+                        'admin',
+                        'petugas',
+                    ],
+                    true
+                )
+            )
+        ) {
+            return '/admin';
+        }
+
+        if (
+            $roles->contains(
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'pemohon_donor',
+                        'pemohon-donor',
+                        'rumah_sakit',
+                        'rumah-sakit',
+                    ],
+                    true
+                )
+            )
+        ) {
+            return '/pemohon-donor';
+        }
+
+        if (
+            $roles->contains(
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'donor',
+                        'pendonor',
+                    ],
+                    true
+                )
+            )
+        ) {
+            return '/donor';
+        }
+
+        return '/login';
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function rolesPengguna(
+        User $user
+    ): Collection {
+        return $user->getRoleNames()
+            ->map(
+                fn (string $role): string => strtolower(
+                    trim($role)
+                )
+            )
+            ->filter()
+            ->values();
+    }
+}
+===== LOGIN BLADE =====
+<div>
+    @php
+        $googleRouteAda = \Illuminate\Support\Facades\Route::has(
+            'google.redirect'
+        );
+
+        $googleUrl = $googleRouteAda
+            ? route('google.redirect', [
+                'tujuan' => 'login',
+            ])
+            : '#';
+    @endphp
+
+    <header class="auth-heading">
+        <p class="auth-kicker">
+            Selamat datang kembali
+        </p>
+
+        <h2>
+            Masuk ke akun Anda
+        </h2>
+
+        <p>
+            Kelola aktivitas donor dan pengajuan darah melalui akun
+            yang telah terdaftar.
+        </p>
+    </header>
+
+    @if (session('success'))
+        <div
+            class="auth-alert auth-alert--success"
+            role="status"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+            >
+                <circle cx="12" cy="12" r="9" />
+                <path d="m8 12 2.5 2.5L16 9" />
+            </svg>
+
+            <span>
+                {{ session('success') }}
+            </span>
+        </div>
+    @endif
+
+    @if ($errors->has('email'))
+        <div
+            class="auth-alert auth-alert--danger"
+            role="alert"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+            >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v6M12 17h.01" />
+            </svg>
+
+            <span>
+                {{ $errors->first('email') }}
+            </span>
+        </div>
+    @endif
+
+    <form
+        wire:submit="authenticate"
+        class="auth-form"
+        novalidate
+    >
+        <label class="auth-field">
+            <span class="auth-field-label">
+                Alamat email
+            </span>
+
+            <span
+                class="auth-control
+                    @error('email')
+                        auth-control--error
+                    @enderror"
+            >
+                <span class="auth-control-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        aria-hidden="true"
+                    >
+                        <rect
+                            x="3"
+                            y="5"
+                            width="18"
+                            height="14"
+                            rx="2"
+                        />
+
+                        <path d="m3 7 9 6 9-6" />
+                    </svg>
+                </span>
+
+                <input
+                    type="email"
+                    wire:model="email"
+                    placeholder="nama@email.com"
+                    autocomplete="email"
+                    inputmode="email"
+                    required
+                >
+            </span>
+
+            @error('email')
+                <span class="auth-field-error">
+                    {{ $message }}
+                </span>
+            @enderror
+        </label>
+
+        <label
+            class="auth-field"
+            x-data="{
+                tampil: false
+            }"
+        >
+            <span class="auth-field-label">
+                Password
+            </span>
+
+            <span
+                class="auth-control
+                    @error('password')
+                        auth-control--error
+                    @enderror"
+            >
+                <span class="auth-control-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        aria-hidden="true"
+                    >
+                        <rect
+                            x="5"
+                            y="10"
+                            width="14"
+                            height="11"
+                            rx="2"
+                        />
+
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                    </svg>
+                </span>
+
+                <input
+                    x-bind:type="
+                        tampil
+                            ? 'text'
+                            : 'password'
+                    "
+                    wire:model="password"
+                    placeholder="Masukkan password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="auth-password-toggle"
+                    x-on:click="tampil = ! tampil"
+                    x-bind:aria-label="
+                        tampil
+                            ? 'Sembunyikan password'
+                            : 'Tampilkan password'
+                    "
+                >
+                    <svg
+                        x-show="! tampil"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                        />
+
+                        <circle
+                            cx="12"
+                            cy="12"
+                            r="2.5"
+                        />
+                    </svg>
+
+                    <svg
+                        x-cloak
+                        x-show="tampil"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="m3 3 18 18M10.6 6.2c.5-.1.9-.2 1.4-.2 6 0 9.5 6 9.5 6a16 16 0 0 1-2.2 2.8M6.2 6.2A15.6 15.6 0 0 0 2.5 12s3.5 6 9.5 6c1.6 0 3-.4 4.2-1"
+                        />
+                    </svg>
+                </button>
+            </span>
+
+            @error('password')
+                <span class="auth-field-error">
+                    {{ $message }}
+                </span>
+            @enderror
+        </label>
+
+        <div class="auth-options">
+            <label class="auth-check">
+                <input
+                    type="checkbox"
+                    wire:model="remember"
+                >
+
+                <span>
+                    Ingat saya di perangkat ini
+                </span>
+            </label>
+
+            <a
+                href="{{ url('/forgot-password') }}"
+                class="auth-text-link"
+            >
+                Lupa password?
+            </a>
+        </div>
+
+        <button
+            type="submit"
+            class="auth-button auth-button--primary auth-button--full"
+            wire:loading.attr="disabled"
+            wire:target="authenticate"
+        >
+            <span
+                wire:loading.remove
+                wire:target="authenticate"
+            >
+                Masuk
+            </span>
+
+            <span
+                wire:loading
+                wire:target="authenticate"
+            >
+                Memeriksa akun...
+            </span>
+        </button>
+    </form>
+
+    <div class="auth-divider">
+        atau lanjutkan dengan
+    </div>
+
+    @if ($googleRouteAda)
+        <a
+            href="{{ $googleUrl }}"
+            class="auth-button auth-button--secondary auth-button--full"
+        >
+            <svg
+                class="auth-google-icon"
+                viewBox="0 0 48 48"
+                aria-hidden="true"
+            >
+                <path
+                    fill="#FFC107"
+                    d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9Z"
+                />
+
+                <path
+                    fill="#FF3D00"
+                    d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"
+                />
+
+                <path
+                    fill="#4CAF50"
+                    d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44Z"
+                />
+
+                <path
+                    fill="#1976D2"
+                    d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9Z"
+                />
+            </svg>
+
+            Masuk dengan Google
+        </a>
+    @else
+        <button
+            type="button"
+            class="auth-button auth-button--secondary auth-button--full"
+            disabled
+        >
+            <svg
+                class="auth-google-icon"
+                viewBox="0 0 48 48"
+                aria-hidden="true"
+            >
+                <path
+                    fill="#FFC107"
+                    d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9Z"
+                />
+
+                <path
+                    fill="#FF3D00"
+                    d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"
+                />
+
+                <path
+                    fill="#4CAF50"
+                    d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44Z"
+                />
+
+                <path
+                    fill="#1976D2"
+                    d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9Z"
+                />
+            </svg>
+
+            Login Google belum tersedia
+        </button>
+    @endif
+
+    <section class="auth-register-links">
+        <p>
+            Belum memiliki akun?
+        </p>
+
+        <div class="auth-register-actions">
+            <a
+                href="{{ url('/register/donor') }}"
+                class="auth-button auth-button--primary"
+            >
+                Daftar Pendonor
+            </a>
+
+            <a
+                href="{{ url('/register/pemohon-donor') }}"
+                class="auth-button auth-button--secondary"
+            >
+                Daftar Pemohon
+            </a>
+        </div>
+    </section>
+
+    <p class="auth-privacy-note">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+        >
+            <path
+                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"
+            />
+        </svg>
+
+        Data akun hanya digunakan untuk pelayanan Donor Darah.
+    </p>
+</div>===== ROUTE AUTH =====
+<?php
+
+use App\Livewire\Auth\Login;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')
+    ->group(function (): void {
+        Route::get('/login', Login::class)
+            ->name('login');
+    });
+
+Route::post('/logout', function (
+    Request $request
+) {
+    Auth::guard('web')->logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login');
+})
+    ->middleware('auth')
+    ->name('logout');===== ROUTE AUTH PUBLIC =====
+<?php
+
+use App\Livewire\Auth\RegisterDonor;
+use App\Livewire\Auth\RegisterPemohonDonor;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware([
+    'web',
+    'guest',
+])->group(function (): void {
+    Route::redirect('/register', '/register/donor')
+        ->name('register.index');
+
+    Route::get('/register/donor', RegisterDonor::class)
+        ->name('register.donor');
+
+    Route::get('/register/pemohon-donor', RegisterPemohonDonor::class)
+        ->name('register.pemohon-donor');
+});===== ROUTE GOOGLE =====
+<?php
+
+use App\Http\Controllers\Auth\GoogleAuthController;
+use Illuminate\Support\Facades\Route;
+
+Route::get(
+    '/auth/google/redirect/{tujuan?}',
+    [
+        GoogleAuthController::class,
+        'redirect',
+    ]
+)
+    ->whereIn('tujuan', [
+        'login',
+        'donor',
+        'pemohon-donor',
+    ])
+    ->middleware(
+        'throttle:10,1'
+    )
+    ->name('google.redirect');
+
+Route::get(
+    '/auth/google/callback',
+    [
+        GoogleAuthController::class,
+        'callback',
+    ]
+)
+    ->middleware(
+        'throttle:20,1'
+    )
+    ->name('google.callback');===== GOOGLE CONTROLLER =====
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Enums\StatusPengguna;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Socialite\Contracts\User as SocialiteUser;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteTwoUser;
+use Throwable;
+
+class GoogleAuthController extends Controller
+{
+    private const SESSION_TUJUAN =
+        'google_oauth_tujuan';
+
+    private const SESSION_REGISTER =
+        'google_register';
+
+    private const REGISTER_EXPIRES_SECONDS = 600;
+
+    /**
+     * @var list<string>
+     */
+    private const ADMIN_ROLES = [
+        'super_admin',
+        'super-admin',
+        'admin',
+        'petugas',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const DONOR_ROLES = [
+        'donor',
+        'pendonor',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const PEMOHON_ROLES = [
+        'pemohon_donor',
+        'pemohon-donor',
+        'rumah_sakit',
+        'rumah-sakit',
+    ];
+
+    public function redirect(
+        Request $request,
+        ?string $tujuan = null
+    ): mixed {
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            $redirectPath = $user instanceof User
+                ? $this->redirectPathByRole($user)
+                : '/';
+
+            return redirect()
+                ->to($redirectPath)
+                ->with(
+                    'error',
+                    'Anda sudah masuk ke dalam akun.'
+                );
+        }
+
+        if (! $this->konfigurasiGoogleSiap()) {
+            return $this->gagal(
+                'Login Google belum dikonfigurasi dengan benar.'
+            );
+        }
+
+        $tujuan = $this->tujuanValid(
+            $tujuan
+        );
+
+        /*
+         * Data registrasi Google lama tidak boleh
+         * digunakan untuk proses OAuth baru.
+         */
+        $request->session()->forget(
+            self::SESSION_REGISTER
+        );
+
+        $request->session()->put(
+            self::SESSION_TUJUAN,
+            $tujuan
+        );
+
+        /*
+         * Socialite tetap menggunakan mode stateful.
+         * Jangan menambahkan stateless().
+         */
+        return Socialite::driver('google')
+            ->redirect();
+    }
+
+    public function callback(
+        Request $request
+    ): RedirectResponse {
+        /*
+         * Callback tidak boleh digunakan untuk
+         * berpindah akun ketika masih login.
+         */
+        if (Auth::check()) {
+            $request->session()->forget([
+                self::SESSION_TUJUAN,
+                self::SESSION_REGISTER,
+            ]);
+
+            $user = Auth::user();
+
+            $redirectPath = $user instanceof User
+                ? $this->redirectPathByRole($user)
+                : '/';
+
+            return redirect()
+                ->to($redirectPath)
+                ->with(
+                    'error',
+                    'Anda sudah masuk ke dalam akun.'
+                );
+        }
+
+        if (! $this->konfigurasiGoogleSiap()) {
+            return $this->gagal(
+                'Login Google belum dikonfigurasi dengan benar.'
+            );
+        }
+
+        try {
+            /*
+             * Method user() memvalidasi state OAuth
+             * yang sebelumnya disimpan dalam session.
+             */
+            $googleUser = Socialite::driver(
+                'google'
+            )->user();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $request->session()->forget([
+                self::SESSION_TUJUAN,
+                self::SESSION_REGISTER,
+            ]);
+
+            return $this->gagal(
+                'Login Google gagal diproses. Silakan coba lagi.'
+            );
+        }
+
+        $tujuan = $this->tujuanValid(
+            (string) $request->session()->pull(
+                self::SESSION_TUJUAN,
+                'login'
+            )
+        );
+
+        $googleId = trim(
+            (string) $googleUser->getId()
+        );
+
+        $email = mb_strtolower(
+            trim(
+                (string) $googleUser->getEmail()
+            )
+        );
+
+        if ($googleId === '') {
+            return $this->gagal(
+                'Akun Google tidak mengembalikan ID pengguna.'
+            );
+        }
+
+        if ($email === '') {
+            return $this->gagal(
+                'Akun Google tidak mengembalikan alamat email.'
+            );
+        }
+
+        if (
+            ! $this->emailGoogleTerverifikasi(
+                $googleUser
+            )
+        ) {
+            return $this->gagal(
+                'Alamat email pada akun Google belum terverifikasi.'
+            );
+        }
+
+        $userGoogle = User::query()
+            ->where(
+                'google_id',
+                $googleId
+            )
+            ->first();
+
+        $userEmail = User::query()
+            ->where(
+                'email',
+                $email
+            )
+            ->first();
+
+        /*
+         * Google ID dan email tidak boleh menunjuk
+         * ke dua pengguna berbeda.
+         */
+        if (
+            $userGoogle instanceof User
+            && $userEmail instanceof User
+            && $userGoogle->getKey()
+                !== $userEmail->getKey()
+        ) {
+            return $this->gagal(
+                'Identitas Google bertentangan dengan akun pengguna lain.'
+            );
+        }
+
+        if ($userGoogle instanceof User) {
+            return $this->loginPenggunaGoogle(
+                request: $request,
+                googleUser: $googleUser,
+                user: $userGoogle,
+                email: $email,
+                tujuan: $tujuan
+            );
+        }
+
+        /*
+         * Akun lokal tidak boleh otomatis ditautkan
+         * hanya berdasarkan email Google yang sama.
+         */
+        if ($userEmail instanceof User) {
+            $googleIdLama = trim(
+                (string) (
+                    $userEmail->getAttribute(
+                        'google_id'
+                    )
+                    ?? ''
+                )
+            );
+
+            if ($googleIdLama !== '') {
+                return $this->gagal(
+                    'Alamat email ini sudah terhubung dengan akun Google lain.'
+                );
+            }
+
+            return $this->gagal(
+                'Alamat email sudah terdaftar sebagai akun lokal. Masuk menggunakan email dan kata sandi. Penautan Google harus dilakukan dari akun yang sudah masuk.'
+            );
+        }
+
+        if ($tujuan === 'login') {
+            return $this->gagal(
+                'Akun Google belum terdaftar. Silakan daftar sebagai pendonor atau pemohon donor terlebih dahulu.'
+            );
+        }
+
+        return $this->siapkanRegistrasiGoogle(
+            request: $request,
+            googleUser: $googleUser,
+            googleId: $googleId,
+            email: $email,
+            tujuan: $tujuan
+        );
+    }
+
+    private function loginPenggunaGoogle(
+        Request $request,
+        SocialiteUser $googleUser,
+        User $user,
+        string $email,
+        string $tujuan
+    ): RedirectResponse {
+        if ($tujuan !== 'login') {
+            return $this->gagal(
+                'Akun Google sudah terdaftar. Gunakan tombol Login dengan Google.'
+            );
+        }
+
+        $emailTersimpan = mb_strtolower(
+            trim(
+                (string) $user->email
+            )
+        );
+
+        /*
+         * Perubahan email Google tidak boleh langsung
+         * mengubah email akun aplikasi.
+         */
+        if ($emailTersimpan !== $email) {
+            return $this->gagal(
+                'Alamat email Google tidak sama dengan email yang tersimpan. Hubungi administrator.'
+            );
+        }
+
+        $pesanPenolakan = $this->pesanPenolakanAkses(
+            $user
+        );
+
+        if ($pesanPenolakan !== null) {
+            return $this->gagal(
+                $pesanPenolakan
+            );
+        }
+
+        $this->perbaruiDataGoogle(
+            user: $user,
+            googleUser: $googleUser
+        );
+
+        Auth::login(
+            $user,
+            true
+        );
+
+        $request->session()->regenerate();
+
+        return redirect()
+            ->intended(
+                $this->redirectPathByRole(
+                    $user
+                )
+            );
+    }
+
+    private function siapkanRegistrasiGoogle(
+        Request $request,
+        SocialiteUser $googleUser,
+        string $googleId,
+        string $email,
+        string $tujuan
+    ): RedirectResponse {
+        if (
+            ! in_array(
+                $tujuan,
+                [
+                    'donor',
+                    'pemohon-donor',
+                ],
+                true
+            )
+        ) {
+            return $this->gagal(
+                'Tujuan registrasi Google tidak valid.'
+            );
+        }
+
+        /*
+         * Regenerasi ID session setelah OAuth sukses.
+         */
+        $request->session()->regenerate();
+
+        $authenticatedAt = now()->timestamp;
+
+        $request->session()->put(
+            self::SESSION_REGISTER,
+            [
+                'google_id' => $googleId,
+
+                'name' => trim(
+                    (string) (
+                        $googleUser->getName()
+                        ?: $googleUser->getNickname()
+                        ?: ''
+                    )
+                ),
+
+                'email' => $email,
+
+                'avatar' => trim(
+                    (string) (
+                        $googleUser->getAvatar()
+                        ?: ''
+                    )
+                ),
+
+                'email_verified' => true,
+
+                'authenticated_at' =>
+                    $authenticatedAt,
+
+                'expires_at' =>
+                    $authenticatedAt
+                    + self::REGISTER_EXPIRES_SECONDS,
+
+                'tujuan' => $tujuan,
+            ]
+        );
+
+        if ($tujuan === 'donor') {
+            return redirect()
+                ->to('/register/donor')
+                ->with(
+                    'success',
+                    'Akun Google berhasil diverifikasi. Silakan lengkapi data pendonor.'
+                );
+        }
+
+        return redirect()
+            ->to('/register/pemohon-donor')
+            ->with(
+                'success',
+                'Akun Google berhasil diverifikasi. Silakan lengkapi data pemohon donor.'
+            );
+    }
+
+    private function perbaruiDataGoogle(
+        User $user,
+        SocialiteUser $googleUser
+    ): void {
+        $payload = [];
+
+        $avatar = trim(
+            (string) (
+                $googleUser->getAvatar()
+                ?: ''
+            )
+        );
+
+        if (
+            $avatar !== ''
+            && Schema::hasColumn(
+                'users',
+                'google_avatar'
+            )
+        ) {
+            $payload['google_avatar'] =
+                $avatar;
+        }
+
+        if (
+            blank(
+                $user->getAttribute(
+                    'email_verified_at'
+                )
+            )
+        ) {
+            /*
+             * Aman karena Google ID dan email telah
+             * cocok serta email Google terverifikasi.
+             */
+            $payload['email_verified_at'] =
+                now();
+        }
+
+        if ($payload === []) {
+            return;
+        }
+
+        $user->forceFill(
+            $payload
+        )->saveQuietly();
+    }
+
+    private function emailGoogleTerverifikasi(
+        SocialiteUser $googleUser
+    ): bool {
+        /*
+         * GoogleProvider menghasilkan instance
+         * Laravel\Socialite\Two\User.
+         */
+        if (
+            ! $googleUser instanceof
+                SocialiteTwoUser
+        ) {
+            return false;
+        }
+
+        $raw = $googleUser->getRaw();
+
+        $verified = $raw['email_verified']
+            ?? $raw['verified_email']
+            ?? false;
+
+        return filter_var(
+            $verified,
+            FILTER_VALIDATE_BOOLEAN
+        );
+    }
+
+    private function pesanPenolakanAkses(
+        User $user
+    ): ?string {
+        if (! $this->statusPenggunaAktif($user)) {
+            return $this->pesanStatusPengguna(
+                $user
+            );
+        }
+
+        $redirectPath = $this->redirectPathByRole(
+            $user
+        );
+
+        if ($redirectPath === '/login') {
+            return 'Akun tidak memiliki role yang dapat mengakses portal.';
+        }
+
+        if (
+            $redirectPath === '/donor'
+            && ! $user->profilPendonor()
+                ->exists()
+        ) {
+            return 'Profil pendonor belum lengkap. Hubungi administrator.';
+        }
+
+        if (
+            $redirectPath === '/pemohon-donor'
+            && ! $user->profilRumahSakit()
+                ->exists()
+        ) {
+            return 'Profil pemohon donor belum lengkap. Hubungi administrator.';
+        }
+
+        return null;
+    }
+
+    private function statusPenggunaAktif(
+        User $user
+    ): bool {
+        return $this->nilaiStatusPengguna($user)
+            === StatusPengguna::Aktif->value;
+    }
+
+    private function pesanStatusPengguna(
+        User $user
+    ): string {
+        return match (
+            $this->nilaiStatusPengguna($user)
+        ) {
+            StatusPengguna::Menunggu->value =>
+                'Akun masih menunggu aktivasi.',
+
+            StatusPengguna::TidakAktif->value =>
+                'Akun sedang tidak aktif. Hubungi administrator.',
+
+            StatusPengguna::Ditangguhkan->value =>
+                'Akun sedang ditangguhkan. Hubungi administrator.',
+
+            StatusPengguna::Ditolak->value =>
+                'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+
+            default =>
+                'Akun belum dapat digunakan. Hubungi administrator.',
+        };
+    }
+
+    private function nilaiStatusPengguna(
+        User $user
+    ): string {
+        $status = $user->status;
+
+        if ($status instanceof \BackedEnum) {
+            return strtolower(
+                trim(
+                    (string) $status->value
+                )
+            );
+        }
+
+        return strtolower(
+            trim(
+                (string) $status
+            )
+        );
+    }
+
+    private function redirectPathByRole(
+        User $user
+    ): string {
+        $roles = $this->rolesPengguna(
+            $user
+        );
+
+        if (
+            $roles->intersect(
+                self::ADMIN_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/admin';
+        }
+
+        if (
+            $roles->intersect(
+                self::PEMOHON_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/pemohon-donor';
+        }
+
+        if (
+            $roles->intersect(
+                self::DONOR_ROLES
+            )->isNotEmpty()
+        ) {
+            return '/donor';
+        }
+
+        return '/login';
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function rolesPengguna(
+        User $user
+    ): Collection {
+        return $user->getRoleNames()
+            ->map(
+                fn (string $role): string =>
+                    strtolower(
+                        trim($role)
+                    )
+            )
+            ->filter()
+            ->values();
+    }
+
+    private function konfigurasiGoogleSiap(): bool
+    {
+        return filled(
+            config(
+                'services.google.client_id'
+            )
+        )
+            && filled(
+                config(
+                    'services.google.client_secret'
+                )
+            )
+            && filled(
+                config(
+                    'services.google.redirect'
+                )
+            )
+            && Schema::hasColumn(
+                'users',
+                'google_id'
+            );
+    }
+
+    private function tujuanValid(
+        ?string $tujuan
+    ): string {
+        return match ($tujuan) {
+            'donor',
+            'pemohon-donor',
+            'login' => $tujuan,
+
+            default => 'login',
+        };
+    }
+
+    private function gagal(
+        string $message
+    ): RedirectResponse {
+        return redirect()
+            ->to('/login')
+            ->withErrors([
+                'email' => $message,
+            ]);
+    }
+}===== MIDDLEWARE ROLE =====
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Enums\StatusPengguna;
+use App\Models\User;
+use Closure;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
+
+class PastikanAksesPortalSesuaiRole
+{
+    public function handle(
+        Request $request,
+        Closure $next
+    ): Response {
+        $user = Auth::guard('web')->user();
+
+        if (! $user instanceof User) {
+            if (
+                $this->portalDiminta($request)
+                !== null
+            ) {
+                return redirect()
+                    ->guest('/login');
+            }
+
+            return $next($request);
+        }
+
+        /*
+         * Link verifikasi bertanda tangan tetap boleh
+         * diproses meskipun status akun berubah.
+         */
+        if (
+            $request->routeIs(
+                'verification.verify'
+            )
+        ) {
+            return $next($request);
+        }
+
+        if (! $this->statusPenggunaAktif($user)) {
+            return $this->keluarkanDanRedirect(
+                $request,
+                $this->pesanStatusPengguna($user)
+            );
+        }
+
+        if (
+            ! $user->hasVerifiedEmail()
+            && ! $this->halamanDiizinkanSebelumVerifikasi(
+                $request
+            )
+        ) {
+            return redirect()
+                ->route('verification.notice');
+        }
+
+        $halamanUtama =
+            $this->halamanUtamaBerdasarkanRole(
+                $user
+            );
+
+        if ($halamanUtama === '/login') {
+            return $this->keluarkanDanRedirect(
+                $request,
+                'Akun tidak memiliki akses ke portal.'
+            );
+        }
+
+        if ($this->halamanAdmin($request)) {
+            if (! $this->adalahAdmin($user)) {
+                return redirect()
+                    ->to($halamanUtama)
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke panel admin.'
+                    );
+            }
+
+            return $next($request);
+        }
+
+        $portalDiminta = $this->portalDiminta(
+            $request
+        );
+
+        if ($portalDiminta !== null) {
+            if (
+                $portalDiminta === 'donor'
+                && ! $this->adalahPendonor($user)
+            ) {
+                return redirect()
+                    ->to($halamanUtama)
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke portal pendonor.'
+                    );
+            }
+
+            if (
+                $portalDiminta === 'pemohon-donor'
+                && ! $this->adalahPemohonDonor(
+                    $user
+                )
+            ) {
+                return redirect()
+                    ->to($halamanUtama)
+                    ->with(
+                        'error',
+                        'Anda tidak memiliki akses ke portal pemohon donor.'
+                    );
+            }
+
+            if (
+                $this->adalahAdmin($user)
+            ) {
+                return redirect()
+                    ->to('/admin')
+                    ->with(
+                        'error',
+                        'Akun admin diarahkan ke panel admin.'
+                    );
+            }
+
+            return $next($request);
+        }
+
+        if (
+            $this->halamanAuthPublik($request)
+        ) {
+            return redirect()
+                ->to($halamanUtama);
+        }
+
+        return $next($request);
+    }
+
+    private function halamanAdmin(
+        Request $request
+    ): bool {
+        return $request->is('admin')
+            || $request->is('admin/*');
+    }
+
+    private function halamanAuthPublik(
+        Request $request
+    ): bool {
+        return $request->is('login')
+            || $request->is('register')
+            || $request->is('register/*');
+    }
+
+    private function halamanDiizinkanSebelumVerifikasi(
+        Request $request
+    ): bool {
+        return $request->routeIs([
+            'verification.notice',
+            'verification.verify',
+            'verification.send',
+            'logout',
+            'donor.logout',
+            'pemohon-donor.logout',
+        ]);
+    }
+
+    private function portalDiminta(
+        Request $request
+    ): ?string {
+        if (
+            $request->is('donor')
+            || $request->is('donor/*')
+        ) {
+            return 'donor';
+        }
+
+        if (
+            $request->is('pemohon-donor')
+            || $request->is('pemohon-donor/*')
+        ) {
+            return 'pemohon-donor';
+        }
+
+        return null;
+    }
+
+    private function halamanUtamaBerdasarkanRole(
+        User $user
+    ): string {
+        if ($this->adalahAdmin($user)) {
+            return '/admin';
+        }
+
+        if ($this->adalahPemohonDonor($user)) {
+            return '/pemohon-donor';
+        }
+
+        if ($this->adalahPendonor($user)) {
+            return '/donor';
+        }
+
+        return '/login';
+    }
+
+    private function adalahAdmin(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'super_admin',
+                            'super-admin',
+                            'admin',
+                            'petugas',
+                        ],
+                        true
+                    )
+            );
+    }
+
+    private function adalahPendonor(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'donor',
+                            'pendonor',
+                        ],
+                        true
+                    )
+            );
+    }
+
+    private function adalahPemohonDonor(
+        User $user
+    ): bool {
+        return $this->roles($user)
+            ->contains(
+                fn (string $role): bool =>
+                    in_array(
+                        $role,
+                        [
+                            'pemohon_donor',
+                            'pemohon-donor',
+                            'rumah_sakit',
+                            'rumah-sakit',
+                        ],
+                        true
+                    )
+            );
+    }
+
+    private function statusPenggunaAktif(
+        User $user
+    ): bool {
+        return $this->nilaiStatusPengguna($user)
+            === StatusPengguna::Aktif->value;
+    }
+
+    private function pesanStatusPengguna(
+        User $user
+    ): string {
+        return match (
+            $this->nilaiStatusPengguna($user)
+        ) {
+            StatusPengguna::Menunggu->value =>
+                'Akun masih menunggu aktivasi.',
+
+            StatusPengguna::TidakAktif->value =>
+                'Akun sedang tidak aktif. Hubungi administrator.',
+
+            StatusPengguna::Ditangguhkan->value =>
+                'Akun sedang ditangguhkan. Hubungi administrator.',
+
+            StatusPengguna::Ditolak->value =>
+                'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+
+            default =>
+                'Akun belum dapat digunakan. Hubungi administrator.',
+        };
+    }
+
+    private function nilaiStatusPengguna(
+        User $user
+    ): string {
+        $status = $user->status;
+
+        if ($status instanceof \BackedEnum) {
+            return strtolower(
+                trim(
+                    (string) $status->value
+                )
+            );
+        }
+
+        return strtolower(
+            trim(
+                (string) $status
+            )
+        );
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function roles(
+        User $user
+    ): Collection {
+        return $user->getRoleNames()
+            ->map(
+                fn (string $role): string =>
+                    strtolower(
+                        trim($role)
+                    )
+            )
+            ->filter()
+            ->values();
+    }
+
+    private function keluarkanDanRedirect(
+        Request $request,
+        string $message
+    ): RedirectResponse {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()
+            ->route('login')
+            ->with(
+                'error',
+                $message
+            );
+    }
+}===== WEB ROUTES =====
+<?php
+
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    $pengguna = Auth::user();
+
+    if (! $pengguna instanceof User) {
+        return redirect()->route('login');
+    }
+
+    if ($pengguna->hasRole('donor')) {
+        return redirect()->route('donor.beranda');
+    }
+
+    if (
+        $pengguna->hasAnyRole([
+            'super_admin',
+            'petugas',
+        ])
+    ) {
+        return redirect('/admin');
+    }
+
+    if ($pengguna->hasRole('pemohon_donor')) {
+        if (Route::has('pemohon-donor.beranda')) {
+            return redirect()->route(
+                'pemohon-donor.beranda'
+            );
+        }
+
+        Auth::guard('web')->logout();
+
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()
+            ->route('login')
+            ->with(
+                'error',
+                'Portal Pemohon Donor belum tersedia.'
+            );
+    }
+
+    Auth::guard('web')->logout();
+
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+
+    return redirect()
+        ->route('login')
+        ->with(
+            'error',
+            'Akun tidak memiliki akses ke portal.'
+        );
+})->name('home');
+
+require __DIR__ . '/auth.php';
+require __DIR__ . '/email-verification.php';
+
+Route::middleware([
+    'auth',
+    'verified',
+])->group(function (): void {
+    require __DIR__ . '/donor.php';
+
+    if (file_exists(__DIR__ . '/pemohon-donor.php')) {
+        require __DIR__ . '/pemohon-donor.php';
+        require __DIR__ . '/pemohon-donor-riwayat-bukti.php';
+    }
+});
+
+require __DIR__ . '/auth-public.php';
+require __DIR__ . '/google-auth.php';
+require __DIR__ . '/logout-public.php';
+require __DIR__ . '/password-reset.php';

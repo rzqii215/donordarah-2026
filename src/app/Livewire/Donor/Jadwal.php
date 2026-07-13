@@ -7,6 +7,7 @@ use App\Enums\StatusPendaftaranDonor;
 use App\Models\JadwalDonor;
 use App\Models\LokasiDonor;
 use App\Models\PendaftaranDonor;
+use BackedEnum;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -20,6 +21,8 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Throwable;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 #[Title('Jadwal Donor')]
@@ -83,14 +86,11 @@ class Jadwal extends Component
                 'after_or_equal:tanggalMulai',
             ],
         ], [
-            'tanggalMulai.date_format' =>
-                'Tanggal mulai tidak valid.',
+            'tanggalMulai.date_format' => 'Tanggal mulai tidak valid.',
 
-            'tanggalSelesai.date_format' =>
-                'Tanggal selesai tidak valid.',
+            'tanggalSelesai.date_format' => 'Tanggal selesai tidak valid.',
 
-            'tanggalSelesai.after_or_equal' =>
-                'Tanggal selesai tidak boleh lebih awal daripada tanggal mulai.',
+            'tanggalSelesai.after_or_equal' => 'Tanggal selesai tidak boleh lebih awal daripada tanggal mulai.',
         ]);
 
         $this->pastikanUrutanValid();
@@ -190,26 +190,21 @@ class Jadwal extends Component
         return view(
             'livewire.donor.jadwal',
             [
-                'jadwalDonors' =>
-                    $jadwalDonors,
+                'jadwalDonors' => $jadwalDonors,
 
-                'jadwalTerpilih' =>
-                    $jadwalTerpilih,
+                'jadwalTerpilih' => $jadwalTerpilih,
 
-                'pendaftaranJadwals' =>
-                    $this->ambilPendaftaranJadwals(
-                        collect(
-                            $jadwalDonors->items()
-                        )
-                    ),
+                'pendaftaranJadwals' => $this->ambilPendaftaranJadwals(
+                    collect(
+                        $jadwalDonors->items()
+                    )
+                ),
 
-                'pendaftaranTerpilih' =>
-                    $this->ambilPendaftaranTerpilih(
-                        $jadwalTerpilih
-                    ),
+                'pendaftaranTerpilih' => $this->ambilPendaftaranTerpilih(
+                    $jadwalTerpilih
+                ),
 
-                'kotaTersedia' =>
-                    $this->ambilKotaTersedia(),
+                'kotaTersedia' => $this->ambilKotaTersedia(),
             ]
         );
     }
@@ -221,8 +216,7 @@ class Jadwal extends Component
             ->withCount('pendaftaranAktif')
             ->where(
                 'status',
-                StatusJadwalDonor
-                    ::Dipublikasikan
+                StatusJadwalDonor::Dipublikasikan
                     ->value
             )
             ->where(
@@ -255,7 +249,7 @@ class Jadwal extends Component
     }
 
     /**
-     * @param Collection<int, JadwalDonor> $jadwals
+     * @param  Collection<int, JadwalDonor>  $jadwals
      * @return Collection<int|string, PendaftaranDonor>
      */
     private function ambilPendaftaranJadwals(
@@ -324,8 +318,7 @@ class Jadwal extends Component
                     $query
                         ->where(
                             'status',
-                            StatusJadwalDonor
-                                ::Dipublikasikan
+                            StatusJadwalDonor::Dipublikasikan
                                 ->value
                         )
                         ->where(
@@ -413,11 +406,10 @@ class Jadwal extends Component
 
         $query->whereHas(
             'lokasi',
-            fn (Builder $query): Builder =>
-                $query->where(
-                    'kota',
-                    $kota
-                )
+            fn (Builder $query): Builder => $query->where(
+                'kota',
+                $kota
+            )
         );
     }
 
@@ -506,21 +498,18 @@ class Jadwal extends Component
         if ($userId !== null) {
             $query->whereDoesntHave(
                 'pendaftaranDonor',
-                fn (Builder $query): Builder =>
-                    $query->where(
-                        'pendonor_id',
-                        $userId
-                    )
+                fn (Builder $query): Builder => $query->where(
+                    'pendonor_id',
+                    $userId
+                )
             );
         }
 
         $statusMengurangiKuota = collect(
-            StatusPendaftaranDonor
-                ::statusMengurangiKuota()
+            StatusPendaftaranDonor::statusMengurangiKuota()
         )
             ->map(
-                fn (mixed $status): string =>
-                    $this->nilaiEnum($status)
+                fn (mixed $status): string => $this->nilaiEnum($status)
             )
             ->filter()
             ->values()
@@ -531,10 +520,10 @@ class Jadwal extends Component
         }
 
         $jadwalTable =
-            (new JadwalDonor())->getTable();
+            (new JadwalDonor)->getTable();
 
         $pendaftaranTable =
-            (new PendaftaranDonor())->getTable();
+            (new PendaftaranDonor)->getTable();
 
         $placeholders = implode(
             ', ',
@@ -572,20 +561,17 @@ class Jadwal extends Component
         Builder $query
     ): void {
         match ($this->urutan) {
-            'kuota_terbesar' =>
-                $query
-                    ->orderByDesc('kuota')
-                    ->orderBy('mulai_pada'),
+            'kuota_terbesar' => $query
+                ->orderByDesc('kuota')
+                ->orderBy('mulai_pada'),
 
-            'terbaru' =>
-                $query
-                    ->orderByDesc('created_at')
-                    ->orderBy('mulai_pada'),
+            'terbaru' => $query
+                ->orderByDesc('created_at')
+                ->orderBy('mulai_pada'),
 
-            default =>
-                $query
-                    ->orderBy('mulai_pada')
-                    ->orderBy('id'),
+            default => $query
+                ->orderBy('mulai_pada')
+                ->orderBy('id'),
         };
     }
 
@@ -655,8 +641,7 @@ class Jadwal extends Component
 
         if (
             $status !==
-            StatusJadwalDonor
-                ::Dipublikasikan
+            StatusJadwalDonor::Dipublikasikan
                 ->value
         ) {
             return [
@@ -765,34 +750,25 @@ class Jadwal extends Component
         );
 
         return match ($value) {
-            'pending' =>
-                'Menunggu Verifikasi',
+            'pending' => 'Menunggu Verifikasi',
 
-            'approved' =>
-                'Disetujui',
+            'approved' => 'Disetujui',
 
-            'attended' =>
-                'Hadir',
+            'attended' => 'Hadir',
 
-            'eligible' =>
-                'Layak Donor',
+            'eligible' => 'Layak Donor',
 
-            'ineligible' =>
-                'Tidak Layak',
+            'ineligible' => 'Tidak Layak',
 
-            'completed' =>
-                'Donor Selesai',
+            'completed' => 'Donor Selesai',
 
-            'rejected' =>
-                'Ditolak',
+            'rejected' => 'Ditolak',
 
-            'cancelled' =>
-                'Dibatalkan',
+            'cancelled' => 'Dibatalkan',
 
             'no_show',
             'absent',
-            'not_attended' =>
-                'Tidak Hadir',
+            'not_attended' => 'Tidak Hadir',
 
             default => $value !== ''
                 ? Str::headline($value)
@@ -1090,8 +1066,7 @@ class Jadwal extends Component
             ),
         ])
             ->filter(
-                fn (string $value): bool =>
-                    $value !== '-'
+                fn (string $value): bool => $value !== '-'
             )
             ->implode(', ');
     }
@@ -1126,7 +1101,7 @@ class Jadwal extends Component
 
         try {
             return Carbon::parse($value);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1143,7 +1118,7 @@ class Jadwal extends Component
                 'Y-m-d',
                 $value
             );
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1151,11 +1126,11 @@ class Jadwal extends Component
     private function nilaiEnum(
         mixed $value
     ): string {
-        if ($value instanceof \BackedEnum) {
+        if ($value instanceof BackedEnum) {
             return (string) $value->value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return (string) $value->name;
         }
 

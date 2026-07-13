@@ -5,9 +5,10 @@ namespace App\Livewire\Donor;
 use App\Enums\StatusPendaftaranDonor;
 use App\Models\JadwalDonor;
 use App\Models\LokasiDonor;
-use App\Models\PendaftaranDonor;
 use App\Models\PemeriksaanKesehatan;
+use App\Models\PendaftaranDonor;
 use App\Services\LayananPendaftaranDonor;
+use BackedEnum;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -21,6 +22,8 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Throwable;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 #[Title('Riwayat Donor')]
@@ -161,14 +164,11 @@ class Riwayat extends Component
                 'max:1000',
             ],
         ], [
-            'alasanPembatalan.required' =>
-                'Alasan pembatalan wajib diisi.',
+            'alasanPembatalan.required' => 'Alasan pembatalan wajib diisi.',
 
-            'alasanPembatalan.min' =>
-                'Alasan pembatalan minimal 10 karakter.',
+            'alasanPembatalan.min' => 'Alasan pembatalan minimal 10 karakter.',
 
-            'alasanPembatalan.max' =>
-                'Alasan pembatalan maksimal 1.000 karakter.',
+            'alasanPembatalan.max' => 'Alasan pembatalan maksimal 1.000 karakter.',
         ]);
 
         if (
@@ -235,17 +235,13 @@ class Riwayat extends Component
         return view(
             'livewire.donor.riwayat',
             [
-                'riwayatDonors' =>
-                    $this->ambilRiwayatDonor(),
+                'riwayatDonors' => $this->ambilRiwayatDonor(),
 
-                'pendaftaranTerpilih' =>
-                    $this->ambilPendaftaranTerpilih(),
+                'pendaftaranTerpilih' => $this->ambilPendaftaranTerpilih(),
 
-                'pendaftaranPembatalan' =>
-                    $this->ambilPendaftaranPembatalan(),
+                'pendaftaranPembatalan' => $this->ambilPendaftaranPembatalan(),
 
-                'ringkasan' =>
-                    $this->ringkasanRiwayat(),
+                'ringkasan' => $this->ringkasanRiwayat(),
             ]
         );
     }
@@ -403,57 +399,45 @@ class Riwayat extends Component
         $this->pastikanFilterValid();
 
         match ($this->filterStatus) {
-            'proses' =>
-                $query->whereIn(
-                    'status',
-                    [
-                        StatusPendaftaranDonor
-                            ::Menunggu
-                            ->value,
+            'proses' => $query->whereIn(
+                'status',
+                [
+                    StatusPendaftaranDonor::Menunggu
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::Disetujui
-                            ->value,
+                    StatusPendaftaranDonor::Disetujui
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::Hadir
-                            ->value,
+                    StatusPendaftaranDonor::Hadir
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::Layak
-                            ->value,
-                    ]
-                ),
+                    StatusPendaftaranDonor::Layak
+                        ->value,
+                ]
+            ),
 
-            'selesai' =>
-                $query->where(
-                    'status',
-                    StatusPendaftaranDonor
-                        ::Selesai
-                        ->value
-                ),
+            'selesai' => $query->where(
+                'status',
+                StatusPendaftaranDonor::Selesai
+                    ->value
+            ),
 
-            'bermasalah' =>
-                $query->whereIn(
-                    'status',
-                    [
-                        StatusPendaftaranDonor
-                            ::TidakLayak
-                            ->value,
+            'bermasalah' => $query->whereIn(
+                'status',
+                [
+                    StatusPendaftaranDonor::TidakLayak
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::Ditolak
-                            ->value,
+                    StatusPendaftaranDonor::Ditolak
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::Dibatalkan
-                            ->value,
+                    StatusPendaftaranDonor::Dibatalkan
+                        ->value,
 
-                        StatusPendaftaranDonor
-                            ::TidakHadir
-                            ->value,
-                    ]
-                ),
+                    StatusPendaftaranDonor::TidakHadir
+                        ->value,
+                ]
+            ),
 
             default => null,
         };
@@ -489,66 +473,53 @@ class Riwayat extends Component
             );
 
         return [
-            'total' =>
-                (clone $query)->count(),
+            'total' => (clone $query)->count(),
 
-            'proses' =>
-                (clone $query)
-                    ->whereIn(
-                        'status',
-                        [
-                            StatusPendaftaranDonor
-                                ::Menunggu
-                                ->value,
+            'proses' => (clone $query)
+                ->whereIn(
+                    'status',
+                    [
+                        StatusPendaftaranDonor::Menunggu
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::Disetujui
-                                ->value,
+                        StatusPendaftaranDonor::Disetujui
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::Hadir
-                                ->value,
+                        StatusPendaftaranDonor::Hadir
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::Layak
-                                ->value,
-                        ]
-                    )
-                    ->count(),
+                        StatusPendaftaranDonor::Layak
+                            ->value,
+                    ]
+                )
+                ->count(),
 
-            'selesai' =>
-                (clone $query)
-                    ->where(
-                        'status',
-                        StatusPendaftaranDonor
-                            ::Selesai
-                            ->value
-                    )
-                    ->count(),
+            'selesai' => (clone $query)
+                ->where(
+                    'status',
+                    StatusPendaftaranDonor::Selesai
+                        ->value
+                )
+                ->count(),
 
-            'bermasalah' =>
-                (clone $query)
-                    ->whereIn(
-                        'status',
-                        [
-                            StatusPendaftaranDonor
-                                ::TidakLayak
-                                ->value,
+            'bermasalah' => (clone $query)
+                ->whereIn(
+                    'status',
+                    [
+                        StatusPendaftaranDonor::TidakLayak
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::Ditolak
-                                ->value,
+                        StatusPendaftaranDonor::Ditolak
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::Dibatalkan
-                                ->value,
+                        StatusPendaftaranDonor::Dibatalkan
+                            ->value,
 
-                            StatusPendaftaranDonor
-                                ::TidakHadir
-                                ->value,
-                        ]
-                    )
-                    ->count(),
+                        StatusPendaftaranDonor::TidakHadir
+                            ->value,
+                    ]
+                )
+                ->count(),
         ];
     }
 
@@ -756,23 +727,18 @@ class Riwayat extends Component
                     }
 
                     return [
-                        'status' =>
-                            $step['status'],
+                        'status' => $step['status'],
 
-                        'label' =>
-                            $step['label'],
+                        'label' => $step['label'],
 
-                        'description' =>
-                            $step['description'],
+                        'description' => $step['description'],
 
-                        'class' =>
-                            $class,
+                        'class' => $class,
 
-                        'tanggal' =>
-                            $this->tanggalTahap(
-                                $pendaftaran,
-                                $step['status']
-                            ),
+                        'tanggal' => $this->tanggalTahap(
+                            $pendaftaran,
+                            $step['status']
+                        ),
                     ];
                 }
             )
@@ -819,51 +785,40 @@ class Riwayat extends Component
 
         $pertanyaan = [
             'sehat_hari_ini' => [
-                'label' =>
-                    'Merasa sehat hari ini',
+                'label' => 'Merasa sehat hari ini',
 
-                'positifJika' =>
-                    true,
+                'positifJika' => true,
             ],
 
             'sedang_minum_obat' => [
-                'label' =>
-                    'Sedang mengonsumsi obat',
+                'label' => 'Sedang mengonsumsi obat',
 
-                'positifJika' =>
-                    false,
+                'positifJika' => false,
             ],
 
             'operasi_terakhir' => [
-                'label' =>
-                    'Menjalani operasi dalam waktu dekat',
+                'label' => 'Menjalani operasi dalam waktu dekat',
 
-                'positifJika' =>
-                    false,
+                'positifJika' => false,
             ],
 
             'cukup_tidur' => [
-                'label' =>
-                    'Sudah tidur dengan cukup',
+                'label' => 'Sudah tidur dengan cukup',
 
-                'positifJika' =>
-                    true,
+                'positifJika' => true,
             ],
 
             'sudah_makan' => [
-                'label' =>
-                    'Sudah makan sebelum donor',
+                'label' => 'Sudah makan sebelum donor',
 
-                'positifJika' =>
-                    true,
+                'positifJika' => true,
             ],
         ];
 
         $hasil = [];
 
         foreach (
-            $pertanyaan
-            as $key => $config
+            $pertanyaan as $key => $config
         ) {
             if (
                 ! array_key_exists(
@@ -882,16 +837,13 @@ class Riwayat extends Component
             $hasil[] = [
                 'key' => $key,
 
-                'label' =>
-                    $config['label'],
+                'label' => $config['label'],
 
-                'jawaban' =>
-                    $nilai
+                'jawaban' => $nilai
                         ? 'Ya'
                         : 'Tidak',
 
-                'positif' =>
-                    $nilai ===
+                'positif' => $nilai ===
                     $config['positifJika'],
             ];
         }
@@ -933,34 +885,25 @@ class Riwayat extends Component
         );
 
         return match ($value) {
-            'pending' =>
-                'Menunggu Verifikasi',
+            'pending' => 'Menunggu Verifikasi',
 
-            'approved' =>
-                'Disetujui',
+            'approved' => 'Disetujui',
 
-            'attended' =>
-                'Hadir',
+            'attended' => 'Hadir',
 
-            'eligible' =>
-                'Layak Donor',
+            'eligible' => 'Layak Donor',
 
-            'ineligible' =>
-                'Tidak Layak Donor',
+            'ineligible' => 'Tidak Layak Donor',
 
-            'completed' =>
-                'Donor Selesai',
+            'completed' => 'Donor Selesai',
 
-            'rejected' =>
-                'Ditolak',
+            'rejected' => 'Ditolak',
 
-            'cancelled' =>
-                'Dibatalkan',
+            'cancelled' => 'Dibatalkan',
 
             'no_show',
             'absent',
-            'not_attended' =>
-                'Tidak Hadir',
+            'not_attended' => 'Tidak Hadir',
 
             default => $value !== ''
                 ? Str::headline($value)
@@ -1159,33 +1102,26 @@ class Riwayat extends Component
     ): string {
         $value = match ($status) {
             'created',
-            'pending' =>
-                $pendaftaran->created_at,
+            'pending' => $pendaftaran->created_at,
 
             'approved',
-            'rejected' =>
-                $pendaftaran->ditinjau_pada,
+            'rejected' => $pendaftaran->ditinjau_pada,
 
-            'attended' =>
-                $pendaftaran->hadir_pada,
+            'attended' => $pendaftaran->hadir_pada,
 
             'eligible',
-            'ineligible' =>
-                $pendaftaran
-                    ->pemeriksaanKesehatan
-                    ?->diperiksa_pada,
+            'ineligible' => $pendaftaran
+                ->pemeriksaanKesehatan
+                ?->diperiksa_pada,
 
-            'completed' =>
-                $pendaftaran
-                    ->selesai_pada,
+            'completed' => $pendaftaran
+                ->selesai_pada,
 
-            'cancelled' =>
-                $pendaftaran
-                    ->dibatalkan_pada,
+            'cancelled' => $pendaftaran
+                ->dibatalkan_pada,
 
-            'no_show' =>
-                $pendaftaran
-                    ->ditinjau_pada,
+            'no_show' => $pendaftaran
+                ->ditinjau_pada,
 
             default => null,
         };
@@ -1220,7 +1156,7 @@ class Riwayat extends Component
 
         try {
             return Carbon::parse($value);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1228,11 +1164,11 @@ class Riwayat extends Component
     private function nilaiEnum(
         mixed $value
     ): string {
-        if ($value instanceof \BackedEnum) {
+        if ($value instanceof BackedEnum) {
             return (string) $value->value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return (string) $value->name;
         }
 

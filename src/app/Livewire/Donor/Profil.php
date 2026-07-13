@@ -9,6 +9,7 @@ use App\Enums\StatusPendaftaranDonor;
 use App\Models\PendaftaranDonor;
 use App\Models\ProfilPendonor;
 use App\Models\User;
+use BackedEnum;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
@@ -19,6 +20,8 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Throwable;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 #[Title('Profil Pendonor')]
@@ -93,16 +96,13 @@ class Profil extends Component
                 $emailBerubah
             ): void {
                 $payloadUser = [
-                    'name' =>
-                        trim($data['name']),
+                    'name' => trim($data['name']),
 
-                    'email' =>
-                        $emailBaru,
+                    'email' => $emailBaru,
 
-                    'nomor_telepon' =>
-                        trim(
-                            $data['nomor_telepon']
-                        ),
+                    'nomor_telepon' => trim(
+                        $data['nomor_telepon']
+                    ),
                 ];
 
                 if ($emailBerubah) {
@@ -120,8 +120,7 @@ class Profil extends Component
                 $profil =
                     ProfilPendonor::query()
                         ->firstOrNew([
-                            'pengguna_id' =>
-                                $user->id,
+                            'pengguna_id' => $user->id,
                         ]);
 
                 if (
@@ -134,61 +133,49 @@ class Profil extends Component
                 }
 
                 $profil->fill([
-                    'tanggal_lahir' =>
-                        $data['tanggal_lahir'],
+                    'tanggal_lahir' => $data['tanggal_lahir'],
 
-                    'jenis_kelamin' =>
-                        $data['jenis_kelamin'],
+                    'jenis_kelamin' => $data['jenis_kelamin'],
 
-                    'golongan_darah' =>
-                        $data['golongan_darah'],
+                    'golongan_darah' => $data['golongan_darah'],
 
-                    'rhesus' =>
-                        $data['rhesus'],
+                    'rhesus' => $data['rhesus'],
 
-                    'alamat' =>
-                        trim($data['alamat']),
+                    'alamat' => trim($data['alamat']),
 
-                    'provinsi' =>
-                        trim($data['provinsi']),
+                    'provinsi' => trim($data['provinsi']),
 
-                    'kota' =>
-                        trim($data['kota']),
+                    'kota' => trim($data['kota']),
 
-                    'kecamatan' =>
-                        filled(
-                            $data['kecamatan']
-                        )
+                    'kecamatan' => filled(
+                        $data['kecamatan']
+                    )
                             ? trim(
                                 $data['kecamatan']
                             )
                             : null,
 
-                    'kode_pos' =>
-                        filled(
-                            $data['kode_pos']
-                        )
+                    'kode_pos' => filled(
+                        $data['kode_pos']
+                    )
                             ? trim(
                                 $data['kode_pos']
                             )
                             : null,
 
-                    'nama_kontak_darurat' =>
-                        trim(
-                            $data[
-                                'nama_kontak_darurat'
-                            ]
-                        ),
+                    'nama_kontak_darurat' => trim(
+                        $data[
+                            'nama_kontak_darurat'
+                        ]
+                    ),
 
-                    'telepon_kontak_darurat' =>
-                        trim(
-                            $data[
-                                'telepon_kontak_darurat'
-                            ]
-                        ),
+                    'telepon_kontak_darurat' => trim(
+                        $data[
+                            'telepon_kontak_darurat'
+                        ]
+                    ),
 
-                    'bersedia_dihubungi' =>
-                        (bool) $data[
+                    'bersedia_dihubungi' => (bool) $data[
                             'bersedia_dihubungi'
                         ],
                 ]);
@@ -205,7 +192,7 @@ class Profil extends Component
             try {
                 $user
                     ->sendEmailVerificationNotification();
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 report($exception);
 
                 session()->flash(
@@ -244,17 +231,13 @@ class Profil extends Component
         return view(
             'livewire.donor.profil',
             [
-                'profilPendonor' =>
-                    $this->profilPendonor(),
+                'profilPendonor' => $this->profilPendonor(),
 
-                'kelengkapan' =>
-                    $this->kelengkapanProfil(),
+                'kelengkapan' => $this->kelengkapanProfil(),
 
-                'ringkasan' =>
-                    $this->ringkasanProfil(),
+                'ringkasan' => $this->ringkasanProfil(),
 
-                'pengguna' =>
-                    $this->penggunaSaatIni(),
+                'pengguna' => $this->penggunaSaatIni(),
             ]
         );
     }
@@ -382,86 +365,59 @@ class Profil extends Component
     private function pesanValidasi(): array
     {
         return [
-            'name.required' =>
-                'Nama lengkap wajib diisi.',
+            'name.required' => 'Nama lengkap wajib diisi.',
 
-            'name.min' =>
-                'Nama lengkap minimal 3 karakter.',
+            'name.min' => 'Nama lengkap minimal 3 karakter.',
 
-            'email.required' =>
-                'Alamat email wajib diisi.',
+            'email.required' => 'Alamat email wajib diisi.',
 
-            'email.email' =>
-                'Alamat email tidak valid.',
+            'email.email' => 'Alamat email tidak valid.',
 
-            'email.unique' =>
-                'Alamat email sudah digunakan akun lain.',
+            'email.unique' => 'Alamat email sudah digunakan akun lain.',
 
-            'nomor_telepon.required' =>
-                'Nomor telepon wajib diisi.',
+            'nomor_telepon.required' => 'Nomor telepon wajib diisi.',
 
-            'nomor_telepon.min' =>
-                'Nomor telepon minimal 9 karakter.',
+            'nomor_telepon.min' => 'Nomor telepon minimal 9 karakter.',
 
-            'nomor_telepon.regex' =>
-                'Format nomor telepon tidak valid.',
+            'nomor_telepon.regex' => 'Format nomor telepon tidak valid.',
 
-            'tanggal_lahir.required' =>
-                'Tanggal lahir wajib diisi.',
+            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
 
-            'tanggal_lahir.date_format' =>
-                'Format tanggal lahir tidak valid.',
+            'tanggal_lahir.date_format' => 'Format tanggal lahir tidak valid.',
 
-            'tanggal_lahir.after_or_equal' =>
-                'Tanggal lahir tidak valid.',
+            'tanggal_lahir.after_or_equal' => 'Tanggal lahir tidak valid.',
 
-            'tanggal_lahir.before_or_equal' =>
-                'Pendonor minimal berusia 17 tahun.',
+            'tanggal_lahir.before_or_equal' => 'Pendonor minimal berusia 17 tahun.',
 
-            'jenis_kelamin.required' =>
-                'Jenis kelamin wajib dipilih.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
 
-            'jenis_kelamin.enum' =>
-                'Jenis kelamin tidak valid.',
+            'jenis_kelamin.enum' => 'Jenis kelamin tidak valid.',
 
-            'golongan_darah.required' =>
-                'Golongan darah wajib dipilih.',
+            'golongan_darah.required' => 'Golongan darah wajib dipilih.',
 
-            'golongan_darah.enum' =>
-                'Golongan darah tidak valid.',
+            'golongan_darah.enum' => 'Golongan darah tidak valid.',
 
-            'rhesus.required' =>
-                'Rhesus darah wajib dipilih.',
+            'rhesus.required' => 'Rhesus darah wajib dipilih.',
 
-            'rhesus.enum' =>
-                'Rhesus darah tidak valid.',
+            'rhesus.enum' => 'Rhesus darah tidak valid.',
 
-            'alamat.required' =>
-                'Alamat wajib diisi.',
+            'alamat.required' => 'Alamat wajib diisi.',
 
-            'alamat.min' =>
-                'Alamat minimal 10 karakter.',
+            'alamat.min' => 'Alamat minimal 10 karakter.',
 
-            'provinsi.required' =>
-                'Provinsi wajib diisi.',
+            'provinsi.required' => 'Provinsi wajib diisi.',
 
-            'kota.required' =>
-                'Kota atau kabupaten wajib diisi.',
+            'kota.required' => 'Kota atau kabupaten wajib diisi.',
 
-            'kode_pos.regex' =>
-                'Kode pos hanya boleh berisi 5 sampai 10 angka.',
+            'kode_pos.regex' => 'Kode pos hanya boleh berisi 5 sampai 10 angka.',
 
-            'nama_kontak_darurat.required' =>
-                'Nama kontak darurat wajib diisi.',
+            'nama_kontak_darurat.required' => 'Nama kontak darurat wajib diisi.',
 
-            'nama_kontak_darurat.min' =>
-                'Nama kontak darurat minimal 3 karakter.',
+            'nama_kontak_darurat.min' => 'Nama kontak darurat minimal 3 karakter.',
 
-            'telepon_kontak_darurat.required' =>
-                'Nomor kontak darurat wajib diisi.',
+            'telepon_kontak_darurat.required' => 'Nomor kontak darurat wajib diisi.',
 
-            'telepon_kontak_darurat.regex' =>
-                'Format nomor kontak darurat tidak valid.',
+            'telepon_kontak_darurat.regex' => 'Format nomor kontak darurat tidak valid.',
         ];
     }
 
@@ -480,11 +436,9 @@ class Profil extends Component
                 fn (
                     JenisKelamin $case
                 ): array => [
-                    'value' =>
-                        $case->value,
+                    'value' => $case->value,
 
-                    'label' =>
-                        $case->label(),
+                    'label' => $case->label(),
                 ]
             )
             ->values()
@@ -506,11 +460,9 @@ class Profil extends Component
                 fn (
                     GolonganDarah $case
                 ): array => [
-                    'value' =>
-                        $case->value,
+                    'value' => $case->value,
 
-                    'label' =>
-                        $case->label(),
+                    'label' => $case->label(),
                 ]
             )
             ->values()
@@ -532,11 +484,9 @@ class Profil extends Component
                 fn (
                     RhesusDarah $case
                 ): array => [
-                    'value' =>
-                        $case->value,
+                    'value' => $case->value,
 
-                    'label' =>
-                        $case->label(),
+                    'label' => $case->label(),
                 ]
             )
             ->values()
@@ -555,11 +505,9 @@ class Profil extends Component
         $rhesus = match (
             $this->rhesus
         ) {
-            RhesusDarah::Positif->value =>
-                '+',
+            RhesusDarah::Positif->value => '+',
 
-            RhesusDarah::Negatif->value =>
-                '-',
+            RhesusDarah::Negatif->value => '-',
 
             default => '',
         };
@@ -574,13 +522,11 @@ class Profil extends Component
         return match (
             $this->rhesus
         ) {
-            RhesusDarah::Positif->value =>
-                RhesusDarah::Positif
-                    ->label(),
+            RhesusDarah::Positif->value => RhesusDarah::Positif
+                ->label(),
 
-            RhesusDarah::Negatif->value =>
-                RhesusDarah::Negatif
-                    ->label(),
+            RhesusDarah::Negatif->value => RhesusDarah::Negatif
+                ->label(),
 
             default => '-',
         };
@@ -591,13 +537,11 @@ class Profil extends Component
         return match (
             $this->jenis_kelamin
         ) {
-            JenisKelamin::LakiLaki->value =>
-                JenisKelamin::LakiLaki
-                    ->label(),
+            JenisKelamin::LakiLaki->value => JenisKelamin::LakiLaki
+                ->label(),
 
-            JenisKelamin::Perempuan->value =>
-                JenisKelamin::Perempuan
-                    ->label(),
+            JenisKelamin::Perempuan->value => JenisKelamin::Perempuan
+                ->label(),
 
             default => '-',
         };
@@ -613,7 +557,7 @@ class Profil extends Component
             return Carbon::parse(
                 $this->tanggal_lahir
             )->age . ' tahun';
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '-';
         }
     }
@@ -630,7 +574,7 @@ class Profil extends Component
             )->translatedFormat(
                 'd F Y'
             );
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '-';
         }
     }
@@ -659,45 +603,33 @@ class Profil extends Component
     public function kelengkapanProfil(): array
     {
         $items = [
-            'Nama Lengkap' =>
-                filled($this->name),
+            'Nama Lengkap' => filled($this->name),
 
-            'Alamat Email' =>
-                filled($this->email),
+            'Alamat Email' => filled($this->email),
 
-            'Nomor Telepon' =>
-                filled($this->nomor_telepon),
+            'Nomor Telepon' => filled($this->nomor_telepon),
 
-            'Tanggal Lahir' =>
-                filled($this->tanggal_lahir),
+            'Tanggal Lahir' => filled($this->tanggal_lahir),
 
-            'Jenis Kelamin' =>
-                filled($this->jenis_kelamin),
+            'Jenis Kelamin' => filled($this->jenis_kelamin),
 
-            'Golongan Darah' =>
-                filled($this->golongan_darah),
+            'Golongan Darah' => filled($this->golongan_darah),
 
-            'Rhesus' =>
-                filled($this->rhesus),
+            'Rhesus' => filled($this->rhesus),
 
-            'Alamat' =>
-                filled($this->alamat),
+            'Alamat' => filled($this->alamat),
 
-            'Provinsi' =>
-                filled($this->provinsi),
+            'Provinsi' => filled($this->provinsi),
 
-            'Kota/Kabupaten' =>
-                filled($this->kota),
+            'Kota/Kabupaten' => filled($this->kota),
 
-            'Nama Kontak Darurat' =>
-                filled(
-                    $this->nama_kontak_darurat
-                ),
+            'Nama Kontak Darurat' => filled(
+                $this->nama_kontak_darurat
+            ),
 
-            'Telepon Kontak Darurat' =>
-                filled(
-                    $this->telepon_kontak_darurat
-                ),
+            'Telepon Kontak Darurat' => filled(
+                $this->telepon_kontak_darurat
+            ),
         ];
 
         $total = count($items);
@@ -717,18 +649,15 @@ class Profil extends Component
 
             'terisi' => $terisi,
 
-            'persentase' =>
-                $persentase,
+            'persentase' => $persentase,
 
-            'lengkap' =>
-                $persentase === 100,
+            'lengkap' => $persentase === 100,
 
-            'belum_lengkap' =>
-                collect($items)
-                    ->reject()
-                    ->keys()
-                    ->values()
-                    ->all(),
+            'belum_lengkap' => collect($items)
+                ->reject()
+                ->keys()
+                ->values()
+                ->all(),
         ];
     }
 
@@ -748,35 +677,28 @@ class Profil extends Component
                 );
 
         return [
-            'kode_pendonor' =>
-                (string) (
-                    $profil?->kode_pendonor
-                    ?? '-'
-                ),
+            'kode_pendonor' => (string) (
+                $profil?->kode_pendonor
+                ?? '-'
+            ),
 
-            'total_pendaftaran' =>
-                (clone $queryPendaftaran)
-                    ->count(),
+            'total_pendaftaran' => (clone $queryPendaftaran)
+                ->count(),
 
-            'donor_selesai' =>
-                (clone $queryPendaftaran)
-                    ->where(
-                        'status',
-                        StatusPendaftaranDonor
-                            ::Selesai
-                            ->value
-                    )
-                    ->count(),
+            'donor_selesai' => (clone $queryPendaftaran)
+                ->where(
+                    'status',
+                    StatusPendaftaranDonor::Selesai
+                        ->value
+                )
+                ->count(),
 
-            'golongan_rhesus' =>
-                $this
-                    ->golonganRhesusTampilan(),
+            'golongan_rhesus' => $this
+                ->golonganRhesusTampilan(),
 
-            'umur' =>
-                $this->umurPendonor(),
+            'umur' => $this->umurPendonor(),
 
-            'terakhir_donor' =>
-                $profil?->terakhir_donor_pada
+            'terakhir_donor' => $profil?->terakhir_donor_pada
                     instanceof CarbonInterface
                         ? $profil
                             ->terakhir_donor_pada
@@ -930,11 +852,11 @@ class Profil extends Component
     private function nilaiDariEnum(
         mixed $value
     ): string {
-        if ($value instanceof \BackedEnum) {
+        if ($value instanceof BackedEnum) {
             return (string) $value->value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return (string) $value->name;
         }
 
@@ -964,7 +886,7 @@ class Profil extends Component
             return Carbon::parse(
                 $value
             )->format('Y-m-d');
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '';
         }
     }

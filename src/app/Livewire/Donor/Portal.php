@@ -9,10 +9,11 @@ use App\Enums\StatusPendaftaranDonor;
 use App\Models\JadwalDonor;
 use App\Models\KantongDarah;
 use App\Models\LokasiDonor;
-use App\Models\PendaftaranDonor;
 use App\Models\PemeriksaanKesehatan;
+use App\Models\PendaftaranDonor;
 use App\Models\ProfilPendonor;
 use App\Models\User;
+use BackedEnum;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
@@ -28,6 +29,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 #[Title('Beranda')]
@@ -56,19 +58,15 @@ class Portal extends Component
                 $pendaftaranTerakhir
             ),
 
-            'pendaftaranTerakhir' =>
-                $pendaftaranTerakhir,
+            'pendaftaranTerakhir' => $pendaftaranTerakhir,
 
-            'tahapanPendaftaran' =>
-                $this->tahapanPendaftaran(
-                    $pendaftaranTerakhir
-                ),
+            'tahapanPendaftaran' => $this->tahapanPendaftaran(
+                $pendaftaranTerakhir
+            ),
 
-            'jadwalBerikutnya' =>
-                $jadwalTerdekat->first(),
+            'jadwalBerikutnya' => $jadwalTerdekat->first(),
 
-            'aktivitasTerbaru' =>
-                $riwayatTerbaru,
+            'aktivitasTerbaru' => $riwayatTerbaru,
 
             /*
              * Data kompatibilitas untuk Blade lama.
@@ -224,57 +222,47 @@ class Portal extends Component
                 ?? '-'
             ),
 
-            'golongan_rhesus' =>
-                $this->golonganRhesusProfil(
-                    $profil
-                ),
+            'golongan_rhesus' => $this->golonganRhesusProfil(
+                $profil
+            ),
 
-            'profil_lengkap' =>
-                $this->persentaseProfil(
-                    $user,
-                    $profil
-                ),
+            'profil_lengkap' => $this->persentaseProfil(
+                $user,
+                $profil
+            ),
 
-            'total_pendaftaran' =>
-                (clone $queryPendaftaran)
-                    ->count(),
+            'total_pendaftaran' => (clone $queryPendaftaran)
+                ->count(),
 
-            'pendaftaran_proses' =>
-                $jumlahProses,
+            'pendaftaran_proses' => $jumlahProses,
 
-            'donor_selesai' =>
-                $jumlahSelesai,
+            'donor_selesai' => $jumlahSelesai,
 
-            'tanggal_donor_terakhir' =>
-                $tanggalDonorTerakhir,
+            'tanggal_donor_terakhir' => $tanggalDonorTerakhir,
 
-            'donor_terakhir_label' =>
-                $tanggalDonorTerakhir
+            'donor_terakhir_label' => $tanggalDonorTerakhir
                     ? $tanggalDonorTerakhir
                         ->translatedFormat(
                             'd F Y'
                         )
                     : 'Belum ada',
 
-            'stok_tersedia' =>
-                KantongDarah::query()
-                    ->where(
-                        'status',
-                        $this->statusKantongTersedia()
-                    )
-                    ->where(
-                        'status_mutu',
-                        $this->statusMutuLulus()
-                    )
-                    ->count(),
+            'stok_tersedia' => KantongDarah::query()
+                ->where(
+                    'status',
+                    $this->statusKantongTersedia()
+                )
+                ->where(
+                    'status_mutu',
+                    $this->statusMutuLulus()
+                )
+                ->count(),
 
-            'jadwal_aktif' =>
-                $this->queryJadwalAktif()
-                    ->count(),
+            'jadwal_aktif' => $this->queryJadwalAktif()
+                ->count(),
 
-            'lokasi_aktif' =>
-                $this->queryLokasiAktif()
-                    ->count(),
+            'lokasi_aktif' => $this->queryLokasiAktif()
+                ->count(),
         ];
     }
 
@@ -299,18 +287,14 @@ class Portal extends Component
                 StatusKelayakanDonor::Layak->value
             ) {
                 return [
-                    'status' =>
-                        StatusKelayakanDonor::Layak
-                            ->label(),
+                    'status' => StatusKelayakanDonor::Layak
+                        ->label(),
 
-                    'tone' =>
-                        'success',
+                    'tone' => 'success',
 
-                    'judul' =>
-                        'Layak untuk donor',
+                    'judul' => 'Layak untuk donor',
 
-                    'deskripsi' =>
-                        $tanggal
+                    'deskripsi' => $tanggal
                             ? 'Berdasarkan pemeriksaan kesehatan pada '
                                 . $tanggal->translatedFormat(
                                     'd F Y'
@@ -318,11 +302,9 @@ class Portal extends Component
                                 . '.'
                             : 'Berdasarkan hasil pemeriksaan kesehatan terakhir.',
 
-                    'alasan' =>
-                        '',
+                    'alasan' => '',
 
-                    'tanggal' =>
-                        $tanggal
+                    'tanggal' => $tanggal
                             ? $tanggal->translatedFormat(
                                 'd F Y, H:i'
                             )
@@ -335,33 +317,27 @@ class Portal extends Component
                 StatusKelayakanDonor::TidakLayak->value
             ) {
                 return [
-                    'status' =>
-                        StatusKelayakanDonor::TidakLayak
-                            ->label(),
+                    'status' => StatusKelayakanDonor::TidakLayak
+                        ->label(),
 
-                    'tone' =>
-                        'danger',
+                    'tone' => 'danger',
 
-                    'judul' =>
-                        'Belum dapat donor',
+                    'judul' => 'Belum dapat donor',
 
-                    'deskripsi' =>
-                        filled(
-                            $pemeriksaan->alasan_tidak_layak
-                        )
+                    'deskripsi' => filled(
+                        $pemeriksaan->alasan_tidak_layak
+                    )
                             ? (string) $pemeriksaan
                                 ->alasan_tidak_layak
                             : 'Silakan mengikuti arahan petugas kesehatan sebelum mendaftar kembali.',
 
-                    'alasan' =>
-                        (string) (
-                            $pemeriksaan
-                                ->alasan_tidak_layak
-                            ?? ''
-                        ),
+                    'alasan' => (string) (
+                        $pemeriksaan
+                            ->alasan_tidak_layak
+                        ?? ''
+                    ),
 
-                    'tanggal' =>
-                        $tanggal
+                    'tanggal' => $tanggal
                             ? $tanggal->translatedFormat(
                                 'd F Y, H:i'
                             )
@@ -393,47 +369,35 @@ class Portal extends Component
                 )
             ) {
                 return [
-                    'status' =>
-                        'Menunggu Pemeriksaan',
+                    'status' => 'Menunggu Pemeriksaan',
 
-                    'tone' =>
-                        'warning',
+                    'tone' => 'warning',
 
-                    'judul' =>
-                        'Proses donor sedang berjalan',
+                    'judul' => 'Proses donor sedang berjalan',
 
-                    'deskripsi' =>
-                        'Selesaikan tahapan pendaftaran dan pemeriksaan kesehatan pada jadwal yang dipilih.',
+                    'deskripsi' => 'Selesaikan tahapan pendaftaran dan pemeriksaan kesehatan pada jadwal yang dipilih.',
 
-                    'alasan' =>
-                        '',
+                    'alasan' => '',
 
-                    'tanggal' =>
-                        $this->tanggalPendaftaran(
-                            $pendaftaran
-                        ),
+                    'tanggal' => $this->tanggalPendaftaran(
+                        $pendaftaran
+                    ),
                 ];
             }
         }
 
         return [
-            'status' =>
-                'Belum Diperiksa',
+            'status' => 'Belum Diperiksa',
 
-            'tone' =>
-                'neutral',
+            'tone' => 'neutral',
 
-            'judul' =>
-                'Belum ada hasil kelayakan',
+            'judul' => 'Belum ada hasil kelayakan',
 
-            'deskripsi' =>
-                'Status kelayakan ditentukan oleh petugas melalui pemeriksaan kesehatan pada hari donor.',
+            'deskripsi' => 'Status kelayakan ditentukan oleh petugas melalui pemeriksaan kesehatan pada hari donor.',
 
-            'alasan' =>
-                '',
+            'alasan' => '',
 
-            'tanggal' =>
-                '-',
+            'tanggal' => '-',
         ];
     }
 
@@ -452,33 +416,24 @@ class Portal extends Component
         );
 
         $posisi = match ($status) {
-            StatusPendaftaranDonor::Menunggu->value =>
-                1,
+            StatusPendaftaranDonor::Menunggu->value => 1,
 
-            StatusPendaftaranDonor::Disetujui->value =>
-                2,
+            StatusPendaftaranDonor::Disetujui->value => 2,
 
-            StatusPendaftaranDonor::Hadir->value =>
-                3,
+            StatusPendaftaranDonor::Hadir->value => 3,
 
-            StatusPendaftaranDonor::Layak->value =>
-                4,
+            StatusPendaftaranDonor::Layak->value => 4,
 
-            StatusPendaftaranDonor::Selesai->value =>
-                5,
+            StatusPendaftaranDonor::Selesai->value => 5,
 
-            StatusPendaftaranDonor::TidakLayak->value =>
-                3,
+            StatusPendaftaranDonor::TidakLayak->value => 3,
 
             StatusPendaftaranDonor::Ditolak->value,
-            StatusPendaftaranDonor::Dibatalkan->value =>
-                1,
+            StatusPendaftaranDonor::Dibatalkan->value => 1,
 
-            StatusPendaftaranDonor::TidakHadir->value =>
-                2,
+            StatusPendaftaranDonor::TidakHadir->value => 2,
 
-            default =>
-                0,
+            default => 0,
         };
 
         $gagal = in_array(
@@ -595,13 +550,12 @@ class Portal extends Component
         ) {
             $positif = $rows
                 ->filter(
-                    fn (KantongDarah $row): bool =>
-                        $this->normalisasiGolongan(
-                            $this->atribut(
-                                $row,
-                                'golongan_darah'
-                            )
-                        ) === $golongan
+                    fn (KantongDarah $row): bool => $this->normalisasiGolongan(
+                        $this->atribut(
+                            $row,
+                            'golongan_darah'
+                        )
+                    ) === $golongan
                         && $this->normalisasiRhesus(
                             $this->atribut(
                                 $row,
@@ -613,13 +567,12 @@ class Portal extends Component
 
             $negatif = $rows
                 ->filter(
-                    fn (KantongDarah $row): bool =>
-                        $this->normalisasiGolongan(
-                            $this->atribut(
-                                $row,
-                                'golongan_darah'
-                            )
-                        ) === $golongan
+                    fn (KantongDarah $row): bool => $this->normalisasiGolongan(
+                        $this->atribut(
+                            $row,
+                            'golongan_darah'
+                        )
+                    ) === $golongan
                         && $this->normalisasiRhesus(
                             $this->atribut(
                                 $row,
@@ -638,14 +591,12 @@ class Portal extends Component
                 'positif' => (int) $positif,
                 'negatif' => (int) $negatif,
                 'total' => $total,
-                'status' =>
-                    $this->labelStatusStok(
-                        $total
-                    ),
-                'class' =>
-                    $this->classStatusStok(
-                        $total
-                    ),
+                'status' => $this->labelStatusStok(
+                    $total
+                ),
+                'class' => $this->classStatusStok(
+                    $total
+                ),
             ];
         }
 
@@ -963,8 +914,7 @@ class Portal extends Component
             $this->wilayahLokasi($lokasi),
         ])
             ->filter(
-                fn (string $value): bool =>
-                    $value !== '-'
+                fn (string $value): bool => $value !== '-'
             )
             ->implode(', ');
 
@@ -1033,52 +983,42 @@ class Portal extends Component
 
         return match ($value) {
             StatusPendaftaranDonor::Menunggu
-                ->value =>
-                StatusPendaftaranDonor::Menunggu
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Menunggu
+                ->label(),
 
             StatusPendaftaranDonor::Disetujui
-                ->value =>
-                StatusPendaftaranDonor::Disetujui
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Disetujui
+                ->label(),
 
             StatusPendaftaranDonor::Ditolak
-                ->value =>
-                StatusPendaftaranDonor::Ditolak
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Ditolak
+                ->label(),
 
             StatusPendaftaranDonor::Hadir
-                ->value =>
-                StatusPendaftaranDonor::Hadir
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Hadir
+                ->label(),
 
             StatusPendaftaranDonor::Layak
-                ->value =>
-                StatusPendaftaranDonor::Layak
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Layak
+                ->label(),
 
             StatusPendaftaranDonor::TidakLayak
-                ->value =>
-                StatusPendaftaranDonor::TidakLayak
-                    ->label(),
+                ->value => StatusPendaftaranDonor::TidakLayak
+                ->label(),
 
             StatusPendaftaranDonor::Selesai
-                ->value =>
-                StatusPendaftaranDonor::Selesai
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Selesai
+                ->label(),
 
             StatusPendaftaranDonor::Dibatalkan
-                ->value =>
-                StatusPendaftaranDonor::Dibatalkan
-                    ->label(),
+                ->value => StatusPendaftaranDonor::Dibatalkan
+                ->label(),
 
             StatusPendaftaranDonor::TidakHadir
-                ->value =>
-                StatusPendaftaranDonor::TidakHadir
-                    ->label(),
+                ->value => StatusPendaftaranDonor::TidakHadir
+                ->label(),
 
-            default =>
-                $value !== ''
+            default => $value !== ''
                     ? Str::headline($value)
                     : '-',
         };
@@ -1102,8 +1042,7 @@ class Portal extends Component
                 ->value,
 
             StatusPendaftaranDonor::Disetujui
-                ->value =>
-                'is-success',
+                ->value => 'is-success',
 
             StatusPendaftaranDonor::Ditolak
                 ->value,
@@ -1115,11 +1054,9 @@ class Portal extends Component
                 ->value,
 
             StatusPendaftaranDonor::TidakHadir
-                ->value =>
-                'is-danger',
+                ->value => 'is-danger',
 
-            default =>
-                'is-warning',
+            default => 'is-warning',
         };
     }
 
@@ -1141,8 +1078,7 @@ class Portal extends Component
                 ->value,
 
             StatusPendaftaranDonor::Disetujui
-                ->value =>
-                'success',
+                ->value => 'success',
 
             StatusPendaftaranDonor::Ditolak
                 ->value,
@@ -1154,11 +1090,9 @@ class Portal extends Component
                 ->value,
 
             StatusPendaftaranDonor::TidakHadir
-                ->value =>
-                'danger',
+                ->value => 'danger',
 
-            default =>
-                'warning',
+            default => 'warning',
         };
     }
 
@@ -1274,14 +1208,11 @@ class Portal extends Component
                 )
             )
         ) {
-            'positive' =>
-                '+',
+            'positive' => '+',
 
-            'negative' =>
-                '-',
+            'negative' => '-',
 
-            default =>
-                '',
+            default => '',
         };
 
         if (blank($golongan)) {
@@ -1325,14 +1256,13 @@ class Portal extends Component
             ->filter()
             ->take(2)
             ->map(
-                fn (string $part): string =>
-                    mb_strtoupper(
-                        mb_substr(
-                            $part,
-                            0,
-                            1
-                        )
+                fn (string $part): string => mb_strtoupper(
+                    mb_substr(
+                        $part,
+                        0,
+                        1
                     )
+                )
             )
             ->implode('');
     }
@@ -1414,30 +1344,27 @@ class Portal extends Component
             'positif',
             'positive',
             'rh+',
-            'rhesus_positive' =>
-                'positive',
+            'rhesus_positive' => 'positive',
 
             '-',
             'minus',
             'negatif',
             'negative',
             'rh-',
-            'rhesus_negative' =>
-                'negative',
+            'rhesus_negative' => 'negative',
 
-            default =>
-                $value,
+            default => $value,
         };
     }
 
     private function nilaiDariEnum(
         mixed $value
     ): string {
-        if ($value instanceof \BackedEnum) {
+        if ($value instanceof BackedEnum) {
             return (string) $value->value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return (string) $value->name;
         }
 
@@ -1491,7 +1418,7 @@ class Portal extends Component
         string $kolom
     ): bool {
         return Schema::hasColumn(
-            (new JadwalDonor())->getTable(),
+            (new JadwalDonor)->getTable(),
             $kolom
         );
     }
@@ -1500,7 +1427,7 @@ class Portal extends Component
         string $kolom
     ): bool {
         return Schema::hasColumn(
-            (new LokasiDonor())->getTable(),
+            (new LokasiDonor)->getTable(),
             $kolom
         );
     }

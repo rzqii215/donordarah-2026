@@ -17,11 +17,29 @@ use Livewire\Component;
 #[Layout('components.layouts.auth')]
 class Login extends Component
 {
+    public string $portal = 'umum';
+
     public string $email = '';
 
     public string $password = '';
 
     public bool $remember = false;
+
+    public function mount(
+        string $portal = 'umum'
+    ): void {
+        $this->portal = in_array(
+            $portal,
+            [
+                'umum',
+                'donor',
+                'pemohon',
+            ],
+            true
+        )
+            ? $portal
+            : 'umum';
+    }
 
     public function authenticate(): mixed
     {
@@ -69,7 +87,9 @@ class Login extends Component
             $this->keluarkanPengguna();
 
             return redirect()
-                ->route('login')
+                ->route(
+                    $this->namaRouteLogin()
+                )
                 ->with(
                     'error',
                     'Sesi login tidak valid. Silakan masuk kembali.'
@@ -88,17 +108,44 @@ class Login extends Component
             $this->keluarkanPengguna();
 
             return redirect()
-                ->route('login')
+                ->route(
+                    $this->namaRouteLogin()
+                )
                 ->with(
                     'error',
                     $pesan
                 );
         }
 
-        /*
-         * Menggunakan session helper agar session regeneration
-         * tetap bekerja pada request HTTP dan pengujian Livewire.
-         */
+        $redirectPath = $this->redirectPathByRole(
+            $user
+        );
+
+        if (
+            ! $this->penggunaSesuaiPortal(
+                $redirectPath
+            )
+        ) {
+            $pesan = match ($this->portal) {
+                'pemohon' => 'Akun tersebut bukan akun pemohon donor. Gunakan halaman masuk pendonor jika Anda terdaftar sebagai pendonor.',
+
+                'donor' => 'Akun tersebut bukan akun pendonor. Gunakan halaman masuk pemohon jika Anda terdaftar sebagai pemohon donor.',
+
+                default => 'Akun tersebut tidak memiliki akses ke portal pengguna.',
+            };
+
+            $this->keluarkanPengguna();
+
+            return redirect()
+                ->route(
+                    $this->namaRouteLogin()
+                )
+                ->with(
+                    'error',
+                    $pesan
+                );
+        }
+
         session()->regenerate();
 
         if (! $user->hasVerifiedEmail()) {
@@ -106,30 +153,19 @@ class Login extends Component
                 ->route('verification.notice');
         }
 
-        $redirectPath = $this->redirectPathByRole(
-            $user
+        return redirect()->to(
+            $redirectPath
         );
-
-        if ($redirectPath === '/login') {
-            $this->keluarkanPengguna();
-
-            return redirect()
-                ->route('login')
-                ->with(
-                    'error',
-                    'Akun tidak memiliki akses ke portal.'
-                );
-        }
-
-        return redirect()
-            ->intended(
-                $redirectPath
-            );
     }
 
     public function render(): View
     {
-        return view('livewire.auth.login');
+        return view(
+            'livewire.auth.login',
+            [
+                'konfigurasiPortal' => $this->konfigurasiPortal(),
+            ]
+        );
     }
 
     private function pastikanTidakTerlaluBanyakPercobaan(): void
@@ -154,9 +190,15 @@ class Login extends Component
 
     private function throttleKey(): string
     {
-        return Str::lower(
-            trim($this->email)
-        ) . '|' . request()->ip();
+        return implode('|', [
+            $this->portal,
+
+            Str::lower(
+                trim($this->email)
+            ),
+
+            (string) request()->ip(),
+        ]);
     }
 
     private function statusPenggunaAktif(
@@ -208,12 +250,109 @@ class Login extends Component
     {
         Auth::guard('web')->logout();
 
-        /*
-         * session() mengembalikan store yang sama dengan guard web,
-         * tetapi tidak bergantung pada session yang terpasang di Request.
-         */
         session()->invalidate();
         session()->regenerateToken();
+    }
+
+    private function penggunaSesuaiPortal(
+        string $redirectPath
+    ): bool {
+        return match ($this->portal) {
+            'donor' => $redirectPath === '/donor',
+
+            'pemohon' => $redirectPath === '/pemohon-donor',
+
+            /*
+             * Mode umum digunakan oleh /login dan
+             * pengujian autentikasi lama.
+             */
+            default => in_array(
+                $redirectPath,
+                [
+                    '/donor',
+                    '/pemohon-donor',
+                    '/admin',
+                ],
+                true
+            ),
+        };
+    }
+
+    private function namaRouteLogin(): string
+    {
+        return match ($this->portal) {
+            'donor' => 'login.donor',
+
+            'pemohon' => 'login.pemohon',
+
+            default => 'login',
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function konfigurasiPortal(): array
+    {
+        if ($this->portal === 'pemohon') {
+            return [
+                'kicker' => 'Portal Pemohon Donor',
+
+                'judul' => 'Masuk sebagai pemohon',
+
+                'deskripsi' => 'Kelola pengajuan kebutuhan darah, distribusi, dan profil instansi melalui akun pemohon donor.',
+
+                'teks_tombol' => 'Masuk ke Portal Pemohon',
+
+                'register_url' => route(
+                    'register.pemohon-donor'
+                ),
+
+                'register_label' => 'Daftar sebagai Pemohon',
+
+                'portal_lain_url' => route('login.donor'),
+
+                'portal_lain_label' => 'Masuk sebagai Pendonor',
+            ];
+        }
+
+        if ($this->portal === 'donor') {
+            return [
+                'kicker' => 'Portal Pendonor',
+
+                'judul' => 'Masuk sebagai pendonor',
+
+                'deskripsi' => 'Kelola jadwal, pendaftaran, profil, dan riwayat donor melalui akun pendonor.',
+
+                'teks_tombol' => 'Masuk ke Portal Pendonor',
+
+                'register_url' => route('register.donor'),
+
+                'register_label' => 'Daftar sebagai Pendonor',
+
+                'portal_lain_url' => route('login.pemohon'),
+
+                'portal_lain_label' => 'Masuk sebagai Pemohon Donor',
+            ];
+        }
+
+        return [
+            'kicker' => 'Portal Donor Darah',
+
+            'judul' => 'Masuk ke akun Anda',
+
+            'deskripsi' => 'Masuk menggunakan akun yang telah terdaftar untuk mengakses layanan Donor Darah.',
+
+            'teks_tombol' => 'Masuk',
+
+            'register_url' => route('register.index'),
+
+            'register_label' => 'Buat Akun Baru',
+
+            'portal_lain_url' => route('login.pemohon'),
+
+            'portal_lain_label' => 'Masuk khusus sebagai Pemohon Donor',
+        ];
     }
 
     private function redirectPathByRole(

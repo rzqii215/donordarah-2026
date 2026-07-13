@@ -7,6 +7,7 @@ use App\Enums\RhesusDarah;
 use App\Enums\StatusKantongDarah;
 use App\Enums\StatusMutuKantongDarah;
 use App\Models\KantongDarah;
+use BackedEnum;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 class Stok extends Component
@@ -105,8 +107,7 @@ class Stok extends Component
             $seluruhStok
         )
             ->filter(
-                fn (array $stok): bool =>
-                    $stok['tersedia'] <= 2
+                fn (array $stok): bool => $stok['tersedia'] <= 2
             )
             ->sortBy('tersedia')
             ->values();
@@ -114,29 +115,21 @@ class Stok extends Component
         return view(
             'livewire.donor.stok',
             [
-                'ringkasan' =>
-                    $this->ringkasanStok(),
+                'ringkasan' => $this->ringkasanStok(),
 
-                'stokDarah' =>
-                    $stokDarah,
+                'stokDarah' => $stokDarah,
 
-                'peringatanStok' =>
-                    $peringatanStok,
+                'peringatanStok' => $peringatanStok,
 
-                'diperbaruiPada' =>
-                    $this->waktuPembaruanTerakhir(),
+                'diperbaruiPada' => $this->waktuPembaruanTerakhir(),
 
-                'pencarian' =>
-                    $this->pencarian,
+                'pencarian' => $this->pencarian,
 
-                'filterRhesus' =>
-                    $this->filterRhesus,
+                'filterRhesus' => $this->filterRhesus,
 
-                'hanyaTersedia' =>
-                    $this->hanyaTersedia,
+                'hanyaTersedia' => $this->hanyaTersedia,
 
-                'urutan' =>
-                    $this->urutan,
+                'urutan' => $this->urutan,
             ]
         );
     }
@@ -153,14 +146,12 @@ class Stok extends Component
         $dipesan = KantongDarah::query()
             ->where(
                 'status',
-                StatusKantongDarah
-                    ::Dipesan
+                StatusKantongDarah::Dipesan
                     ->value
             )
             ->where(
                 'status_mutu',
-                StatusMutuKantongDarah
-                    ::Lulus
+                StatusMutuKantongDarah::Lulus
                     ->value
             )
             ->where(
@@ -174,14 +165,12 @@ class Stok extends Component
             KantongDarah::query()
                 ->where(
                     'status',
-                    StatusKantongDarah
-                        ::Didistribusikan
+                    StatusKantongDarah::Didistribusikan
                         ->value
                 )
                 ->where(
                     'status_mutu',
-                    StatusMutuKantongDarah
-                        ::Lulus
+                    StatusMutuKantongDarah::Lulus
                         ->value
                 )
                 ->count();
@@ -189,8 +178,7 @@ class Stok extends Component
         $lulusMutu = KantongDarah::query()
             ->where(
                 'status_mutu',
-                StatusMutuKantongDarah
-                    ::Lulus
+                StatusMutuKantongDarah::Lulus
                     ->value
             )
             ->where(
@@ -200,8 +188,7 @@ class Stok extends Component
                     $query
                         ->where(
                             'status',
-                            StatusKantongDarah
-                                ::Didistribusikan
+                            StatusKantongDarah::Didistribusikan
                                 ->value
                         )
                         ->orWhere(
@@ -231,23 +218,17 @@ class Stok extends Component
                 ->sum('volume_ml');
 
         return [
-            'tersedia' =>
-                $tersedia,
+            'tersedia' => $tersedia,
 
-            'dipesan' =>
-                $dipesan,
+            'dipesan' => $dipesan,
 
-            'didistribusikan' =>
-                $didistribusikan,
+            'didistribusikan' => $didistribusikan,
 
-            'lulus_mutu' =>
-                $lulusMutu,
+            'lulus_mutu' => $lulusMutu,
 
-            'hampir_kedaluwarsa' =>
-                $hampirKedaluwarsa,
+            'hampir_kedaluwarsa' => $hampirKedaluwarsa,
 
-            'volume_tersedia_ml' =>
-                $volumeTersedia,
+            'volume_tersedia_ml' => $volumeTersedia,
         ];
     }
 
@@ -262,22 +243,18 @@ class Stok extends Component
         $hasil = [];
 
         foreach (
-            GolonganDarah::cases()
-            as $golongan
+            GolonganDarah::cases() as $golongan
         ) {
             foreach (
-                RhesusDarah::cases()
-                as $rhesus
+                RhesusDarah::cases() as $rhesus
             ) {
                 $tersedia =
                     $this->ambilTotal(
                         agregat: $agregat,
                         golongan: $golongan->value,
                         rhesus: $rhesus->value,
-                        status:
-                            StatusKantongDarah
-                                ::Tersedia
-                                ->value,
+                        status: StatusKantongDarah::Tersedia
+                            ->value,
                     );
 
                 $dipesan =
@@ -285,10 +262,8 @@ class Stok extends Component
                         agregat: $agregat,
                         golongan: $golongan->value,
                         rhesus: $rhesus->value,
-                        status:
-                            StatusKantongDarah
-                                ::Dipesan
-                                ->value,
+                        status: StatusKantongDarah::Dipesan
+                            ->value,
                     );
 
                 $didistribusikan =
@@ -296,10 +271,8 @@ class Stok extends Component
                         agregat: $agregat,
                         golongan: $golongan->value,
                         rhesus: $rhesus->value,
-                        status:
-                            StatusKantongDarah
-                                ::Didistribusikan
-                                ->value,
+                        status: StatusKantongDarah::Didistribusikan
+                            ->value,
                     );
 
                 $total =
@@ -308,48 +281,36 @@ class Stok extends Component
                     + $didistribusikan;
 
                 $hasil[] = [
-                    'kode' =>
-                        $golongan->value .
+                    'kode' => $golongan->value .
                         $rhesus->simbol(),
 
-                    'golongan' =>
-                        $golongan->value,
+                    'golongan' => $golongan->value,
 
-                    'rhesus' =>
-                        $rhesus->value,
+                    'rhesus' => $rhesus->value,
 
-                    'rhesus_label' =>
-                        $rhesus->label(),
+                    'rhesus_label' => $rhesus->label(),
 
-                    'rhesus_simbol' =>
-                        $rhesus->simbol(),
+                    'rhesus_simbol' => $rhesus->simbol(),
 
-                    'tersedia' =>
-                        $tersedia,
+                    'tersedia' => $tersedia,
 
-                    'dipesan' =>
-                        $dipesan,
+                    'dipesan' => $dipesan,
 
-                    'didistribusikan' =>
-                        $didistribusikan,
+                    'didistribusikan' => $didistribusikan,
 
-                    'total' =>
-                        $total,
+                    'total' => $total,
 
-                    'status_label' =>
-                        $this->labelKetersediaan(
-                            $tersedia
-                        ),
+                    'status_label' => $this->labelKetersediaan(
+                        $tersedia
+                    ),
 
-                    'status_class' =>
-                        $this->classKetersediaan(
-                            $tersedia
-                        ),
+                    'status_class' => $this->classKetersediaan(
+                        $tersedia
+                    ),
 
-                    'persentase' =>
-                        $this->persentaseStok(
-                            $tersedia
-                        ),
+                    'persentase' => $this->persentaseStok(
+                        $tersedia
+                    ),
                 ];
             }
         }
@@ -373,23 +334,19 @@ class Stok extends Component
             ])
             ->where(
                 'status_mutu',
-                StatusMutuKantongDarah
-                    ::Lulus
+                StatusMutuKantongDarah::Lulus
                     ->value
             )
             ->whereIn(
                 'status',
                 [
-                    StatusKantongDarah
-                        ::Tersedia
+                    StatusKantongDarah::Tersedia
                         ->value,
 
-                    StatusKantongDarah
-                        ::Dipesan
+                    StatusKantongDarah::Dipesan
                         ->value,
 
-                    StatusKantongDarah
-                        ::Didistribusikan
+                    StatusKantongDarah::Didistribusikan
                         ->value,
                 ]
             )
@@ -400,8 +357,7 @@ class Stok extends Component
                     $query
                         ->where(
                             'status',
-                            StatusKantongDarah
-                                ::Didistribusikan
+                            StatusKantongDarah::Didistribusikan
                                 ->value
                         )
                         ->orWhere(
@@ -422,27 +378,23 @@ class Stok extends Component
                     KantongDarah $kantong
                 ): array {
                     return [
-                        'golongan' =>
-                            $this->nilaiEnum(
-                                $kantong
-                                    ->golongan_darah
-                            ),
+                        'golongan' => $this->nilaiEnum(
+                            $kantong
+                                ->golongan_darah
+                        ),
 
-                        'rhesus' =>
-                            $this->nilaiEnum(
-                                $kantong->rhesus
-                            ),
+                        'rhesus' => $this->nilaiEnum(
+                            $kantong->rhesus
+                        ),
 
-                        'status' =>
-                            $this->nilaiEnum(
-                                $kantong->status
-                            ),
+                        'status' => $this->nilaiEnum(
+                            $kantong->status
+                        ),
 
-                        'total' =>
-                            (int) $kantong
-                                ->getAttribute(
-                                    'total'
-                                ),
+                        'total' => (int) $kantong
+                            ->getAttribute(
+                                'total'
+                            ),
                     ];
                 }
             );
@@ -456,8 +408,7 @@ class Stok extends Component
     ): int {
         return (int) $agregat
             ->filter(
-                fn (array $item): bool =>
-                    $item['golongan'] ===
+                fn (array $item): bool => $item['golongan'] ===
                         $golongan
                     && $item['rhesus'] ===
                         $rhesus
@@ -468,7 +419,7 @@ class Stok extends Component
     }
 
     /**
-     * @param array<int, array<string, mixed>> $stokDarah
+     * @param  array<int, array<string, mixed>>  $stokDarah
      * @return array<int, array<string, mixed>>
      */
     private function terapkanFilter(
@@ -522,55 +473,49 @@ class Stok extends Component
 
         if ($this->hanyaTersedia) {
             $hasil = $hasil->filter(
-                fn (array $stok): bool =>
-                    $stok['tersedia'] > 0
+                fn (array $stok): bool => $stok['tersedia'] > 0
             );
         }
 
         $hasil = match ($this->urutan) {
-            'tersedia_terbanyak' =>
-                $hasil->sortByDesc(
-                    'tersedia'
-                ),
+            'tersedia_terbanyak' => $hasil->sortByDesc(
+                'tersedia'
+            ),
 
-            'tersedia_tersedikit' =>
-                $hasil->sortBy(
-                    'tersedia'
-                ),
+            'tersedia_tersedikit' => $hasil->sortBy(
+                'tersedia'
+            ),
 
-            'total_terbanyak' =>
-                $hasil->sortByDesc(
-                    'total'
-                ),
+            'total_terbanyak' => $hasil->sortByDesc(
+                'total'
+            ),
 
-            default =>
-                $hasil->sortBy(
-                    function (
-                        array $stok
-                    ): string {
-                        $urutanGolongan = [
-                            'A' => '1',
-                            'B' => '2',
-                            'AB' => '3',
-                            'O' => '4',
-                        ];
+            default => $hasil->sortBy(
+                function (
+                    array $stok
+                ): string {
+                    $urutanGolongan = [
+                        'A' => '1',
+                        'B' => '2',
+                        'AB' => '3',
+                        'O' => '4',
+                    ];
 
-                        $urutanRhesus =
-                            $stok['rhesus'] ===
-                            RhesusDarah
-                                ::Positif
-                                ->value
-                                ? '1'
-                                : '2';
+                    $urutanRhesus =
+                        $stok['rhesus'] ===
+                        RhesusDarah::Positif
+                            ->value
+                            ? '1'
+                            : '2';
 
-                        return (
-                            $urutanGolongan[
-                                $stok['golongan']
-                            ]
-                            ?? '9'
-                        ) . $urutanRhesus;
-                    }
-                ),
+                    return (
+                        $urutanGolongan[
+                            $stok['golongan']
+                        ]
+                        ?? '9'
+                    ) . $urutanRhesus;
+                }
+            ),
         };
 
         return $hasil
@@ -631,16 +576,14 @@ class Stok extends Component
         mixed $value
     ): string {
         if (
-            $value instanceof
-            \BackedEnum
+            $value instanceof BackedEnum
         ) {
             return (string) $value
                 ->value;
         }
 
         if (
-            $value instanceof
-            \UnitEnum
+            $value instanceof UnitEnum
         ) {
             return (string) $value
                 ->name;

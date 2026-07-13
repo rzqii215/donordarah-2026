@@ -8,6 +8,7 @@ use App\Models\PendaftaranDonor;
 use App\Models\ProfilPendonor;
 use App\Models\User;
 use App\Services\LayananPendaftaranDonor;
+use BackedEnum;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use UnitEnum;
 
 #[Layout('components.layouts.donor')]
 #[Title('Daftar Donor')]
@@ -198,11 +200,9 @@ class DaftarDonor extends Component
             array_merge(
                 $this->pesanValidasiSkrining(),
                 [
-                    'catatan.max' =>
-                        'Catatan maksimal 1.000 karakter.',
+                    'catatan.max' => 'Catatan maksimal 1.000 karakter.',
 
-                    'persetujuan.accepted' =>
-                        'Anda wajib menyetujui pernyataan kebenaran data.',
+                    'persetujuan.accepted' => 'Anda wajib menyetujui pernyataan kebenaran data.',
                 ]
             )
         );
@@ -221,38 +221,28 @@ class DaftarDonor extends Component
         try {
             app(LayananPendaftaranDonor::class)
                 ->daftar(
-                    jadwalDonorId:
-                        (int) $this->jadwal->id,
+                    jadwalDonorId: (int) $this->jadwal->id,
 
-                    pendonorId:
-                        (int) $user->id,
+                    pendonorId: (int) $user->id,
 
                     data: [
                         'jawaban_skrining' => [
-                            'sehat_hari_ini' =>
-                                $this->sehatHariIni === '1',
+                            'sehat_hari_ini' => $this->sehatHariIni === '1',
 
-                            'sedang_minum_obat' =>
-                                $this->sedangMinumObat === '1',
+                            'sedang_minum_obat' => $this->sedangMinumObat === '1',
 
-                            'operasi_terakhir' =>
-                                $this->operasiTerakhir === '1',
+                            'operasi_terakhir' => $this->operasiTerakhir === '1',
 
-                            'cukup_tidur' =>
-                                $this->cukupTidur === '1',
+                            'cukup_tidur' => $this->cukupTidur === '1',
 
-                            'sudah_makan' =>
-                                $this->sudahMakan === '1',
+                            'sudah_makan' => $this->sudahMakan === '1',
 
-                            'persetujuan_kebenaran_data' =>
-                                true,
+                            'persetujuan_kebenaran_data' => true,
 
-                            'disetujui_pada' =>
-                                now()->toIso8601String(),
+                            'disetujui_pada' => now()->toIso8601String(),
                         ],
 
-                        'catatan' =>
-                            filled($this->catatan)
+                        'catatan' => filled($this->catatan)
                                 ? trim($this->catatan)
                                 : null,
                     ],
@@ -298,16 +288,13 @@ class DaftarDonor extends Component
             [
                 'pengguna' => $user,
 
-                'profilPendonor' =>
-                    $user instanceof User
+                'profilPendonor' => $user instanceof User
                         ? $user->profilPendonor
                         : null,
 
-                'pertanyaanSkrining' =>
-                    $this->pertanyaanSkrining(),
+                'pertanyaanSkrining' => $this->pertanyaanSkrining(),
 
-                'dataProfilBelumLengkap' =>
-                    $this->dataProfilBelumLengkap(),
+                'dataProfilBelumLengkap' => $this->dataProfilBelumLengkap(),
             ]
         );
     }
@@ -351,23 +338,17 @@ class DaftarDonor extends Component
     private function pesanValidasiSkrining(): array
     {
         return [
-            'sehatHariIni.required' =>
-                'Jawab pertanyaan mengenai kondisi kesehatan hari ini.',
+            'sehatHariIni.required' => 'Jawab pertanyaan mengenai kondisi kesehatan hari ini.',
 
-            'sedangMinumObat.required' =>
-                'Jawab pertanyaan mengenai konsumsi obat.',
+            'sedangMinumObat.required' => 'Jawab pertanyaan mengenai konsumsi obat.',
 
-            'operasiTerakhir.required' =>
-                'Jawab pertanyaan mengenai riwayat operasi.',
+            'operasiTerakhir.required' => 'Jawab pertanyaan mengenai riwayat operasi.',
 
-            'cukupTidur.required' =>
-                'Jawab pertanyaan mengenai waktu tidur.',
+            'cukupTidur.required' => 'Jawab pertanyaan mengenai waktu tidur.',
 
-            'sudahMakan.required' =>
-                'Jawab pertanyaan mengenai makan sebelum donor.',
+            'sudahMakan.required' => 'Jawab pertanyaan mengenai makan sebelum donor.',
 
-            '*.in' =>
-                'Jawaban skrining tidak valid.',
+            '*.in' => 'Jawaban skrining tidak valid.',
         ];
     }
 
@@ -382,54 +363,39 @@ class DaftarDonor extends Component
     {
         return [
             [
-                'property' =>
-                    'sehatHariIni',
+                'property' => 'sehatHariIni',
 
-                'pertanyaan' =>
-                    'Apakah Anda merasa sehat hari ini?',
+                'pertanyaan' => 'Apakah Anda merasa sehat hari ini?',
 
-                'bantuan' =>
-                    'Jawab sesuai kondisi tubuh yang Anda rasakan saat ini.',
+                'bantuan' => 'Jawab sesuai kondisi tubuh yang Anda rasakan saat ini.',
             ],
             [
-                'property' =>
-                    'sedangMinumObat',
+                'property' => 'sedangMinumObat',
 
-                'pertanyaan' =>
-                    'Apakah Anda sedang mengonsumsi obat tertentu?',
+                'pertanyaan' => 'Apakah Anda sedang mengonsumsi obat tertentu?',
 
-                'bantuan' =>
-                    'Termasuk obat dengan resep dokter maupun obat yang dikonsumsi rutin.',
+                'bantuan' => 'Termasuk obat dengan resep dokter maupun obat yang dikonsumsi rutin.',
             ],
             [
-                'property' =>
-                    'operasiTerakhir',
+                'property' => 'operasiTerakhir',
 
-                'pertanyaan' =>
-                    'Apakah Anda menjalani operasi dalam waktu dekat?',
+                'pertanyaan' => 'Apakah Anda menjalani operasi dalam waktu dekat?',
 
-                'bantuan' =>
-                    'Informasi ini akan ditinjau kembali oleh petugas kesehatan.',
+                'bantuan' => 'Informasi ini akan ditinjau kembali oleh petugas kesehatan.',
             ],
             [
-                'property' =>
-                    'cukupTidur',
+                'property' => 'cukupTidur',
 
-                'pertanyaan' =>
-                    'Apakah Anda sudah tidur dengan cukup?',
+                'pertanyaan' => 'Apakah Anda sudah tidur dengan cukup?',
 
-                'bantuan' =>
-                    'Pendonor disarankan memiliki waktu istirahat yang cukup.',
+                'bantuan' => 'Pendonor disarankan memiliki waktu istirahat yang cukup.',
             ],
             [
-                'property' =>
-                    'sudahMakan',
+                'property' => 'sudahMakan',
 
-                'pertanyaan' =>
-                    'Apakah Anda sudah makan sebelum donor?',
+                'pertanyaan' => 'Apakah Anda sudah makan sebelum donor?',
 
-                'bantuan' =>
-                    'Hindari melakukan donor darah dalam keadaan perut kosong.',
+                'bantuan' => 'Hindari melakukan donor darah dalam keadaan perut kosong.',
             ],
         ];
     }
@@ -460,35 +426,26 @@ class DaftarDonor extends Component
         }
 
         $data = [
-            'Nama lengkap' =>
-                filled($user->name),
+            'Nama lengkap' => filled($user->name),
 
-            'Email' =>
-                filled($user->email),
+            'Email' => filled($user->email),
 
-            'Nomor telepon' =>
-                filled($user->nomor_telepon),
+            'Nomor telepon' => filled($user->nomor_telepon),
 
-            'Tanggal lahir' =>
-                filled($profil->tanggal_lahir),
+            'Tanggal lahir' => filled($profil->tanggal_lahir),
 
-            'Jenis kelamin' =>
-                filled($profil->jenis_kelamin),
+            'Jenis kelamin' => filled($profil->jenis_kelamin),
 
-            'Golongan darah' =>
-                filled($profil->golongan_darah),
+            'Golongan darah' => filled($profil->golongan_darah),
 
-            'Rhesus' =>
-                filled($profil->rhesus),
+            'Rhesus' => filled($profil->rhesus),
 
-            'Alamat' =>
-                filled($profil->alamat),
+            'Alamat' => filled($profil->alamat),
         ];
 
         return collect($data)
             ->reject(
-                fn (bool $terisi): bool =>
-                    $terisi
+                fn (bool $terisi): bool => $terisi
             )
             ->keys()
             ->values()
@@ -499,20 +456,15 @@ class DaftarDonor extends Component
         string $property
     ): string {
         $value = match ($property) {
-            'sehatHariIni' =>
-                $this->sehatHariIni,
+            'sehatHariIni' => $this->sehatHariIni,
 
-            'sedangMinumObat' =>
-                $this->sedangMinumObat,
+            'sedangMinumObat' => $this->sedangMinumObat,
 
-            'operasiTerakhir' =>
-                $this->operasiTerakhir,
+            'operasiTerakhir' => $this->operasiTerakhir,
 
-            'cukupTidur' =>
-                $this->cukupTidur,
+            'cukupTidur' => $this->cukupTidur,
 
-            'sudahMakan' =>
-                $this->sudahMakan,
+            'sudahMakan' => $this->sudahMakan,
 
             default => '',
         };
@@ -662,11 +614,11 @@ class DaftarDonor extends Component
     private function nilaiEnum(
         mixed $value
     ): string {
-        if ($value instanceof \BackedEnum) {
+        if ($value instanceof BackedEnum) {
             return (string) $value->value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return (string) $value->name;
         }
 

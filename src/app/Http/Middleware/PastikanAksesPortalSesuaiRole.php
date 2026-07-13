@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\StatusPengguna;
 use App\Models\User;
+use BackedEnum;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -151,8 +152,10 @@ class PastikanAksesPortalSesuaiRole
         Request $request
     ): bool {
         return $request->is('login')
+            || $request->is('login/*')
             || $request->is('register')
             || $request->is('register/*');
+
     }
 
     private function halamanDiizinkanSebelumVerifikasi(
@@ -211,17 +214,16 @@ class PastikanAksesPortalSesuaiRole
     ): bool {
         return $this->roles($user)
             ->contains(
-                fn (string $role): bool =>
-                    in_array(
-                        $role,
-                        [
-                            'super_admin',
-                            'super-admin',
-                            'admin',
-                            'petugas',
-                        ],
-                        true
-                    )
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'super_admin',
+                        'super-admin',
+                        'admin',
+                        'petugas',
+                    ],
+                    true
+                )
             );
     }
 
@@ -230,15 +232,14 @@ class PastikanAksesPortalSesuaiRole
     ): bool {
         return $this->roles($user)
             ->contains(
-                fn (string $role): bool =>
-                    in_array(
-                        $role,
-                        [
-                            'donor',
-                            'pendonor',
-                        ],
-                        true
-                    )
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'donor',
+                        'pendonor',
+                    ],
+                    true
+                )
             );
     }
 
@@ -247,17 +248,16 @@ class PastikanAksesPortalSesuaiRole
     ): bool {
         return $this->roles($user)
             ->contains(
-                fn (string $role): bool =>
-                    in_array(
-                        $role,
-                        [
-                            'pemohon_donor',
-                            'pemohon-donor',
-                            'rumah_sakit',
-                            'rumah-sakit',
-                        ],
-                        true
-                    )
+                fn (string $role): bool => in_array(
+                    $role,
+                    [
+                        'pemohon_donor',
+                        'pemohon-donor',
+                        'rumah_sakit',
+                        'rumah-sakit',
+                    ],
+                    true
+                )
             );
     }
 
@@ -274,20 +274,15 @@ class PastikanAksesPortalSesuaiRole
         return match (
             $this->nilaiStatusPengguna($user)
         ) {
-            StatusPengguna::Menunggu->value =>
-                'Akun masih menunggu aktivasi.',
+            StatusPengguna::Menunggu->value => 'Akun masih menunggu aktivasi.',
 
-            StatusPengguna::TidakAktif->value =>
-                'Akun sedang tidak aktif. Hubungi administrator.',
+            StatusPengguna::TidakAktif->value => 'Akun sedang tidak aktif. Hubungi administrator.',
 
-            StatusPengguna::Ditangguhkan->value =>
-                'Akun sedang ditangguhkan. Hubungi administrator.',
+            StatusPengguna::Ditangguhkan->value => 'Akun sedang ditangguhkan. Hubungi administrator.',
 
-            StatusPengguna::Ditolak->value =>
-                'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
+            StatusPengguna::Ditolak->value => 'Akun tidak dapat digunakan karena pengajuan akun ditolak.',
 
-            default =>
-                'Akun belum dapat digunakan. Hubungi administrator.',
+            default => 'Akun belum dapat digunakan. Hubungi administrator.',
         };
     }
 
@@ -296,7 +291,7 @@ class PastikanAksesPortalSesuaiRole
     ): string {
         $status = $user->status;
 
-        if ($status instanceof \BackedEnum) {
+        if ($status instanceof BackedEnum) {
             return strtolower(
                 trim(
                     (string) $status->value
@@ -319,10 +314,9 @@ class PastikanAksesPortalSesuaiRole
     ): Collection {
         return $user->getRoleNames()
             ->map(
-                fn (string $role): string =>
-                    strtolower(
-                        trim($role)
-                    )
+                fn (string $role): string => strtolower(
+                    trim($role)
+                )
             )
             ->filter()
             ->values();

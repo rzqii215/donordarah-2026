@@ -1,28 +1,34 @@
 <div>
     @php
-        $googleRouteAda = \Illuminate\Support\Facades\Route::has(
-            'google.redirect'
-        );
+        $googleRouteAda =
+            \Illuminate\Support\Facades\Route::has(
+                'google.redirect'
+            );
 
         $googleUrl = $googleRouteAda
             ? route('google.redirect', [
                 'tujuan' => 'login',
             ])
             : '#';
+
+        $namaJenisAkun = match ($portal) {
+            'pemohon' => 'pemohon donor',
+            'donor' => 'pendonor',
+            default => 'pengguna',
+        };
     @endphp
 
     <header class="auth-heading">
         <p class="auth-kicker">
-            Selamat datang kembali
+            {{ $konfigurasiPortal['kicker'] }}
         </p>
 
         <h2>
-            Masuk ke akun Anda
+            {{ $konfigurasiPortal['judul'] }}
         </h2>
 
         <p>
-            Kelola aktivitas donor dan pengajuan darah melalui akun
-            yang telah terdaftar.
+            {{ $konfigurasiPortal['deskripsi'] }}
         </p>
     </header>
 
@@ -38,7 +44,12 @@
                 stroke-width="2"
                 aria-hidden="true"
             >
-                <circle cx="12" cy="12" r="9" />
+                <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                />
+
                 <path d="m8 12 2.5 2.5L16 9" />
             </svg>
 
@@ -48,7 +59,7 @@
         </div>
     @endif
 
-    @if ($errors->has('email'))
+    @if (session('error'))
         <div
             class="auth-alert auth-alert--danger"
             role="alert"
@@ -60,7 +71,42 @@
                 stroke-width="2"
                 aria-hidden="true"
             >
-                <circle cx="12" cy="12" r="9" />
+                <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                />
+
+                <path d="M12 7v6M12 17h.01" />
+            </svg>
+
+            <span>
+                {{ session('error') }}
+            </span>
+        </div>
+    @endif
+
+    @if (
+        $errors->has('email')
+        && ! session('error')
+    )
+        <div
+            class="auth-alert auth-alert--danger"
+            role="alert"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+            >
+                <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                />
+
                 <path d="M12 7v6M12 17h.01" />
             </svg>
 
@@ -253,7 +299,7 @@
                 wire:loading.remove
                 wire:target="authenticate"
             >
-                Masuk
+                {{ $konfigurasiPortal['teks_tombol'] }}
             </span>
 
             <span
@@ -266,7 +312,7 @@
     </form>
 
     <div class="auth-divider">
-        atau lanjutkan dengan
+        atau masuk menggunakan
     </div>
 
     @if ($googleRouteAda)
@@ -308,57 +354,36 @@
             class="auth-button auth-button--secondary auth-button--full"
             disabled
         >
-            <svg
-                class="auth-google-icon"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-            >
-                <path
-                    fill="#FFC107"
-                    d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9Z"
-                />
-
-                <path
-                    fill="#FF3D00"
-                    d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.6-5.6C34 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"
-                />
-
-                <path
-                    fill="#4CAF50"
-                    d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44Z"
-                />
-
-                <path
-                    fill="#1976D2"
-                    d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9Z"
-                />
-            </svg>
-
             Login Google belum tersedia
         </button>
     @endif
 
     <section class="auth-register-links">
         <p>
-            Belum memiliki akun?
+            Belum memiliki akun
+            {{ $namaJenisAkun }}?
         </p>
 
-        <div class="auth-register-actions">
+        <div class="auth-register-actions auth-register-actions--single">
             <a
-                href="{{ url('/register/donor') }}"
-                class="auth-button auth-button--primary"
+                href="{{ $konfigurasiPortal['register_url'] }}"
+                class="auth-button auth-button--primary auth-button--full"
             >
-                Daftar Pendonor
-            </a>
-
-            <a
-                href="{{ url('/register/pemohon-donor') }}"
-                class="auth-button auth-button--secondary"
-            >
-                Daftar Pemohon
+                {{ $konfigurasiPortal['register_label'] }}
             </a>
         </div>
     </section>
+
+    <p class="auth-privacy-note">
+        Ingin masuk ke portal lainnya?
+
+        <a
+            href="{{ $konfigurasiPortal['portal_lain_url'] }}"
+            class="auth-text-link"
+        >
+            {{ $konfigurasiPortal['portal_lain_label'] }}
+        </a>
+    </p>
 
     <p class="auth-privacy-note">
         <svg

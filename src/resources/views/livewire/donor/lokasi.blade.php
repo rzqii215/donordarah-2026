@@ -403,7 +403,7 @@
                                 </p>
 
                                 <p class="mt-2 text-sm font-semibold text-[#191c20]">
-                                    {{ $this->namaKontak($lokasiTerpilih) }}
+                                    {{ $this->namaKontakLokasi($lokasiTerpilih) }}
                                 </p>
 
                                 @if ($teleponUrlTerpilih)

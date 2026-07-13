@@ -141,35 +141,25 @@ class Lokasi extends Component
         return view(
             'livewire.donor.lokasi',
             [
-                'lokasiDonors' =>
-                    $lokasiDonors,
+                'lokasiDonors' => $lokasiDonors,
 
-                'kotaTersedia' =>
-                    $kotaTersedia,
+                'kotaTersedia' => $kotaTersedia,
 
-                'daftarKota' =>
-                    $kotaTersedia,
+                'daftarKota' => $kotaTersedia,
 
-                'lokasiTerpilih' =>
-                    $this->ambilLokasiTerpilih(),
+                'lokasiTerpilih' => $this->ambilLokasiTerpilih(),
 
-                'jumlahLokasi' =>
-                    $lokasiDonors->total(),
+                'jumlahLokasi' => $lokasiDonors->total(),
 
-                'ringkasan' =>
-                    $this->ambilRingkasan(),
+                'ringkasan' => $this->ambilRingkasan(),
 
-                'pencarian' =>
-                    $this->pencarian,
+                'pencarian' => $this->pencarian,
 
-                'kota' =>
-                    $this->kota,
+                'kota' => $this->kota,
 
-                'hanyaDenganJadwal' =>
-                    $this->hanyaDenganJadwal,
+                'hanyaDenganJadwal' => $this->hanyaDenganJadwal,
 
-                'urutan' =>
-                    $this->urutan,
+                'urutan' => $this->urutan,
             ]
         );
     }
@@ -179,36 +169,33 @@ class Lokasi extends Component
         $query = LokasiDonor::query()
             ->where('aktif', true)
             ->withMin([
-                'jadwalDonors as jadwal_terdekat_pada' =>
-                    function (
-                        Builder|HasMany $query
-                    ): void {
-                        $this->queryJadwalAktif(
-                            $query
-                        );
-                    },
+                'jadwalDonors as jadwal_terdekat_pada' => function (
+                    Builder|HasMany $query
+                ): void {
+                    $this->queryJadwalAktif(
+                        $query
+                    );
+                },
             ], 'mulai_pada')
             ->withCount([
-                'jadwalDonors as jumlah_jadwal_aktif' =>
-                    function (
-                        Builder|HasMany $query
-                    ): void {
-                        $this->queryJadwalAktif(
-                            $query
-                        );
-                    },
+                'jadwalDonors as jumlah_jadwal_aktif' => function (
+                    Builder|HasMany $query
+                ): void {
+                    $this->queryJadwalAktif(
+                        $query
+                    );
+                },
             ])
             ->with([
-                'jadwalDonors' =>
-                    function (
-                        Builder|HasMany $query
-                    ): void {
-                        $this->queryJadwalAktif(
-                            $query
-                        );
+                'jadwalDonors' => function (
+                    Builder|HasMany $query
+                ): void {
+                    $this->queryJadwalAktif(
+                        $query
+                    );
 
-                        $query->limit(3);
-                    },
+                    $query->limit(3);
+                },
             ]);
 
         $this->terapkanPencarian(
@@ -247,8 +234,7 @@ class Lokasi extends Component
             ->orderBy('kota')
             ->pluck('kota')
             ->map(
-                fn (mixed $kota): string =>
-                    trim((string) $kota)
+                fn (mixed $kota): string => trim((string) $kota)
             )
             ->filter()
             ->values();
@@ -289,14 +275,11 @@ class Lokasi extends Component
                 ->count('kota');
 
         return [
-            'total_lokasi' =>
-                $totalLokasi,
+            'total_lokasi' => $totalLokasi,
 
-            'dengan_jadwal' =>
-                $lokasiDenganJadwal,
+            'dengan_jadwal' => $lokasiDenganJadwal,
 
-            'jumlah_kota' =>
-                $jumlahKota,
+            'jumlah_kota' => $jumlahKota,
         ];
     }
 
@@ -312,26 +295,24 @@ class Lokasi extends Component
         return LokasiDonor::query()
             ->where('aktif', true)
             ->withCount([
-                'jadwalDonors as jumlah_jadwal_aktif' =>
-                    function (
-                        Builder|HasMany $query
-                    ): void {
-                        $this->queryJadwalAktif(
-                            $query
-                        );
-                    },
+                'jadwalDonors as jumlah_jadwal_aktif' => function (
+                    Builder|HasMany $query
+                ): void {
+                    $this->queryJadwalAktif(
+                        $query
+                    );
+                },
             ])
             ->with([
-                'jadwalDonors' =>
-                    function (
-                        Builder|HasMany $query
-                    ): void {
-                        $this->queryJadwalAktif(
-                            $query
-                        );
+                'jadwalDonors' => function (
+                    Builder|HasMany $query
+                ): void {
+                    $this->queryJadwalAktif(
+                        $query
+                    );
 
-                        $query->limit(10);
-                    },
+                    $query->limit(10);
+                },
             ])
             ->find(
                 $this->lokasiTerpilihId
@@ -344,8 +325,7 @@ class Lokasi extends Component
         $query
             ->where(
                 'status',
-                StatusJadwalDonor
-                    ::Dipublikasikan
+                StatusJadwalDonor::Dipublikasikan
                     ->value
             )
             ->where(
@@ -549,15 +529,13 @@ class Lokasi extends Component
                 ->sortBy(
                     fn (
                         JadwalDonor $jadwal
-                    ): int =>
-                        $jadwal->mulai_pada
-                            ?->timestamp
+                    ): int => $jadwal->mulai_pada
+                        ?->timestamp
                         ?? PHP_INT_MAX
                 )
                 ->first();
 
-            return $jadwal instanceof
-                JadwalDonor
+            return $jadwal instanceof JadwalDonor
                     ? $jadwal
                     : null;
         }
@@ -610,9 +588,8 @@ class Lokasi extends Component
                 ->sortBy(
                     fn (
                         JadwalDonor $jadwal
-                    ): int =>
-                        $jadwal->mulai_pada
-                            ?->timestamp
+                    ): int => $jadwal->mulai_pada
+                        ?->timestamp
                         ?? PHP_INT_MAX
                 )
                 ->values();
@@ -662,8 +639,7 @@ class Lokasi extends Component
             $lokasi->kode_pos,
         ])
             ->map(
-                fn (mixed $value): string =>
-                    trim((string) $value)
+                fn (mixed $value): string => trim((string) $value)
             )
             ->filter()
             ->unique()
@@ -692,8 +668,7 @@ class Lokasi extends Component
             $lokasi->provinsi,
         ])
             ->map(
-                fn (mixed $value): string =>
-                    trim((string) $value)
+                fn (mixed $value): string => trim((string) $value)
             )
             ->filter()
             ->unique()
@@ -1041,8 +1016,7 @@ class Lokasi extends Component
             ),
         ])
             ->filter(
-                fn (string $value): bool =>
-                    $value !== '-'
+                fn (string $value): bool => $value !== '-'
             )
             ->implode(', ');
 
