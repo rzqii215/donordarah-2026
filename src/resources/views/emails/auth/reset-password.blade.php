@@ -1,50 +1,153 @@
+@php
+    $namaAplikasi = filled($appName ?? null)
+        ? (string) $appName
+        : (string) config(
+            'app.name',
+            'Donor Darah'
+        );
+
+    $namaPengguna = filled($userName ?? null)
+        ? (string) $userName
+        : (
+            isset($notifiable)
+            && filled($notifiable->name ?? null)
+                ? (string) $notifiable->name
+                : 'Pengguna'
+        );
+
+    $tautanReset = (string) (
+        $resetUrl
+        ?? $resetPasswordUrl
+        ?? $url
+        ?? url('/forgot-password')
+    );
+
+    $masaBerlaku = (int) (
+        $expiresInMinutes
+        ?? config(
+            'auth.passwords.users.expire',
+            60
+        )
+    );
+
+    $tahunSekarang = now()->year;
+@endphp
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Atur Ulang Password</title>
+    <meta
+        name="color-scheme"
+        content="light"
+    >
+
+    <meta
+        name="supported-color-schemes"
+        content="light"
+    >
+
+    <title>
+        Atur Ulang Password — {{ $namaAplikasi }}
+    </title>
 
     <style>
-        @media only screen and (max-width: 640px) {
-            .email-container {
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0;
+            mso-table-rspace: 0;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+
+        table {
+            border-collapse: collapse !important;
+        }
+
+        body {
+            width: 100% !important;
+            min-width: 100%;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #f7f4f4;
+        }
+
+        a {
+            color: #991b2f;
+        }
+
+        @media only screen and (max-width: 680px) {
+            .email-shell {
                 width: 100% !important;
             }
 
-            .email-content {
-                padding: 30px 22px !important;
+            .email-card {
+                border-radius: 0 !important;
             }
 
             .email-header {
-                padding: 26px 22px !important;
+                padding: 32px 24px !important;
             }
 
-            .reset-button {
+            .email-body {
+                padding: 32px 24px !important;
+            }
+
+            .email-footer {
+                padding: 24px !important;
+            }
+
+            .email-title {
+                font-size: 27px !important;
+                line-height: 1.25 !important;
+            }
+
+            .email-button {
                 display: block !important;
                 width: auto !important;
+                padding: 15px 20px !important;
+            }
+
+            .email-url {
+                font-size: 11px !important;
             }
         }
     </style>
 </head>
 
-<body style="
-    margin: 0;
-    padding: 0;
-    background-color: #f4f7fb;
-    color: #1f2937;
-    font-family: Arial, Helvetica, sans-serif;
-">
-    <div style="
-        display: none;
-        max-height: 0;
-        overflow: hidden;
-        opacity: 0;
-    ">
-        Permintaan untuk mengatur ulang password akun {{ $appName }}.
+<body>
+    <div
+        style="
+            display: none;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            color: transparent;
+            mso-hide: all;
+        "
+    >
+        Gunakan tautan ini untuk membuat password baru akun
+        {{ $namaAplikasi }} Anda.
     </div>
 
     <table
@@ -52,98 +155,227 @@
         width="100%"
         cellpadding="0"
         cellspacing="0"
+        border="0"
         style="
             width: 100%;
-            background-color: #f4f7fb;
+            background-color: #f7f4f4;
         "
     >
         <tr>
             <td
                 align="center"
-                style="padding: 40px 16px;"
+                style="
+                    padding: 42px 16px;
+                "
             >
                 <table
                     role="presentation"
-                    width="600"
+                    class="email-shell email-card"
+                    width="640"
                     cellpadding="0"
                     cellspacing="0"
-                    class="email-container"
+                    border="0"
                     style="
-                        width: 600px;
-                        max-width: 600px;
+                        width: 100%;
+                        max-width: 640px;
                         overflow: hidden;
+                        border: 1px solid #e7dddf;
+                        border-radius: 22px;
                         background-color: #ffffff;
-                        border: 1px solid #e5e7eb;
-                        border-radius: 16px;
-                        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+                        box-shadow: 0 18px 50px rgba(79, 0, 18, 0.08);
                     "
                 >
                     <tr>
                         <td
                             class="email-header"
+                            align="left"
                             style="
-                                padding: 30px 40px;
-                                background-color: #b91c1c;
-                                text-align: center;
+                                padding: 36px 48px;
+                                background-color: #76001c;
                             "
                         >
-                            <div style="
-                                display: inline-block;
-                                margin-bottom: 12px;
-                                padding: 8px 14px;
-                                border: 1px solid rgba(255, 255, 255, 0.35);
-                                border-radius: 999px;
-                                color: #ffffff;
-                                font-size: 12px;
-                                font-weight: 700;
-                                letter-spacing: 1.2px;
-                            ">
-                                DONOR DARAH
-                            </div>
+                            <table
+                                role="presentation"
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                            >
+                                <tr>
+                                    <td
+                                        width="58"
+                                        valign="middle"
+                                        style="
+                                            width: 58px;
+                                        "
+                                    >
+                                        <table
+                                            role="presentation"
+                                            width="48"
+                                            height="48"
+                                            cellpadding="0"
+                                            cellspacing="0"
+                                            border="0"
+                                            style="
+                                                width: 48px;
+                                                height: 48px;
+                                                border: 1px solid rgba(255, 255, 255, 0.35);
+                                                border-radius: 14px;
+                                                background-color: rgba(255, 255, 255, 0.12);
+                                            "
+                                        >
+                                            <tr>
+                                                <td
+                                                    align="center"
+                                                    valign="middle"
+                                                    style="
+                                                        color: #ffffff;
+                                                        font-family: Arial, Helvetica, sans-serif;
+                                                        font-size: 25px;
+                                                        font-weight: 700;
+                                                    "
+                                                >
+                                                    ♡
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
 
-                            <h1 style="
-                                margin: 0;
-                                color: #ffffff;
-                                font-size: 25px;
-                                line-height: 1.3;
-                            ">
-                                Atur Ulang Password
-                            </h1>
+                                    <td
+                                        valign="middle"
+                                        style="
+                                            padding-left: 4px;
+                                        "
+                                    >
+                                        <p
+                                            style="
+                                                margin: 0;
+                                                color: #ffffff;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 19px;
+                                                font-weight: 700;
+                                                line-height: 1.25;
+                                                letter-spacing: -0.3px;
+                                            "
+                                        >
+                                            {{ $namaAplikasi }}
+                                        </p>
 
-                            <p style="
-                                margin: 10px 0 0;
-                                color: #fee2e2;
-                                font-size: 14px;
-                                line-height: 1.6;
-                            ">
-                                Perlindungan akses akun {{ $appName }}
-                            </p>
+                                        <p
+                                            style="
+                                                margin: 3px 0 0;
+                                                color: #f7cbd5;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 10px;
+                                                font-weight: 700;
+                                                line-height: 1.4;
+                                                letter-spacing: 0.8px;
+                                                text-transform: uppercase;
+                                            "
+                                        >
+                                            Terhubung untuk menolong
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <table
+                                role="presentation"
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                            >
+                                <tr>
+                                    <td
+                                        style="
+                                            padding-top: 34px;
+                                        "
+                                    >
+                                        <p
+                                            style="
+                                                margin: 0 0 8px;
+                                                color: #f3b7c4;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 11px;
+                                                font-weight: 700;
+                                                line-height: 1.4;
+                                                letter-spacing: 1.2px;
+                                                text-transform: uppercase;
+                                            "
+                                        >
+                                            Keamanan akun
+                                        </p>
+
+                                        <h1
+                                            class="email-title"
+                                            style="
+                                                margin: 0;
+                                                color: #ffffff;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 32px;
+                                                font-weight: 700;
+                                                line-height: 1.2;
+                                                letter-spacing: -0.7px;
+                                            "
+                                        >
+                                            Atur Ulang Password
+                                        </h1>
+
+                                        <p
+                                            style="
+                                                margin: 12px 0 0;
+                                                color: #f6dce2;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 14px;
+                                                font-weight: 400;
+                                                line-height: 1.6;
+                                            "
+                                        >
+                                            Buat password baru untuk menjaga
+                                            keamanan akun Anda.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
 
                     <tr>
                         <td
-                            class="email-content"
-                            style="padding: 40px;"
+                            class="email-body"
+                            style="
+                                padding: 42px 48px 38px;
+                                background-color: #ffffff;
+                            "
                         >
-                            <p style="
-                                margin: 0 0 18px;
-                                color: #111827;
-                                font-size: 16px;
-                                font-weight: 700;
-                            ">
-                                Halo, {{ $userName }}
+                            <p
+                                style="
+                                    margin: 0 0 18px;
+                                    color: #191c20;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 19px;
+                                    font-weight: 700;
+                                    line-height: 1.5;
+                                "
+                            >
+                                Halo, {{ $namaPengguna }}
                             </p>
 
-                            <p style="
-                                margin: 0 0 18px;
-                                color: #4b5563;
-                                font-size: 15px;
-                                line-height: 1.75;
-                            ">
+                            <p
+                                style="
+                                    margin: 0;
+                                    color: #5f5558;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 15px;
+                                    font-weight: 400;
+                                    line-height: 1.75;
+                                "
+                            >
                                 Kami menerima permintaan untuk mengatur ulang
-                                password akun Anda. Tekan tombol berikut untuk
-                                membuat password baru.
+                                password akun {{ $namaAplikasi }} Anda.
+                                Tekan tombol di bawah ini untuk membuat
+                                password baru.
                             </p>
 
                             <table
@@ -151,24 +383,34 @@
                                 width="100%"
                                 cellpadding="0"
                                 cellspacing="0"
-                                style="margin: 28px 0;"
+                                border="0"
                             >
                                 <tr>
-                                    <td align="center">
+                                    <td
+                                        align="center"
+                                        style="
+                                            padding: 30px 0;
+                                        "
+                                    >
                                         <a
-                                            href="{{ $resetUrl }}"
-                                            class="reset-button"
+                                            href="{{ $tautanReset }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="email-button"
                                             style="
                                                 display: inline-block;
-                                                padding: 14px 28px;
-                                                background-color: #dc2626;
-                                                border-radius: 9px;
+                                                padding: 15px 30px;
+                                                border: 1px solid #991b2f;
+                                                border-radius: 12px;
                                                 color: #ffffff;
-                                                font-size: 15px;
+                                                background-color: #991b2f;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 14px;
                                                 font-weight: 700;
-                                                line-height: 1.4;
+                                                line-height: 1.2;
                                                 text-align: center;
                                                 text-decoration: none;
+                                                box-shadow: 0 10px 24px rgba(153, 27, 47, 0.2);
                                             "
                                         >
                                             Buat Password Baru
@@ -182,92 +424,314 @@
                                 width="100%"
                                 cellpadding="0"
                                 cellspacing="0"
+                                border="0"
                                 style="
-                                    margin-bottom: 24px;
-                                    background-color: #fff7ed;
-                                    border: 1px solid #fed7aa;
-                                    border-radius: 10px;
+                                    margin-bottom: 26px;
+                                    border: 1px solid #efd1d8;
+                                    border-radius: 14px;
+                                    background-color: #fff5f7;
                                 "
                             >
                                 <tr>
-                                    <td style="padding: 16px 18px;">
-                                        <p style="
-                                            margin: 0;
-                                            color: #9a3412;
-                                            font-size: 13px;
-                                            line-height: 1.65;
-                                        ">
-                                            Link ini hanya berlaku selama
-                                            <strong>{{ $expiresInMinutes }} menit</strong>.
-                                            Setelah melewati batas waktu tersebut,
-                                            silakan ajukan reset password kembali.
+                                    <td
+                                        width="52"
+                                        valign="top"
+                                        style="
+                                            width: 52px;
+                                            padding: 18px 0 18px 18px;
+                                        "
+                                    >
+                                        <table
+                                            role="presentation"
+                                            width="34"
+                                            height="34"
+                                            cellpadding="0"
+                                            cellspacing="0"
+                                            border="0"
+                                            style="
+                                                width: 34px;
+                                                height: 34px;
+                                                border-radius: 10px;
+                                                background-color: #f7dce2;
+                                            "
+                                        >
+                                            <tr>
+                                                <td
+                                                    align="center"
+                                                    valign="middle"
+                                                    style="
+                                                        color: #76001c;
+                                                        font-family: Arial, Helvetica, sans-serif;
+                                                        font-size: 16px;
+                                                        font-weight: 700;
+                                                    "
+                                                >
+                                                    ⏱
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+
+                                    <td
+                                        valign="top"
+                                        style="
+                                            padding: 18px 18px 18px 12px;
+                                        "
+                                    >
+                                        <p
+                                            style="
+                                                margin: 0 0 4px;
+                                                color: #76001c;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 13px;
+                                                font-weight: 700;
+                                                line-height: 1.5;
+                                            "
+                                        >
+                                            Tautan berlaku selama
+                                            {{ $masaBerlaku }} menit
+                                        </p>
+
+                                        <p
+                                            style="
+                                                margin: 0;
+                                                color: #7a5961;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 12px;
+                                                font-weight: 400;
+                                                line-height: 1.65;
+                                            "
+                                        >
+                                            Setelah melewati batas waktu,
+                                            silakan ajukan pengaturan ulang
+                                            password kembali.
                                         </p>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="
-                                margin: 0 0 10px;
-                                color: #4b5563;
-                                font-size: 14px;
-                                line-height: 1.7;
-                            ">
+                            <table
+                                role="presentation"
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="
+                                    margin-bottom: 26px;
+                                    border: 1px solid #e7dddf;
+                                    border-radius: 14px;
+                                    background-color: #faf8f8;
+                                "
+                            >
+                                <tr>
+                                    <td
+                                        style="
+                                            padding: 18px;
+                                        "
+                                    >
+                                        <p
+                                            style="
+                                                margin: 0 0 8px;
+                                                color: #191c20;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 12px;
+                                                font-weight: 700;
+                                                line-height: 1.5;
+                                            "
+                                        >
+                                            Tidak merasa meminta perubahan ini?
+                                        </p>
+
+                                        <p
+                                            style="
+                                                margin: 0;
+                                                color: #6f6467;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 12px;
+                                                font-weight: 400;
+                                                line-height: 1.65;
+                                            "
+                                        >
+                                            Abaikan email ini. Password akun
+                                            Anda tidak akan berubah selama
+                                            tombol atau tautan tidak digunakan.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p
+                                style="
+                                    margin: 0 0 10px;
+                                    color: #655a5d;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 12px;
+                                    font-weight: 400;
+                                    line-height: 1.65;
+                                "
+                            >
                                 Jika tombol tidak dapat digunakan, salin dan
                                 buka alamat berikut melalui browser:
                             </p>
 
-                            <p style="
-                                margin: 0 0 24px;
-                                padding: 13px 15px;
-                                background-color: #f8fafc;
-                                border: 1px solid #e2e8f0;
-                                border-radius: 8px;
-                                color: #b91c1c;
-                                font-size: 12px;
-                                line-height: 1.6;
-                                word-break: break-all;
-                            ">
-                                {{ $resetUrl }}
-                            </p>
+                            <table
+                                role="presentation"
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="
+                                    border: 1px solid #e7dddf;
+                                    border-radius: 12px;
+                                    background-color: #f7f4f4;
+                                "
+                            >
+                                <tr>
+                                    <td
+                                        class="email-url"
+                                        style="
+                                            padding: 14px 16px;
+                                            color: #76001c;
+                                            font-family: Consolas, Monaco, monospace;
+                                            font-size: 11px;
+                                            font-weight: 400;
+                                            line-height: 1.6;
+                                            word-break: break-all;
+                                        "
+                                    >
+                                        <a
+                                            href="{{ $tautanReset }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style="
+                                                color: #76001c;
+                                                text-decoration: none;
+                                                word-break: break-all;
+                                            "
+                                        >
+                                            {{ $tautanReset }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
 
-                            <p style="
-                                margin: 0;
-                                color: #6b7280;
-                                font-size: 13px;
-                                line-height: 1.7;
-                            ">
-                                Jika Anda tidak merasa meminta perubahan
-                                password, abaikan email ini. Password akun Anda
-                                tetap aman dan tidak akan berubah.
-                            </p>
+                            <table
+                                role="presentation"
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                            >
+                                <tr>
+                                    <td
+                                        style="
+                                            padding-top: 30px;
+                                        "
+                                    >
+                                        <p
+                                            style="
+                                                margin: 0;
+                                                color: #5f5558;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 13px;
+                                                font-weight: 400;
+                                                line-height: 1.7;
+                                            "
+                                        >
+                                            Salam hangat,
+                                        </p>
+
+                                        <p
+                                            style="
+                                                margin: 3px 0 0;
+                                                color: #191c20;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 13px;
+                                                font-weight: 700;
+                                                line-height: 1.7;
+                                            "
+                                        >
+                                            Tim {{ $namaAplikasi }}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
 
                     <tr>
-                        <td style="
-                            padding: 24px 40px;
-                            background-color: #f8fafc;
-                            border-top: 1px solid #e5e7eb;
-                            text-align: center;
-                        ">
-                            <p style="
-                                margin: 0 0 6px;
-                                color: #374151;
-                                font-size: 13px;
-                                font-weight: 700;
-                            ">
-                                {{ $appName }}
+                        <td
+                            class="email-footer"
+                            align="center"
+                            style="
+                                padding: 26px 42px;
+                                border-top: 1px solid #eee6e8;
+                                background-color: #faf8f8;
+                            "
+                        >
+                            <p
+                                style="
+                                    margin: 0;
+                                    color: #86797c;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    line-height: 1.7;
+                                "
+                            >
+                                Email ini dikirim secara otomatis untuk
+                                melindungi akses akun Anda.
+                                Mohon tidak membalas email ini.
                             </p>
 
-                            <p style="
-                                margin: 0;
-                                color: #9ca3af;
-                                font-size: 12px;
-                                line-height: 1.6;
-                            ">
-                                Email otomatis. Mohon tidak membalas email ini.
-                                <br>
-                                &copy; {{ now()->year }} {{ $appName }}.
+                            <p
+                                style="
+                                    margin: 10px 0 0;
+                                    color: #a09295;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    line-height: 1.7;
+                                "
+                            >
+                                &copy; {{ $tahunSekarang }}
+                                {{ $namaAplikasi }}.
+                                Seluruh hak dilindungi.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <table
+                    role="presentation"
+                    class="email-shell"
+                    width="640"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                    style="
+                        width: 100%;
+                        max-width: 640px;
+                    "
+                >
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                padding: 18px 20px 0;
+                            "
+                        >
+                            <p
+                                style="
+                                    margin: 0;
+                                    color: #9b8d90;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 9px;
+                                    font-weight: 400;
+                                    line-height: 1.6;
+                                "
+                            >
+                                Pesan keamanan dari {{ $namaAplikasi }}
                             </p>
                         </td>
                     </tr>
